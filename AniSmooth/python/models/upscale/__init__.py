@@ -1,0 +1,1 @@
+from .shufflecugan import ShuffleCUGANModel

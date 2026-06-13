@@ -1,0 +1,14 @@
+{
+  "name": "anismooth-ae-extension-tools",
+  "version": "1.0.0",
+  "description": "Build tools for AniSmooth Extension",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.4.3",
+    "jsxbin": "^2.3.0",
+    "zxp-sign-cmd": "^2.0.0"
+  }
+}

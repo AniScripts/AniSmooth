@@ -1,0 +1,605 @@
+import argparse
+import sys
+import os
+import json
+import cv2
+import torch
+import torch.nn.functional as F
+import numpy as np
+
+from utils import VideoProcessor, get_device, check_tensorrt, print_gpu_info
+from utils.video import mux_audio
+from models.rife import RIFEModel
+from models.upscale import ShuffleCUGANModel
+from models.weight_loader import load_weights_if_available, download_weights, is_weight_downloaded
+from models.tensorrt_engine import (
+    is_tensorrt_available, build_rife_onnx, build_rife_tensorrt_engine,
+    load_tensorrt_engine, TensorRTInferenceEngine, get_engine_path, ensure_engines_dir,
+)
+
+
+def log(msg_type, msg, **kw):
+    out = {"type": msg_type, "msg": str(msg)}
+    out.update(kw)
+    print(json.dumps(out), flush=True)
+
+
+def tensor_to_frame(tensor, device="cuda"):
+    frame = tensor.squeeze(0).permute(1, 2, 0).detach()
+    if device == "cuda" or str(frame.device).startswith("cuda"):
+        frame = frame.cpu()
+    frame = frame.float().numpy()
+    frame = (frame.clip(0, 1) * 255).astype(np.uint8)
+    return cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+
+def frame_to_tensor(frame, device):
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    tensor = torch.from_numpy(frame_rgb).float() / 255.0
+    tensor = tensor.permute(2, 0, 1).unsqueeze(0)
+    return tensor.to(device)
+
+
+def pad_to_mod(tensor, mod=32):
+    """Pad tensor height and width to be divisible by `mod`.
+    Returns (padded_tensor, (pad_h, pad_w)) so the caller can crop back."""
+    _, _, h, w = tensor.shape
+    pad_h = (mod - h % mod) % mod
+    pad_w = (mod - w % mod) % mod
+    if pad_h == 0 and pad_w == 0:
+        return tensor, (0, 0)
+    # Pad right and bottom (F.pad order: left, right, top, bottom)
+    padded = F.pad(tensor, (0, pad_w, 0, pad_h), mode="replicate")
+    return padded, (pad_h, pad_w)
+
+
+def unpad(tensor, pad_hw):
+    """Remove padding added by pad_to_mod."""
+    pad_h, pad_w = pad_hw
+    if pad_h == 0 and pad_w == 0:
+        return tensor
+    h = tensor.shape[2] - pad_h
+    w = tensor.shape[3] - pad_w
+    return tensor[:, :, :h, :w]
+
+
+def detect_scene_change(frame_a, frame_b, threshold=0.40):
+    """Detect if two frames are from different scenes by comparing
+    mean absolute difference of downscaled grayscale versions.
+    Returns True if a scene change is detected."""
+    small_size = (64, 64)
+    gray_a = cv2.cvtColor(frame_a, cv2.COLOR_BGR2GRAY)
+    gray_b = cv2.cvtColor(frame_b, cv2.COLOR_BGR2GRAY)
+    gray_a = cv2.resize(gray_a, small_size).astype(np.float32) / 255.0
+    gray_b = cv2.resize(gray_b, small_size).astype(np.float32) / 255.0
+    diff = np.mean(np.abs(gray_a - gray_b))
+    return diff > threshold
+
+
+def load_interpolation_model(model_name, device):
+    log("info", f"Loading RIFE model: {model_name}")
+    model = RIFEModel(model_name).to(device)
+    model.eval()
+
+    base_key = model_name.replace("-tensorrt", "")
+    if is_weight_downloaded(base_key):
+        load_weights_if_available(model, base_key, device)
+    else:
+        log("info", f"No cached weights for {base_key}. Attempting download...")
+        success = download_weights(base_key)
+        if success:
+            load_weights_if_available(model, base_key, device)
+        else:
+            log("warn", f"Weights not available for {model_name}. Model will use untrained weights.")
+            log("warn", "Output quality will be poor until proper weights are downloaded.")
+
+    return model
+
+
+def load_upscale_model(model_name, scale, device):
+    log("info", f"Loading upscale model: {model_name}, scale: {scale}x")
+
+    # Ensure weights are available
+    if not is_weight_downloaded(model_name):
+        log("info", f"No cached weights for {model_name}. Attempting download...")
+        success = download_weights(model_name)
+        if not success:
+            log("error", f"Failed to download weights for {model_name}. Cannot proceed.")
+            raise RuntimeError(f"Weights not available for {model_name}")
+
+    weight_path = None
+    try:
+        from models.weight_loader import get_weight_path
+        weight_path = get_weight_path(model_name)
+    except ValueError:
+        pass
+
+    # Try spandrel first — it auto-detects architecture from weight files
+    try:
+        import spandrel
+        if weight_path and os.path.exists(weight_path):
+            log("info", f"Loading model via spandrel (auto-detect architecture)...")
+            model_descriptor = spandrel.ModelLoader(device=device).load_from_file(weight_path)
+            log("info", f"Spandrel loaded model: {model_descriptor.architecture}")
+            return model_descriptor
+    except ImportError:
+        log("warn", "spandrel not installed. Falling back to built-in ShuffleCUGAN architecture.")
+        log("warn", "Install spandrel for proper model loading: pip install spandrel")
+    except Exception as e:
+        log("warn", f"spandrel loading failed ({e}). Falling back to built-in architecture.")
+
+    # Fallback: try built-in ShuffleCUGANModel (may not match weight keys)
+    log("info", f"Using built-in ShuffleCUGAN architecture for {model_name}")
+    model = ShuffleCUGANModel(model_name, scale).to(device)
+    model.eval()
+    if weight_path and os.path.exists(weight_path):
+        load_weights_if_available(model, model_name, device)
+    else:
+        log("warn", f"Weights not available for {model_name}. Model will use untrained weights.")
+        log("warn", "Output quality will be poor until proper weights are downloaded.")
+
+    return model
+
+
+def run_interpolation(input_path, output_path, model_name, factor):
+    log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
+
+    print_gpu_info()
+    device = get_device()
+    log("info", f"Using device: {device}")
+
+    use_tensorrt = "tensorrt" in model_name and is_tensorrt_available()
+    if "tensorrt" in model_name and not is_tensorrt_available():
+        log("warn", "TensorRT requested but not available. Falling back to PyTorch CUDA.")
+        use_tensorrt = False
+
+    video = VideoProcessor(input_path, output_path)
+    w, h, fps, total_frames = video.get_info()
+    video.setup_writer(fps * factor)
+    log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
+
+    # Check if dimensions need padding for RIFE's U-Net architecture
+    pad_h = (32 - h % 32) % 32
+    pad_w = (32 - w % 32) % 32
+    if pad_h > 0 or pad_w > 0:
+        log("info", f"Padding frames from {w}x{h} to {w + pad_w}x{h + pad_h} (mod-32 alignment)")
+
+    trt_engine = None
+    model = None
+
+    if use_tensorrt:
+        log("info", "Initializing TensorRT engine...")
+        base_key = model_name.replace("-tensorrt", "")
+        ensure_engines_dir()
+        # Use padded dimensions for engine building
+        engine_h = h + pad_h
+        engine_w = w + pad_w
+        engine_path = get_engine_path(base_key, (engine_h, engine_w), "fp16")
+
+        if not os.path.exists(engine_path):
+            log("info", "Building TensorRT engine from PyTorch model...")
+            pt_model = load_interpolation_model(base_key, device)
+            onnx_path = build_rife_onnx(pt_model, base_key, (engine_h, engine_w), device)
+            engine_path = build_rife_tensorrt_engine(onnx_path, engine_path, "fp16")
+            del pt_model
+            torch.cuda.empty_cache()
+
+        if engine_path and os.path.exists(engine_path):
+            engine = load_tensorrt_engine(engine_path)
+            if engine is not None:
+                trt_engine = TensorRTInferenceEngine(engine)
+                trt_engine.allocate_buffers({
+                    "img0": (1, 3, engine_h, engine_w),
+                    "img1": (1, 3, engine_h, engine_w),
+                })
+                log("info", "TensorRT engine ready for inference")
+            else:
+                log("error", "Failed to load TensorRT engine. Falling back to PyTorch.")
+                use_tensorrt = False
+
+    if not use_tensorrt:
+        model = load_interpolation_model(model_name.replace("-tensorrt", ""), device)
+
+    log("info", "Starting frame interpolation...")
+    frame_idx = 0
+    prev_frame = None
+    scene_changes = 0
+
+    for frame in video.read_frames():
+        if prev_frame is not None:
+            # Detect scene changes to avoid ghosting at hard cuts
+            is_scene_change = detect_scene_change(prev_frame, frame)
+            if is_scene_change:
+                scene_changes += 1
+                # At scene changes, duplicate prev_frame for the intermediate slots
+                # instead of interpolating (which would create ghosting)
+                for _ in range(1, factor):
+                    video.writer.write(prev_frame)
+            elif use_tensorrt and trt_engine is not None:
+                # TensorRT inference path
+                t0 = frame_to_tensor(prev_frame, device).half()
+                t1 = frame_to_tensor(frame, device).half()
+                t0, pad_info = pad_to_mod(t0, 32)
+                t1, _ = pad_to_mod(t1, 32)
+                for f in range(1, factor):
+                    alpha = f / factor
+                    with torch.no_grad():
+                        # Pass timestep to TensorRT engine
+                        timestep_tensor = torch.full(
+                            (1, 1, t0.shape[2], t0.shape[3]),
+                            alpha, dtype=t0.dtype, device=device
+                        )
+                        result = trt_engine.infer({
+                            "img0": t0, "img1": t1, "timestep": timestep_tensor
+                        })
+                        mid = unpad(result["output"].float(), pad_info)
+                    interp = tensor_to_frame(mid, str(device))
+                    video.writer.write(interp)
+            else:
+                # PyTorch CUDA inference path
+                t0 = frame_to_tensor(prev_frame, device)
+                t1 = frame_to_tensor(frame, device)
+                t0_padded, pad_info = pad_to_mod(t0, 32)
+                t1_padded, _ = pad_to_mod(t1, 32)
+                with torch.no_grad():
+                    for f in range(1, factor):
+                        alpha = f / factor
+                        # Each intermediate frame is independently interpolated
+                        # between the original pair with the correct timestep.
+                        # This is the correct RIFE usage — never chain results.
+                        mid = model(t0_padded, t1_padded, alpha)
+                        mid = unpad(mid, pad_info)
+                        interp_frame = tensor_to_frame(mid, str(device))
+                        video.writer.write(interp_frame)
+
+            video.writer.write(frame)
+        else:
+            video.writer.write(frame)
+
+        prev_frame = frame
+        frame_idx += 1
+        denom = max(total_frames, 1)
+        pct = min(100, int((frame_idx / denom) * 100))
+        log("progress", f"Interpolating frames... {frame_idx}/{denom}", pct=pct)
+
+    if scene_changes > 0:
+        log("info", f"Scene changes detected and skipped: {scene_changes}")
+
+    video.close()
+    if model is not None:
+        del model
+    if trt_engine is not None:
+        del trt_engine
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    mux_audio(output_path, input_path)
+    log("success", "Interpolation process completed successfully.")
+
+
+def run_upscaling(input_path, output_path, model_name, scale):
+    log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
+
+    print_gpu_info()
+    device = get_device()
+    log("info", f"Using device: {device}")
+
+    model = load_upscale_model(model_name, scale, device)
+
+    video = VideoProcessor(input_path, output_path)
+    w, h, fps, total_frames = video.get_info()
+    video.setup_writer(fps, scale=scale)
+    log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
+
+    log("info", "Starting frame upscaling...")
+    frame_idx = 0
+
+    for frame in video.read_frames():
+        tensor = frame_to_tensor(frame, device)
+
+        with torch.no_grad():
+            upscaled = model(tensor)
+
+        # Clamp output to valid range and convert to frame
+        upscaled = torch.clamp(upscaled, 0, 1)
+        result = tensor_to_frame(upscaled, str(device))
+        video.writer.write(result)
+
+        frame_idx += 1
+        denom = max(total_frames, 1)
+        pct = min(100, int((frame_idx / denom) * 100))
+        log("progress", f"Upscaling frames... {frame_idx}/{denom}", pct=pct)
+
+    video.close()
+    del model
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    mux_audio(output_path, input_path)
+    log("success", "Upscaling process completed successfully.")
+
+
+def run_gpu_info():
+    import torch
+    import platform
+    from utils import get_gpu_info, check_tensorrt
+
+    info = get_gpu_info()
+    info["tensorrt_available"] = check_tensorrt()
+    info["torch_version"] = torch.__version__
+    info["python_version"] = sys.version
+
+    # System Info
+    info["sys_os"] = f"{platform.system()} {platform.release()}"
+    info["sys_arch"] = platform.machine()
+    info["sys_hostname"] = platform.node()
+
+    # CPU
+    cpu = ""
+    try:
+        if platform.system() == "Windows":
+            cpu = platform.processor()
+        elif platform.system() == "Darwin":
+            import subprocess
+            cpu = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"]).decode().strip()
+        else:
+            import subprocess
+            cpu = subprocess.check_output("grep -m 1 'model name' /proc/cpuinfo | cut -d: -f2", shell=True).decode().strip()
+    except Exception:
+        cpu = platform.processor() or "Unknown"
+    info["sys_cpu"] = cpu
+
+    # RAM
+    ram = 0
+    try:
+        if platform.system() == "Windows":
+            import ctypes
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong)
+                ]
+            stat = MEMORYSTATUSEX()
+            stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+            ram = stat.ullTotalPhys
+        elif platform.system() == "Darwin":
+            import subprocess
+            ram = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"]).decode().strip())
+        else:
+            with open("/proc/meminfo", "r") as f:
+                for line in f:
+                    if line.startswith("MemTotal:"):
+                        ram = int(line.split()[1]) * 1024
+                        break
+    except Exception:
+        pass
+    info["sys_ram_bytes"] = ram
+
+    log("gpu_info", json.dumps(info))
+
+
+def run_sys_metrics():
+    import platform
+    import subprocess
+    import json
+
+    metrics = {
+        "cpu_percent": 0.0,
+        "ram_total_gb": 0.0,
+        "ram_used_gb": 0.0,
+        "ram_percent": 0.0,
+        "gpu_name": "N/A",
+        "gpu_util": 0.0,
+        "gpu_temp": 0.0,
+        "gpu_mem_used_mb": 0.0,
+        "gpu_mem_total_mb": 0.0,
+        "gpu_mem_percent": 0.0
+    }
+
+    # 1. CPU Percent
+    try:
+        import psutil
+        metrics["cpu_percent"] = psutil.cpu_percent(interval=0.1)
+    except ImportError:
+        # Fallback for Windows
+        if platform.system() == "Windows":
+            try:
+                out = subprocess.check_output("wmic cpu get loadpercentage", shell=True).decode().split()
+                if len(out) >= 2:
+                    metrics["cpu_percent"] = float(out[1])
+            except Exception:
+                pass
+
+    # 2. RAM
+    try:
+        import psutil
+        mem = psutil.virtual_memory()
+        metrics["ram_total_gb"] = mem.total / (1024**3)
+        metrics["ram_used_gb"] = mem.used / (1024**3)
+        metrics["ram_percent"] = mem.percent
+    except ImportError:
+        if platform.system() == "Windows":
+            try:
+                import ctypes
+                class MEMORYSTATUSEX(ctypes.Structure):
+                    _fields_ = [
+                        ("dwLength", ctypes.c_ulong),
+                        ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("ullAvailExtendedVirtual", ctypes.c_ulonglong)
+                    ]
+                stat = MEMORYSTATUSEX()
+                stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+                ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+                total = stat.ullTotalPhys
+                avail = stat.ullAvailPhys
+                used = total - avail
+                metrics["ram_total_gb"] = total / (1024**3)
+                metrics["ram_used_gb"] = used / (1024**3)
+                metrics["ram_percent"] = float(stat.dwMemoryLoad)
+            except Exception:
+                pass
+
+    # 3. GPU Info via nvidia-smi
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name,utilization.gpu,utilization.memory,temperature.gpu,memory.used,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            parts = result.stdout.strip().split(",")
+            if len(parts) >= 6:
+                metrics["gpu_name"] = parts[0].strip()
+                metrics["gpu_util"] = float(parts[1].strip())
+                metrics["gpu_mem_percent"] = float(parts[2].strip())
+                metrics["gpu_temp"] = float(parts[3].strip())
+                metrics["gpu_mem_used_mb"] = float(parts[4].strip())
+                metrics["gpu_mem_total_mb"] = float(parts[5].strip())
+    except Exception:
+        pass
+
+    log("sys_metrics", json.dumps(metrics))
+
+
+def run_dedupe(
+    input_path,
+    output_path,
+    threshold,
+    region_sensitivity=1,
+    use_optical_flow=True,
+    camera_compensation=True,
+    remove_static_subject=True
+):
+    log("info", f"Starting Duplicate Frame Removal. Input: {input_path}")
+
+    from duplicate_frame_remover.processor import process_single_video
+    from utils import get_gpu_info
+    import sys
+    from pathlib import Path
+
+    # Find ffmpeg.exe in the same directory as this script (backend tools folder)
+    ffmpeg_exe = None
+    script_dir = Path(__file__).parent
+    local_ffmpeg = script_dir / "ffmpeg.exe"
+    if local_ffmpeg.exists():
+        ffmpeg_exe = str(local_ffmpeg)
+    else:
+        import shutil
+        ffmpeg_exe = shutil.which("ffmpeg")
+
+    gpu_info = get_gpu_info()
+    use_gpu = gpu_info.get("cuda_available", False)
+
+    # Convert difference threshold (UI 0.05) to similarity threshold (Python 0.95)
+    similarity_threshold = 1.0 - threshold
+
+    def progress_cb(current, total, unique, dupes):
+        pct = min(100, int((current / max(total, 1)) * 100))
+        log("progress", f"Processed frames... {current}/{total} (Unique: {unique}, Duplicate: {dupes})", pct=pct)
+
+    try:
+        stats = process_single_video(
+            input_path=Path(input_path),
+            output_path=Path(output_path),
+            ffmpeg_path=ffmpeg_exe,
+            similarity_threshold=similarity_threshold,
+            use_optical_flow=use_optical_flow,
+            region_sensitivity=region_sensitivity,
+            camera_motion_compensation=camera_compensation,
+            remove_static_subject=remove_static_subject,
+            verbose=False,
+            use_gpu=use_gpu,
+            progress_callback=progress_cb
+        )
+        log("info", f"Deduplication report: Total={stats['total_frames']}, Unique={stats['unique_frames']}, Duplicate={stats['duplicate_frames']}")
+        mux_audio(str(output_path), str(input_path))
+        log("success", "Duplicate frame removal completed successfully.")
+    except Exception as e:
+        log("error", f"Deduplication failed: {e}")
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="AniSmooth PyTorch Pipeline")
+    parser.add_argument("--mode", type=str, required=True,
+                        choices=["interpolate", "upscale", "gpu-info", "sys-metrics", "dedupe"], help="Execution mode")
+    parser.add_argument("--input", type=str, default="", help="Input video file path")
+    parser.add_argument("--output", type=str, default="", help="Output video file path")
+    parser.add_argument("--model", type=str, default="", help="Model name selection")
+    parser.add_argument("--factor", type=int, default=2,
+                        help="Scale or interpolation multiplier factor")
+    parser.add_argument("--threshold", type=float, default=0.05,
+                        help="Deduplication threshold (difference amount, e.g. 0.05)")
+    parser.add_argument("--region-sensitivity", type=int, default=1,
+                        help="Minimum changed regions to consider unique motion")
+    parser.add_argument("--no-optical-flow", action="store_true",
+                        help="Disable optical flow comparison")
+    parser.add_argument("--no-camera-comp", action="store_true",
+                        help="Disable camera motion compensation")
+    parser.add_argument("--no-static-subject", action="store_true",
+                        help="Disable static subject detection")
+
+    args = parser.parse_args()
+
+    if args.mode == "gpu-info":
+        try:
+            run_gpu_info()
+        except Exception as e:
+            log("error", f"GPU info failed: {e}")
+            sys.exit(1)
+        return
+
+    if args.mode == "sys-metrics":
+        try:
+            run_sys_metrics()
+        except Exception as e:
+            log("error", f"System metrics failed: {e}")
+            sys.exit(1)
+        return
+
+    if args.mode == "dedupe":
+        try:
+            run_dedupe(
+                args.input,
+                args.output,
+                args.threshold,
+                region_sensitivity=args.region_sensitivity,
+                use_optical_flow=not args.no_optical_flow,
+                camera_compensation=not args.no_camera_comp,
+                remove_static_subject=not args.no_static_subject
+            )
+        except Exception as e:
+            log("error", f"Deduplication failed: {e}")
+            sys.exit(1)
+        return
+
+    if not os.path.exists(args.input):
+        log("error", f"Input video path not found: {args.input}")
+        sys.exit(1)
+
+    try:
+        if args.mode == "interpolate":
+            run_interpolation(args.input, args.output, args.model, args.factor)
+        elif args.mode == "upscale":
+            run_upscaling(args.input, args.output, args.model, args.factor)
+    except Exception as e:
+        log("error", f"Processing failed: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

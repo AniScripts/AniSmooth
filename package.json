@@ -1,0 +1,9 @@
+{
+  "name": "anismooth-root",
+  "version": "1.0.0",
+  "description": "Root shortcuts for AniSmooth AE Extension tools",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix tools"
+  }
+}

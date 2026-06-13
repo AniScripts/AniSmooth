@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Production build output
+dist/
+
+# Archive and log files
+*.rar
+*.zip
+*.log
+*.tmp
+logs.txt
+
+# Certificates (sensitive)
+tools/cert.p12
+
+# Inno Setup output
+*.exe

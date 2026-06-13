@@ -1,0 +1,599 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AniSmooth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/toolsSetup.css">
+</head>
+
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="topbar-brand">AniSmooth</span>
+      <nav class="topbar-nav">
+        <button id="deadframesTabBtn" class="nav-icon active" title="Deadframes">
+          <i class="fa-solid fa-scissors"></i>
+        </button>
+        <button id="interpolationTabBtn" class="nav-icon" title="Interpolation">
+          <i class="fa-solid fa-forward"></i>
+        </button>
+        <button id="upscaleTabBtn" class="nav-icon" title="Upscale">
+          <i class="fa-solid fa-expand"></i>
+        </button>
+        <button id="consoleTabBtn" class="nav-icon" title="Console">
+          <i class="fa-solid fa-terminal"></i>
+        </button>
+        <button id="queueTabBtn" class="nav-icon" title="Queue">
+          <i class="fa-solid fa-list-check"></i>
+        </button>
+        <button id="sysmonTabBtn" class="nav-icon" title="System Monitor">
+          <i class="fa-solid fa-chart-line"></i>
+        </button>
+        <button id="settingsTabBtn" class="nav-icon" title="Settings">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+      </nav>
+    </header>
+
+    <main class="content">
+      <!-- Deadframes -->
+      <div id="deadframesView" class="tab-content">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-film panel-head-icon"></i>
+            <span class="panel-title">Remove Duplicate Deadframes</span>
+          </div>
+          <div class="form-group">
+            <label for="deadframeThreshold">Sensitivity (Lower = Removes More)</label>
+            <input type="number" id="deadframeThreshold" value="0.05" min="0.0" max="1.0" step="0.01">
+            <span class="form-hint">Threshold to identify duplicates (0.01 to 0.10 is standard).</span>
+          </div>
+          <div class="form-group">
+            <label for="deadframeRegionSensitivity">Minimum Motion Size</label>
+            <input type="number" id="deadframeRegionSensitivity" value="1" min="1" max="16" step="1">
+            <span class="form-hint">How many grid blocks (out of 16) must change to consider it unique motion.</span>
+          </div>
+          <div class="form-group">
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Track Motion (Optical Flow)</span>
+              <input type="checkbox" class="toggle-input" id="deadframeOpticalFlow" checked>
+              <span class="toggle-switch"></span>
+            </div>
+            <span class="form-hint">Uses pixel tracking to tell the difference between duplicates and slow motion.</span>
+          </div>
+          <div class="form-group">
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Ignore Camera Movement</span>
+              <input type="checkbox" class="toggle-input" id="deadframeCameraComp" checked>
+              <span class="toggle-switch"></span>
+            </div>
+            <span class="form-hint">Detects camera panning/zooming so camera movement isn't mistaken for unique frames.</span>
+          </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Remove Frozen Characters</span>
+              <input type="checkbox" class="toggle-input" id="deadframeStaticSubject" checked>
+              <span class="toggle-switch"></span>
+            </div>
+            <span class="form-hint">Removes frames where the background/camera moves but the characters themselves are completely frozen.</span>
+          </div>
+          <button id="removeDeadframesBtn" class="btn">
+            <i class="fa-solid fa-scissors"></i> Remove Deadframes
+          </button>
+        </div>
+      </div>
+
+      <!-- Interpolation -->
+      <div id="interpolationView" class="tab-content hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-forward-step panel-head-icon"></i>
+            <span class="panel-title">RIFE Interpolation</span>
+          </div>
+          <div class="form-group">
+            <div id="interpLayerInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Model</label>
+            <div class="custom-select" id="interpolationModel">
+              <div class="select-trigger">
+                <span class="select-value"><i class="fa-solid fa-microchip"></i> RIFE 4.25 HEAVY Cuda</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="rife4.25-heavy" data-label="RIFE 4.25 HEAVY Cuda"><i class="fa-solid fa-microchip"></i> RIFE 4.25 HEAVY Cuda</div>
+                <div class="select-option" data-value="rife4.25" data-label="RIFE 4.25 Cuda"><i class="fa-solid fa-microchip"></i> RIFE 4.25 Cuda</div>
+                <div class="select-sep"><span>TensorRT</span></div>
+                <div class="select-option" data-value="rife4.25-heavy-tensorrt" data-label="RIFE 4.25 HEAVY TensorRT"><i class="fa-solid fa-bolt"></i> RIFE 4.25 HEAVY TensorRT</div>
+                <div class="select-option" data-value="rife4.25-tensorrt" data-label="RIFE 4.25 TensorRT"><i class="fa-solid fa-bolt"></i> RIFE 4.25 TensorRT</div>
+              </div>
+            </div>
+            <div class="info-card" id="interpModelInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Factor</label>
+            <div class="factor-presets" id="interpolationFactor">
+              <button class="factor-btn active" data-value="2">2×</button>
+              <button class="factor-btn" data-value="4">4×</button>
+              <button class="factor-btn" data-value="6">6×</button>
+              <button class="factor-btn" data-value="8">8×</button>
+              <button class="factor-btn" data-value="10">10×</button>
+              <input type="number" class="factor-custom" id="interpFactorCustom" placeholder="custom" min="2" max="64" value="">
+            </div>
+            <div class="info-card" id="interpFactorInfo"></div>
+          </div>
+          <div class="btn-row">
+            <button id="startInterpolateBtn" class="btn">
+              <i class="fa-solid fa-plus"></i> Add to Queue
+            </button>
+            <button id="previewInterpolateBtn" class="btn" style="flex:0.4;">
+              <i class="fa-solid fa-play"></i> Preview
+            </button>
+            <button id="cancelInterpolateBtn" class="btn btn-cancel" style="display:none;">
+              <i class="fa-solid fa-stop"></i> Cancel
+            </button>
+          </div>
+          <div id="interpPreviewBar" class="progress-wrap" style="display:none;">
+            <div class="progress-track">
+              <div id="interpPreviewFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="interpPreviewLabel">Preview</span>
+              <span id="interpPreviewPercent">0%</span>
+            </div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div id="interpolationProgressFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="interpolationProgressLabel">Ready</span>
+              <span id="interpolationProgressPercent">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upscale -->
+      <div id="upscaleView" class="tab-content hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-maximize panel-head-icon"></i>
+            <span class="panel-title">Video Upscaling</span>
+          </div>
+          <div class="form-group">
+            <div id="upscaleLayerInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Model</label>
+            <div class="custom-select" id="upscaleModel">
+              <div class="select-trigger">
+                <span class="select-value"><i class="fa-solid fa-microchip"></i> Adore Cuda</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="adore" data-label="Adore Cuda"><i class="fa-solid fa-microchip"></i> Adore Cuda</div>
+                <div class="select-sep"><span>Sharp Detail</span></div>
+                <div class="select-option" data-value="fallin_soft" data-label="Fallin Soft Cuda"><i class="fa-solid fa-microchip"></i> Fallin Soft Cuda</div>
+              </div>
+            </div>
+            <div class="info-card" id="upscaleModelInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Multiplier</label>
+            <div class="custom-select" id="upscaleScale">
+              <div class="select-trigger">
+                <span class="select-value">2x</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="2">2x</div>
+                <div class="select-option" data-value="4">4x</div>
+              </div>
+            </div>
+            <div class="info-card" id="upscaleScaleInfo"></div>
+          </div>
+          <div class="btn-row">
+            <button id="startUpscaleBtn" class="btn">
+              <i class="fa-solid fa-plus"></i> Add to Queue
+            </button>
+            <button id="previewUpscaleBtn" class="btn" style="flex:0.4;">
+              <i class="fa-solid fa-play"></i> Preview
+            </button>
+          </div>
+          <div id="upscalePreviewBar" class="progress-wrap" style="display:none;">
+            <div class="progress-track">
+              <div id="upscalePreviewFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="upscalePreviewLabel">Preview</span>
+              <span id="upscalePreviewPercent">0%</span>
+            </div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div id="upscaleProgressFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="upscaleProgressLabel">Ready</span>
+              <span id="upscaleProgressPercent">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Console -->
+      <div id="consoleView" class="tab-content hidden">
+        <div class="console-bar">
+          <div class="console-bar-left">
+            <i class="fa-solid fa-magnifying-glass console-search-icon"></i>
+            <input id="consoleSearch" type="text" placeholder="Filter logs...">
+          </div>
+          <div class="console-bar-right">
+            <button id="consoleClearBtn" class="btn-sm"><i class="fa-solid fa-eraser"></i> Clear</button>
+            <button id="consoleExportBtn" class="btn-sm"><i class="fa-solid fa-download"></i> Export</button>
+          </div>
+        </div>
+        <div id="consoleEntries" class="console-entries"></div>
+      </div>
+
+      <!-- Queue -->
+      <div id="queueView" class="tab-content hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-list-check panel-head-icon"></i>
+            <span class="panel-title">Process Queue</span>
+          </div>
+          <div class="queue-toolbar">
+            <button id="queueCancelBtn" class="btn-sm" style="display:none;">
+              <i class="fa-solid fa-stop"></i> Cancel All
+            </button>
+            <div style="flex:1;"></div>
+            <button id="queueClearBtn" class="btn-sm" style="display:none;">
+              <i class="fa-solid fa-broom"></i> Clear Done
+            </button>
+          </div>
+          <div id="queueEntries" class="queue-entries"></div>
+        </div>
+      </div>
+
+      <!-- System Monitor -->
+      <div id="sysmonView" class="tab-content hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-chart-line panel-head-icon"></i>
+            <span class="panel-title">System Monitor</span>
+          </div>
+          <div class="form-group">
+            <span class="form-hint" style="margin-bottom: 12px; display: block;">Real-time CPU, RAM, and GPU diagnostics fetched via Python.</span>
+          </div>
+          <div id="sysmonDetails" class="env-list">
+            <div class="env-row"><i class="fa-solid fa-spinner fa-spin"></i> <span>Initializing monitor...</span></div>
+          </div>
+          <button id="sysmonRefreshBtn" class="btn" style="margin-top: 15px;">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh Metrics
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div id="settingsView" class="tab-content hidden">
+        <nav class="sub-nav" id="settingsSubNav">
+          <button class="sub-tab active" data-cat="system" title="System">
+            <i class="fa-solid fa-microchip"></i>
+          </button>
+          <button class="sub-tab" data-cat="output" title="Output">
+            <i class="fa-solid fa-folder-open"></i>
+          </button>
+          <button class="sub-tab" data-cat="python" title="Python">
+            <i class="fa-brands fa-python"></i>
+          </button>
+          <button class="sub-tab" data-cat="tools" title="Tools">
+            <i class="fa-solid fa-toolbox"></i>
+          </button>
+          <button class="sub-tab" data-cat="interface" title="Interface">
+            <i class="fa-solid fa-sliders"></i>
+          </button>
+          <button class="sub-tab" data-cat="presets" title="Presets">
+            <i class="fa-solid fa-bookmark"></i>
+          </button>
+        </nav>
+
+        <div class="settings-cat" id="settingsCatSystem">
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-microchip panel-head-icon"></i>
+              <span class="panel-title">GPU</span>
+            </div>
+            <div class="gpu-card" id="gpuCard">
+              <div class="gpu-status-row">
+                <div class="gpu-indicator" id="gpuIndicator">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i>
+                </div>
+                <div class="gpu-main-info">
+                  <div class="gpu-name" id="gpuName">Detecting GPU...</div>
+                  <div class="gpu-meta" id="gpuMeta"></div>
+                </div>
+                <button id="refreshGpuBtn" class="btn-sm" title="Refresh GPU info">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+              </div>
+              <div class="gpu-details" id="gpuDetails">
+                <div class="gpu-stat">
+                  <span class="gpu-stat-label">VRAM</span>
+                  <div class="gpu-vram-bar-wrap">
+                    <div class="gpu-vram-bar">
+                      <div class="gpu-vram-fill" id="gpuVramFill"></div>
+                    </div>
+                    <span class="gpu-vram-text" id="gpuVramText">--</span>
+                  </div>
+                </div>
+                <div class="gpu-badges" id="gpuBadges"></div>
+                <div class="gpu-actions" id="gpuActions" style="display:none;margin-top:8px;"></div>
+                <div id="gpuInstallLog" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-cubes panel-head-icon"></i>
+              <span class="panel-title">CUDA &amp; PyTorch</span>
+            </div>
+            <div id="cudaInfo" class="env-list">
+              <div class="env-row"><i class="fa-solid fa-spinner fa-spin"></i> <span>Waiting for GPU scan...</span></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-desktop panel-head-icon"></i>
+              <span class="panel-title">System</span>
+            </div>
+            <div id="sysInfo" class="env-list">
+              <div class="env-row">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatInterface">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-sliders panel-head-icon"></i>
+            <span class="panel-title">Navbar Tabs</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Show or hide tabs in the top navigation bar. Settings cannot be hidden.</span>
+          <div id="interfaceToggles"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-microchip panel-head-icon"></i>
+            <span class="panel-title">Interpolation Models</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:6px;display:block;">Choose which models appear in the interpolation dropdown.</span>
+          <div id="interpModelToggles"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-maximize panel-head-icon"></i>
+            <span class="panel-title">Upscale Models</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:6px;display:block;">Choose which models appear in the upscale dropdown.</span>
+          <div id="upscaleModelToggles"></div>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatPresets">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-bookmark panel-head-icon"></i>
+            <span class="panel-title">Presets</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Save, load, and share your settings configurations. Export to share with others.</span>
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button id="presetSaveBtn" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Current</button>
+            <button id="presetImportBtn" class="btn"><i class="fa-solid fa-file-import"></i> Import</button>
+          </div>
+          <div class="preset-legend" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;padding:4px 0 6px 0;font-size:8px;color:#4b5563;border-bottom:1px solid #14161e;justify-content:space-between;align-items:center;">
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-i" style="width:4px;height:4px;margin:0;"></span> Interp</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-u" style="width:4px;height:4px;margin:0;"></span> Upscale</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-d" style="width:4px;height:4px;margin:0;"></span> Deadframes</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-o" style="width:4px;height:4px;margin:0;"></span> Output</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-p" style="width:4px;height:4px;margin:0;"></span> Python</span>
+          </div>
+          <div id="presetList" class="preset-list"></div>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatOutput">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-folder-open panel-head-icon"></i>
+            <span class="panel-title">Output Folder</span>
+          </div>
+          <div class="form-group">
+            <label>Save Location</label>
+            <div class="folder-row">
+              <div id="outputFolderText" class="folder-text">Select output...</div>
+              <button id="chooseOutputFolderBtn" class="btn-sm"><i class="fa-solid fa-folder"></i></button>
+            </div>
+            <span class="form-hint">All processed files and pre-renders are saved here.</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-file-signature panel-head-icon"></i>
+            <span class="panel-title">File Naming</span>
+          </div>
+          <div class="form-group">
+            <label for="outputPrefix">Prefix</label>
+            <input type="text" id="outputPrefix" value="AniSmooth" maxlength="24">
+            <span class="form-hint">Prepended to all output filenames.</span>
+          </div>
+          <div class="form-group">
+            <label for="outputTimestamp">Include Timestamp</label>
+            <div class="toggle-row" style="padding:0;">
+              <input type="checkbox" class="toggle-input" id="outputTimestamp" checked>
+              <span class="toggle-switch"></span>
+              <span style="font-size:9px;color:#4b5563;margin-left:4px;">Prevents overwrites</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-sliders panel-head-icon"></i>
+            <span class="panel-title">Behavior</span>
+          </div>
+          <div class="form-group">
+            <div class="toggle-row" style="padding:0;margin-bottom:6px;">
+              <span class="toggle-label" style="flex:1;">Auto-import to AE</span>
+              <input type="checkbox" class="toggle-input" id="outputAutoImport" checked>
+              <span class="toggle-switch"></span>
+            </div>
+            <span class="form-hint">Automatically adds processed files to the active composition.</span>
+          </div>
+          <div class="form-group">
+            <div class="toggle-row" style="padding:0;margin-bottom:6px;">
+              <span class="toggle-label" style="flex:1;">Save pre-render copy</span>
+              <input type="checkbox" class="toggle-input" id="outputKeepPrerender" checked>
+              <span class="toggle-switch"></span>
+            </div>
+            <span class="form-hint">Keeps an extra copy of the timeline pre-render alongside the processed output.</span>
+          </div>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatPython">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-brands fa-python panel-head-icon"></i>
+            <span class="panel-title">Python</span>
+          </div>
+          <div class="form-group">
+            <label for="pythonPathInput">Executable Path</label>
+            <input type="text" id="pythonPathInput" value="python">
+          </div>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatTools">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-toolbox panel-head-icon"></i>
+            <span class="panel-title">Environment</span>
+          </div>
+          <div id="envInfoList" class="env-list">
+            <div class="env-row"><i class="fa-solid fa-spinner fa-spin"></i> <span>Loading...</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-folder-tree panel-head-icon"></i>
+            <span class="panel-title">Folders</span>
+          </div>
+          <div class="env-actions" id="envFolderActions"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-database panel-head-icon"></i>
+            <span class="panel-title">Model Manager</span>
+          </div>
+          <div id="modelManagerList" class="model-list">
+            <div class="model-empty"><i class="fa-solid fa-spinner fa-spin"></i> Scanning...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-wrench panel-head-icon"></i>
+            <span class="panel-title">Maintenance</span>
+          </div>
+          <button id="rerunSetupBtn" class="btn">
+            <i class="fa-solid fa-arrows-rotate"></i> Rerun Setup Wizard
+          </button>
+        </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tools-setup-gate" class="setup-gate" style="display:none;"></div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-icon"><i class="fa-solid fa-circle-question"></i></div>
+      <p class="modal-msg" id="confirmMsg"></p>
+      <div class="modal-btns">
+        <button class="btn-sm" id="confirmCancel"><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button class="btn" id="confirmOk"><i class="fa-solid fa-check"></i> Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt Modal (text input) -->
+  <div id="promptModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-icon"><i class="fa-solid fa-pen-to-square"></i></div>
+      <p class="modal-msg" id="promptTitle"></p>
+      <div class="modal-input-wrap">
+        <input type="text" id="promptInput" class="modal-input" placeholder="Preset name..." maxlength="40">
+        <input type="text" id="promptDesc" class="modal-input modal-input-desc" placeholder="Description (optional)" maxlength="80">
+      </div>
+      <div class="modal-btns">
+        <button class="btn-sm" id="promptCancel"><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button class="btn" id="promptOk"><i class="fa-solid fa-check"></i> Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Picker Modal -->
+  <div id="sectionModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-icon"><i class="fa-solid fa-list-check"></i></div>
+      <p class="modal-msg">Choose what to include in this preset</p>
+      <div id="sectionToggles" class="section-toggles"></div>
+      <div class="modal-btns">
+        <button class="btn-sm" id="sectionSelectNone">None</button>
+        <button class="btn-sm" id="sectionSelectAll">All</button>
+        <button class="btn" id="sectionOk"><i class="fa-solid fa-check"></i> Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" style="display:none;">
+    <i id="toastIcon" class="fa-solid fa-circle-info"></i>
+    <span id="toastMsg"></span>
+    <button id="toastClose" class="toast-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <script src="./js/CSInterface.js"></script>
+  <script src="./js/utils/storage.js"></script>
+  <script src="./js/utils/fileSystem.js"></script>
+  <script src="./js/utils/customSelect.js"></script>
+  <script src="./js/utils/modelHandler.js"></script>
+  <script src="./js/utils/queueManager.js"></script>
+  <script src="./js/console.js"></script>
+  <script src="./js/components/deadframesPanel.js"></script>
+  <script src="./js/components/interpolationPanel.js"></script>
+  <script src="./js/components/upscalePanel.js"></script>
+  <script src="./js/components/consolePanel.js"></script>
+  <script src="./js/components/queuePanel.js"></script>
+  <script src="./js/components/toolsSetup.js"></script>
+  <script src="./js/components/sysmonPanel.js"></script>
+  <script src="./js/main.js"></script>
+</body>
+</html>
