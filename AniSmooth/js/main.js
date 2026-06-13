@@ -238,8 +238,14 @@
       if (pythonInput) {
         pythonInput.value = this.settings.pythonPath;
         pythonInput.addEventListener("change", function () {
-          self.settings.pythonPath = pythonInput.value;
-          window.StorageManager.setItem("anismooth_python_path", pythonInput.value);
+          var val = pythonInput.value.trim();
+          if (self._validatePythonPath(val)) {
+            self.settings.pythonPath = val;
+            window.StorageManager.setItem("anismooth_python_path", val);
+          } else {
+            window.showToast("Invalid/untrusted Python path. Restored previous.", "error");
+            pythonInput.value = self.settings.pythonPath;
+          }
         });
       }
 
@@ -990,7 +996,7 @@
           var p = this.getAttribute("data-path");
           if (p && window.FileSystem.fs.existsSync(p)) {
             try {
-              window.FileSystem.childProcess.exec('explorer "' + p + '"');
+              window.FileSystem.childProcess.execFile('explorer.exe', [p]);
             } catch (e) {}
           }
         });
@@ -1142,7 +1148,11 @@
     },
 
     _applyState: function (preset) {
-      
+      if (!this._validatePreset(preset)) {
+        dbg("error", "Presets", "Rejected invalid/unsafe preset");
+        window.showToast("Unsafe/invalid preset settings rejected.", "error");
+        return;
+      }
       var state = preset.settings || preset;
       if (state.interpolation) {
         var modelInt = document.getElementById("interpolationModel");
@@ -1197,6 +1207,40 @@
         var pi = document.getElementById("pythonPathInput");
         if (pi) pi.value = this.settings.pythonPath;
       }
+    },
+
+    _validatePreset: function (preset) {
+      if (!preset) return false;
+      var state = preset.settings || preset;
+      if (!state) return false;
+      var validInterp = ["rife4.25-heavy", "rife4.25", "rife4.25-heavy-tensorrt", "rife4.25-tensorrt"];
+      var validUpscale = ["adore", "fallin_soft"];
+      
+      if (state.interpolation && state.interpolation.model) {
+        if (validInterp.indexOf(state.interpolation.model) === -1) return false;
+      }
+      if (state.upscale && state.upscale.model) {
+        if (validUpscale.indexOf(state.upscale.model) === -1) return false;
+      }
+      if (state.python && state.python.path) {
+        if (!this._validatePythonPath(state.python.path)) return false;
+      }
+      return true;
+    },
+
+    _validatePythonPath: function (pPath) {
+      if (!pPath) return false;
+      if (pPath === "python" || pPath === "python3") return true;
+      // Reject UNC paths and network shares
+      if (pPath.indexOf("\\\\") === 0 || pPath.indexOf("//") === 0) {
+        return false;
+      }
+      // Must look like a local path
+      var lower = pPath.toLowerCase();
+      if (lower.indexOf("python") === -1) {
+        return false;
+      }
+      return true;
     },
 
     _showSectionPicker: function (name, description) {
@@ -1379,7 +1423,7 @@
         var outDir = this.settings.outputPath || (window.FileSystem.os ? window.FileSystem.os.homedir() : "");
         var filePath = window.FileSystem.path.join(outDir, filename);
         window.FileSystem.fs.writeFileSync(filePath, json, "utf8");
-        window.FileSystem.childProcess.exec('explorer /select,"' + filePath + '"');
+        window.FileSystem.childProcess.execFile('explorer.exe', ['/select,' + filePath]);
         dbg("info", "Presets", "Exported: " + filePath);
       } catch (e) {
         dbg("error", "Presets", "Export failed: " + (e.message || e));
@@ -1399,6 +1443,11 @@
           try {
             var raw = window.FileSystem.fs.readFileSync(filePath, "utf8");
             var preset = JSON.parse(raw);
+            if (!self._validatePreset(preset)) {
+              dbg("error", "Presets", "Rejected invalid/unsafe preset file during import");
+              window.showToast("Import failed: Preset contains invalid or unsafe values.", "error");
+              return;
+            }
             var defName = filePath.split("\\").pop().replace(/\.(preset\.)?json$/i, "").replace(/^AniSmooth_/, "");
             window.showPrompt("Import Preset", "Preset name...", "", function (name) {
               if (!name) return;

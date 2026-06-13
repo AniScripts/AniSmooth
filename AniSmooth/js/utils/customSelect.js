@@ -77,13 +77,15 @@
           this.setAttribute("data-value", newVal);
 
           var options = this.querySelectorAll(".select-option");
-          var displayHTML = newVal;
+          var displayHTML = "";
+          var found = false;
 
           for (var i = 0; i < options.length; i++) {
             var opt = options[i];
             if (opt.getAttribute("data-value") === newVal) {
               opt.classList.add("active");
               displayHTML = self.getOptionHTML(opt);
+              found = true;
             } else {
               opt.classList.remove("active");
             }
@@ -91,7 +93,11 @@
 
           var textSpan = this.querySelector(".select-value");
           if (textSpan) {
-            textSpan.innerHTML = displayHTML;
+            if (found) {
+              textSpan.innerHTML = displayHTML;
+            } else {
+              textSpan.textContent = newVal;
+            }
           }
 
           var event;

@@ -115,7 +115,7 @@ window.exportLog = function() {
     
     try {
       var childProcess = window.FileSystem.childProcess;
-      childProcess.exec('explorer /select,"' + filePath + '"');
+      childProcess.execFile('explorer.exe', ['/select,' + filePath]);
     } catch (e) {}
   } catch (e) {
     dbg("error", "Console", "Export failed: " + (e.message || e));

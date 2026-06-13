@@ -4,7 +4,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 
-PIP_PACKAGES = ["torch", "torchvision", "opencv-python", "numpy", "Pillow", "onnx", "onnxruntime", "spandrel"]
+PIP_PACKAGES = [
+    "torch==2.2.2",
+    "torchvision==0.17.2",
+    "opencv-python==4.9.0.80",
+    "numpy==1.26.4",
+    "Pillow==10.2.0",
+    "onnx==1.15.0",
+    "onnxruntime==1.17.1",
+    "spandrel==0.3.4"
+]
 
 def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
@@ -72,7 +81,7 @@ def find_in_zip(zip_path, exe_name, dest_dir):
         return None
 
 def install_ffmpeg():
-    """Download and install ffmpeg.exe and ffprobe.exe."""
+    """Download and install ffmpeg.exe and ffprobe.exe with SHA-256 integrity verification."""
     ffmpeg_exe = os.path.join(SCRIPT_DIR, "ffmpeg.exe")
     ffprobe_exe = os.path.join(SCRIPT_DIR, "ffprobe.exe")
 
@@ -84,6 +93,48 @@ def install_ffmpeg():
 
     zip_path = os.path.join(SCRIPT_DIR, "_ffmpeg_download.zip")
     if not download_file(FFMPEG_URL, zip_path, "FFmpeg"):
+        return False
+
+    # Download SHA-256 and verify
+    sha_path = zip_path + ".sha256"
+    if download_file(FFMPEG_URL + ".sha256", sha_path, "FFmpeg checksum"):
+        try:
+            with open(sha_path, "r", encoding="utf-8") as sf:
+                expected_sha = sf.read().strip().split()[0].lower()
+            import hashlib
+            sha256 = hashlib.sha256()
+            with open(zip_path, "rb") as f:
+                while True:
+                    data = f.read(65536)
+                    if not data:
+                        break
+                    sha256.update(data)
+            calculated_sha = sha256.hexdigest().lower()
+            try:
+                os.unlink(sha_path)
+            except Exception:
+                pass
+            if calculated_sha != expected_sha:
+                log("error", f"FFmpeg checksum verification failed! Expected: {expected_sha}, Got: {calculated_sha}")
+                try:
+                    os.unlink(zip_path)
+                except Exception:
+                    pass
+                return False
+            log("info", "FFmpeg checksum verified successfully.")
+        except Exception as e:
+            log("error", f"Failed to verify FFmpeg checksum: {e}")
+            try:
+                os.unlink(zip_path); os.unlink(sha_path)
+            except Exception:
+                pass
+            return False
+    else:
+        log("error", "Failed to download FFmpeg checksum file.")
+        try:
+            os.unlink(zip_path)
+        except Exception:
+            pass
         return False
 
     log("info", "Extracting FFmpeg...")

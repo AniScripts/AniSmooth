@@ -176,6 +176,38 @@ def _remap_state_dict_keys(state_dict, model):
     
     return state_dict
 
+MODEL_HASHES = {
+    "rife4.25": "040ed973997570f4f85489be3d8eb64be9c0cffdf0a9f049443b6a4838ed88f1",
+    "rife4.25-heavy": "49f7c82d3866860683992042ba8eb559b9c01fbe2600b80a53c56de05bb13b6f",
+    "adore": "443378bdc6db6cf4a75eea61ee7afc78b2c4b6a4d3b3981a40ff61f38bbc8f1a",
+    "fallin_soft": "910aa56a9a1187df97c3284177da1bc66836679350b2613191340734937e9960",
+}
+
+def verify_weight_hash(model_key, weight_path):
+    expected_hash = MODEL_HASHES.get(model_key)
+    if not expected_hash:
+        log("error", f"No verified hash exists for model key: {model_key}")
+        return False
+    
+    import hashlib
+    sha256 = hashlib.sha256()
+    try:
+        with open(weight_path, "rb") as f:
+            while True:
+                data = f.read(65536)
+                if not data:
+                    break
+                sha256.update(data)
+        calculated_hash = sha256.hexdigest().lower()
+        if calculated_hash != expected_hash:
+            log("error", f"Model weight hash verification failed for {model_key}! Expected: {expected_hash}, Got: {calculated_hash}")
+            return False
+        log("info", f"Model weight integrity verified for {model_key}.")
+        return True
+    except Exception as e:
+        log("error", f"Failed to compute hash for {weight_path}: {e}")
+        return False
+
 def load_weights_if_available(model, model_key, device=None):
     import torch
     try:
@@ -188,9 +220,12 @@ def load_weights_if_available(model, model_key, device=None):
         log("info", "Weight file not found: " + os.path.basename(weight_path))
         log("info", "Attempting download from TAS-Models-Host CDN...")
         if not download_weights(model_key):
-            log("warn", "Download failed. Place the model manually at:")
-            log("warn", "  " + weight_path)
+            log("error", "Download failed. Place the model manually at:")
+            log("error", "  " + weight_path)
             return False
+
+    if not verify_weight_hash(model_key, weight_path):
+        raise RuntimeError(f"Model integrity verification failed for {model_key}. File is corrupted or untrusted.")
 
     try:
         state_dict = torch.load(weight_path, map_location=device or "cpu",
@@ -229,5 +264,4 @@ def load_weights_if_available(model, model_key, device=None):
         return True
     except Exception as e:
         log("error", "Failed to load weights for " + model_key + ": " + str(e))
-        log("warn", "Model will run with random weights (low quality).")
-        return False
+        raise RuntimeError(f"Failed to load weights: {e}")

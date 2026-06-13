@@ -13,10 +13,20 @@
         return;
       }
 
+      // Validate command path (reject UNC/network/non-python executables)
+      var lowerCmd = command.toLowerCase();
+      if (lowerCmd !== "python" && lowerCmd !== "python3") {
+        if (command.indexOf("\\\\") === 0 || command.indexOf("//") === 0 || lowerCmd.indexOf("python") === -1) {
+          if (callbacks.onError) {
+            callbacks.onError("Untrusted or invalid Python executable path rejected: " + command);
+          }
+          return;
+        }
+      }
+
       dbg('info', 'ModelHandler', 'Spawning: ' + command + ' ' + args.join(' '));
       
       try {
-        
         var appdata = "";
         try { appdata = process.env.APPDATA || ""; } catch (e) {}
         if (!appdata && window.FileSystem && window.FileSystem.os && window.FileSystem.path) {
@@ -24,17 +34,32 @@
         }
         var toolsFolder = appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend") : "C:\\AniSmoothTools";
 
-        
         var env = {};
         for (var key in process.env) {
           if (process.env.hasOwnProperty(key)) {
             env[key] = process.env[key];
           }
         }
-        if (env.PATH) {
-          env.PATH = toolsFolder + ";" + env.PATH;
+        
+        // Ensure critical Windows environment variables are preserved in CEP
+        if (process.platform === 'win32') {
+          if (!env.SystemRoot) env.SystemRoot = process.env.SystemRoot || "C:\\Windows";
+          if (!env.windir) env.windir = process.env.windir || "C:\\Windows";
+          var pathKey = 'PATH';
+          if ('Path' in env) pathKey = 'Path';
+          else if ('PATH' in env) pathKey = 'PATH';
+          
+          if (env[pathKey]) {
+            env[pathKey] = env[pathKey] + ";" + toolsFolder;
+          } else {
+            env[pathKey] = toolsFolder;
+          }
         } else {
-          env.PATH = toolsFolder;
+          if (env.PATH) {
+            env.PATH = env.PATH + ":" + toolsFolder;
+          } else {
+            env.PATH = toolsFolder;
+          }
         }
 
         var proc = window.FileSystem.childProcess.spawn(command, args, { env: env });

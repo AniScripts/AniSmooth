@@ -76,22 +76,22 @@ def load_interpolation_model(model_name, device):
 
     base_key = model_name.replace("-tensorrt", "")
     if is_weight_downloaded(base_key):
-        load_weights_if_available(model, base_key, device)
+        if not load_weights_if_available(model, base_key, device):
+            raise RuntimeError(f"Failed to load weights for {base_key}")
     else:
         log("info", f"No cached weights for {base_key}. Attempting download...")
         success = download_weights(base_key)
         if success:
-            load_weights_if_available(model, base_key, device)
+            if not load_weights_if_available(model, base_key, device):
+                raise RuntimeError(f"Failed to load weights for {base_key}")
         else:
-            log("warn", f"Weights not available for {model_name}. Model will use untrained weights.")
-            log("warn", "Output quality will be poor until proper weights are downloaded.")
+            raise RuntimeError(f"Weights download failed for {model_name}")
 
     return model
 
 def load_upscale_model(model_name, scale, device):
     log("info", f"Loading upscale model: {model_name}, scale: {scale}x")
 
-    
     if not is_weight_downloaded(model_name):
         log("info", f"No cached weights for {model_name}. Attempting download...")
         success = download_weights(model_name)
@@ -101,12 +101,14 @@ def load_upscale_model(model_name, scale, device):
 
     weight_path = None
     try:
-        from models.weight_loader import get_weight_path
+        from models.weight_loader import get_weight_path, verify_weight_hash
         weight_path = get_weight_path(model_name)
+        if weight_path and os.path.exists(weight_path):
+            if not verify_weight_hash(model_name, weight_path):
+                raise RuntimeError(f"Model integrity verification failed for {model_name}")
     except ValueError:
         pass
 
-    
     try:
         import spandrel
         if weight_path and os.path.exists(weight_path):
@@ -120,15 +122,14 @@ def load_upscale_model(model_name, scale, device):
     except Exception as e:
         log("warn", f"spandrel loading failed ({e}). Falling back to built-in architecture.")
 
-    
     log("info", f"Using built-in ShuffleCUGAN architecture for {model_name}")
     model = ShuffleCUGANModel(model_name, scale).to(device)
     model.eval()
     if weight_path and os.path.exists(weight_path):
-        load_weights_if_available(model, model_name, device)
+        if not load_weights_if_available(model, model_name, device):
+            raise RuntimeError(f"Failed to load weights for {model_name}")
     else:
-        log("warn", f"Weights not available for {model_name}. Model will use untrained weights.")
-        log("warn", "Output quality will be poor until proper weights are downloaded.")
+        raise RuntimeError(f"Weights not available for {model_name}")
 
     return model
 

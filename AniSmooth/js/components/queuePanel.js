@@ -47,7 +47,7 @@
       if (queue.length === 0) {
         container.innerHTML =
           '<div class="queue-empty">' +
-            '<i class="fa-solid fa-list-check"></i>' +
+            '<img src="./AniSmooth Logo-Only.png" alt="AniSmooth Logo" style="height: 54px; width: auto; object-fit: contain; opacity: 0.15; margin-bottom: 6px;">' +
             '<p>Queue is empty</p>' +
             '<span>Add jobs from the Interpolation or Upscale tabs</span>' +
           '</div>';
@@ -91,7 +91,7 @@
             '<div class="q-info">' +
             '<div class="q-name">' + escapeHtml(item.name) + '</div>' +
             '<div class="q-meta">' +
-              '<i class="fa-solid ' + taskIcon + '"></i> ' + taskLabel + ' · ' + scaleLabel + ' · ' + item.model.replace("rife4.25", "RIFE 4.25") +
+              '<i class="fa-solid ' + taskIcon + '"></i> ' + taskLabel + ' · ' + scaleLabel + ' · ' + escapeHtml(item.model ? item.model.replace("rife4.25", "RIFE 4.25") : "Unknown Model") +
               (item.preRenderPath ? ' · <i class="fa-solid fa-film"></i> pre-render saved' : '') +
             '</div>' +
               (item.status === "error" ? '<div class="q-err">' + escapeHtml(item.error || "Unknown error") + '</div>' : '') +
