@@ -10,8 +10,8 @@ DefaultDirName={commoncf}\Adobe\CEP\extensions\AniSmooth
 DisableDirPage=yes
 DefaultGroupName=AniSmooth
 DisableProgramGroupPage=yes
-OutputDir=..\dist\Installer (easiest)
-OutputBaseFilename=AniSmoothSetup
+OutputDir={#OutputDir}
+OutputBaseFilename={#OutputName}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -28,7 +28,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 ; Copy files from the structured "Extension Folder" directory
-Source: "..\dist\Extension Folder\AniSmooth\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "{#SourcePath}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 [Registry]
 ; Enable player debug mode across CSXS versions so unsigned files load correctly

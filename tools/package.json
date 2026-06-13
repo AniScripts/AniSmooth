@@ -4,7 +4,12 @@
   "description": "Build tools for AniSmooth Extension",
   "main": "build.js",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js --target=2020",
+    "build:2018": "node build.js --target=2018",
+    "build:2020": "node build.js --target=2020",
+    "build:2022": "node build.js --target=2022",
+    "build:all": "node build.js --target=2018 && node build.js --target=2020 && node build.js --target=2022 && node generate-docs.js",
+    "docs": "node generate-docs.js"
   },
   "devDependencies": {
     "javascript-obfuscator": "^5.4.3",

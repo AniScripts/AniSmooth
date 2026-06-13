@@ -4,8 +4,38 @@ const JavaScriptObfuscator = require('javascript-obfuscator');
 const jsxbin = require('jsxbin');
 const zxpSignCmd = require('zxp-sign-cmd');
 
+const VERSION_PROFILES = {
+    '2018': {
+        label: 'AE2018',
+        hostVersion: '[13.5,20.0]',
+        csxsVersion: '6.0',
+        description: 'After Effects CC 2017–2018 (v15.x)'
+    },
+    '2020': {
+        label: 'AE2020',
+        hostVersion: '[16.0,18.9]',
+        csxsVersion: '8.0',
+        description: 'After Effects CC 2019–2021 (v16.x–v18.x)'
+    },
+    '2022': {
+        label: 'AE2022',
+        hostVersion: '[22.0,99.9]',
+        csxsVersion: '10.0',
+        description: 'After Effects CC 2022+ (v22.x+)'
+    }
+};
+
+const targetArg = process.argv.find(a => a.startsWith('--target='));
+const TARGET = targetArg ? targetArg.split('=')[1] : '2020';
+const PROFILE = VERSION_PROFILES[TARGET];
+
+if (!PROFILE) {
+    console.error(`Unknown target: ${TARGET}. Valid targets: ${Object.keys(VERSION_PROFILES).join(', ')}`);
+    process.exit(1);
+}
+
 const SRC_DIR = path.join(__dirname, '..', 'AniSmooth');
-const DIST_DIR = path.join(__dirname, '..', 'dist', 'Extension Folder', 'AniSmooth');
+const DIST_DIR = path.join(__dirname, '..', 'dist', PROFILE.label, 'AniSmooth');
 const EXTENSION_NAME = 'AniSmooth';
 const BUNDLE_ID = 'com.anismooth.extension';
 const CERT_PASSWORD = 'anismooth_extension_pass';
@@ -41,19 +71,22 @@ function getFiles(dir, extension, files_ = []) {
 }
 
 async function runBuild() {
-    console.log(`🚀 Starting ${EXTENSION_NAME} AE Extension Build Process...`);
+    console.log(`🚀 Starting ${EXTENSION_NAME} ${PROFILE.label} Build (${PROFILE.description})...`);
 
-    
     if (fs.existsSync(DIST_DIR)) {
         console.log('🧹 Cleaning existing dist directory...');
         fs.rmSync(DIST_DIR, { recursive: true, force: true });
     }
 
-    
     console.log('📂 Copying files to dist...');
     copyFolderSync(SRC_DIR, DIST_DIR);
 
-    
+    const compatDir = path.join(__dirname, 'compat', TARGET);
+    if (fs.existsSync(compatDir)) {
+        console.log(`📂 Applying compatibility overlay for ${PROFILE.label} (${TARGET})...`);
+        copyFolderSync(compatDir, DIST_DIR);
+    }
+
     console.log('🔒 Obfuscating JavaScript files...');
     const jsFiles = getFiles(DIST_DIR, '.js');
 
@@ -95,7 +128,6 @@ async function runBuild() {
         }
     }
 
-    
     const jsxPath = path.join(DIST_DIR, 'jsx', 'host.jsx');
     const jsxbinPath = path.join(DIST_DIR, 'jsx', 'host.jsxbin');
 
@@ -113,40 +145,46 @@ async function runBuild() {
         console.warn('⚠️ host.jsx not found in dist/jsx/');
     }
 
-    
     const manifestPath = path.join(DIST_DIR, 'CSXS', 'manifest.xml');
     if (fs.existsSync(manifestPath)) {
-        console.log('📝 Updating manifest.xml to load host.jsxbin...');
+        console.log(`📝 Patching manifest.xml for ${PROFILE.label}...`);
         let manifestContent = fs.readFileSync(manifestPath, 'utf8');
-        if (manifestContent.includes('host.jsx</ScriptPath>')) {
-            manifestContent = manifestContent.replace(
-                /host\.jsx<\/ScriptPath>/g,
-                'host.jsxbin</ScriptPath>'
-            );
-            fs.writeFileSync(manifestPath, manifestContent, 'utf8');
-            console.log('   - manifest.xml successfully updated!');
-        } else {
-            console.warn('⚠️ Could not find ScriptPath reference to host.jsx in manifest.xml');
-        }
+
+        manifestContent = manifestContent.replace(
+            /host\.jsx<\/ScriptPath>/g,
+            'host.jsxbin</ScriptPath>'
+        );
+
+        manifestContent = manifestContent.replace(
+            /<Host Name="AEFT" Version="[^"]*"/g,
+            `<Host Name="AEFT" Version="${PROFILE.hostVersion}"`
+        );
+
+        manifestContent = manifestContent.replace(
+            /<RequiredRuntime Name="CSXS" Version="[^"]*"/g,
+            `<RequiredRuntime Name="CSXS" Version="${PROFILE.csxsVersion}"`
+        );
+
+        fs.writeFileSync(manifestPath, manifestContent, 'utf8');
+        console.log(`   - Host: ${PROFILE.hostVersion}, CSXS: ${PROFILE.csxsVersion}`);
     } else {
         console.error('❌ manifest.xml not found!');
     }
 
-    console.log(`\n✨ Build process completed! Obfuscated extension files are in "dist/Extension Folder/${EXTENSION_NAME}".`);
+    console.log(`\n✨ Build process completed! Extension files in "dist/${PROFILE.label}/${EXTENSION_NAME}".`);
 
-    
     console.log('\n📦 Packaging and signing ZXP...');
     const certPath = path.join(__dirname, 'cert.p12');
-    const zxpDir = path.join(__dirname, '..', 'dist', 'ZXP Install');
-    const zxpOutputPath = path.join(zxpDir, `${EXTENSION_NAME}.zxp`);
+    const versionDir = path.join(__dirname, '..', 'dist', PROFILE.label);
+    const zxpOutputPath = path.join(versionDir, `${EXTENSION_NAME}_${PROFILE.label}.zxp`);
 
-    if (!fs.existsSync(zxpDir)) {
-        fs.mkdirSync(zxpDir, { recursive: true });
+    if (!fs.existsSync(versionDir)) {
+        fs.mkdirSync(versionDir, { recursive: true });
     }
 
-    if (!fs.existsSync(certPath)) {
-        console.log('   - Certificate not found. Generating a self-signed certificate...');
-        try {
+    try {
+        if (!fs.existsSync(certPath)) {
+            console.log('   - Certificate not found. Generating a self-signed certificate...');
             await zxpSignCmd.selfSignedCert({
                 country: 'US',
                 province: 'NY',
@@ -156,27 +194,21 @@ async function runBuild() {
                 output: certPath
             });
             console.log('   - Certificate successfully created!');
-        } catch (certErr) {
-            console.error('❌ Failed to generate self-signed certificate:', certErr.message);
         }
+
+        console.log('   - Packaging to ZXP...');
+        await zxpSignCmd.sign({
+            input: DIST_DIR,
+            output: zxpOutputPath,
+            cert: certPath,
+            password: CERT_PASSWORD
+        });
+        console.log(`✨ Signed package: dist/${PROFILE.label}/${EXTENSION_NAME}_${PROFILE.label}.zxp`);
+    } catch (signErr) {
+        console.error('❌ Failed to package and sign ZXP:', signErr.message);
+        console.log('     The extension folder is still available in dist/ for manual packaging.');
     }
 
-    if (fs.existsSync(certPath)) {
-        try {
-            console.log('   - Packaging to ZXP...');
-            await zxpSignCmd.sign({
-                input: DIST_DIR,
-                output: zxpOutputPath,
-                cert: certPath,
-                password: CERT_PASSWORD
-            });
-            console.log(`✨ Successfully generated signed package: dist/ZXP Install/${EXTENSION_NAME}.zxp`);
-        } catch (signErr) {
-            console.error('❌ Failed to package and sign ZXP:', signErr.message);
-        }
-    }
-
-    
     console.log('\n🛠️ Building Inno Setup EXE Installer...');
     const isccPaths = [
         'C:\\Program Files\\Inno Setup 6\\ISCC.exe',
@@ -188,10 +220,17 @@ async function runBuild() {
         isccPaths.unshift(path.join(process.env.LOCALAPPDATA, 'Programs', 'Inno Setup 5', 'ISCC.exe'));
     }
     let isccPath = null;
-    for (const p of isccPaths) {
-        if (fs.existsSync(p)) {
-            isccPath = p;
-            break;
+    const { execSync } = require('child_process');
+
+    try {
+        execSync('iscc /?', { stdio: 'ignore' });
+        isccPath = 'iscc';
+    } catch (e) {
+        for (const p of isccPaths) {
+            if (fs.existsSync(p)) {
+                isccPath = p;
+                break;
+            }
         }
     }
 
@@ -199,8 +238,11 @@ async function runBuild() {
         try {
             console.log('   - Compiling installer script...');
             const issPath = path.join(__dirname, 'installer.iss');
-            const { execSync } = require('child_process');
-            execSync(`"${isccPath}" "${issPath}"`, { stdio: 'inherit' });
+            const outputName = `${EXTENSION_NAME}Setup_${PROFILE.label}`;
+            const cmd = isccPath === 'iscc'
+                ? `iscc /DSourcePath="${DIST_DIR}" /DOutputDir="${versionDir}" /DOutputName="${outputName}" "${issPath}"`
+                : `"${isccPath}" /DSourcePath="${DIST_DIR}" /DOutputDir="${versionDir}" /DOutputName="${outputName}" "${issPath}"`;
+            execSync(cmd, { stdio: 'inherit' });
             console.log('✨ Successfully compiled installer EXE!');
         } catch (execErr) {
             console.error('❌ Failed to compile installer EXE:', execErr.message);
@@ -210,7 +252,71 @@ async function runBuild() {
         console.log('     Please compile tools/installer.iss manually using Inno Setup on Windows to create the EXE.');
     }
 
-    console.log(`\n✨ ${EXTENSION_NAME} build complete!`);
+    const batPath = path.join(versionDir, 'Install-Windows.bat');
+    console.log('\n📝 Generating Windows batch installer...');
+    fs.writeFileSync(batPath, [
+        `@echo off`,
+        `:: Self-elevate to Administrator`,
+        `net session >nul 2>&1`,
+        `if %errorLevel% neq 0 (`,
+        `    echo Requesting administrator privileges...`,
+        `    goto UACPrompt`,
+        `) else (`,
+        `    goto gotAdmin`,
+        `)`,
+        ``,
+        `:UACPrompt`,
+        `    echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\\getadmin.vbs"`,
+        `    echo UAC.ShellExecute "%~s0", "", "", "runas", 1 >> "%temp%\\getadmin.vbs"`,
+        `    "%temp%\\getadmin.vbs"`,
+        `    exit /B`,
+        ``,
+        `:gotAdmin`,
+        `    if exist "%temp%\\getadmin.vbs" ( del "%temp%\\getadmin.vbs" )`,
+        `    pushd "%~dp0"`,
+        ``,
+        `echo ==========================================================`,
+        `echo ${EXTENSION_NAME} After Effects Extension - Windows Installer`,
+        `echo ==========================================================`,
+        `echo.`,
+        ``,
+        `set "SRC_DIR=%~dp0${EXTENSION_NAME}"`,
+        `set "DEST_DIR=C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions\\${EXTENSION_NAME}"`,
+        ``,
+        `if not exist "%SRC_DIR%" (`,
+        `    echo [ERROR] Could not find ${EXTENSION_NAME} folder next to this batch file.`,
+        `    echo Please make sure the folder exists.`,
+        `    pause`,
+        `    exit /b`,
+        `)`,
+        ``,
+        `echo [1/3] Copying extension files...`,
+        `if exist "%DEST_DIR%" (`,
+        `    rmdir /s /q "%DEST_DIR%"`,
+        `)`,
+        `mkdir "%DEST_DIR%"`,
+        `xcopy /s /e /y "%SRC_DIR%\\*" "%DEST_DIR%\\" >nul`,
+        ``,
+        `echo [2/3] Registering debug keys for After Effects...`,
+        `reg add "HKCU\\Software\\Adobe\\CSXS.8" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul`,
+        `reg add "HKCU\\Software\\Adobe\\CSXS.9" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul`,
+        `reg add "HKCU\\Software\\Adobe\\CSXS.10" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul`,
+        `reg add "HKCU\\Software\\Adobe\\CSXS.11" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul`,
+        `reg add "HKCU\\Software\\Adobe\\CSXS.12" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul`,
+        `reg add "HKCU\\Software\\Adobe\\CSXS.13" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul`,
+        ``,
+        `echo [3/3] Finalizing installation...`,
+        `echo.`,
+        `echo ==========================================================`,
+        `echo [SUCCESS] ${EXTENSION_NAME} Extension has been successfully installed!`,
+        `echo Please restart After Effects and open it from Window ^> Extensions.`,
+        `echo ==========================================================`,
+        `echo.`,
+        `pause`
+    ].join('\r\n'), 'utf8');
+    console.log('   - Generated batch installer');
+
+    console.log(`\n✨ ${EXTENSION_NAME} ${PROFILE.label} build complete!`);
 }
 
 runBuild().catch(err => {
