@@ -1,14 +1,9 @@
 (function () {
   var ModelHandler = {
-    // Current running child process
+    
     activeProcess: null,
 
-    /**
-     * Executes a local model with the specified arguments.
-     * @param {string} command - The command or path to execution binary/Python
-     * @param {string[]} args - Argument list
-     * @param {object} callbacks - Event callbacks: onStart, onProgress, onLog, onComplete, onError
-     */
+    
     executeModel: function (command, args, callbacks) {
       var self = this;
       if (this.activeProcess) {
@@ -21,7 +16,7 @@
       dbg('info', 'ModelHandler', 'Spawning: ' + command + ' ' + args.join(' '));
       
       try {
-        // Resolve backend tools folder in AppData
+        
         var appdata = "";
         try { appdata = process.env.APPDATA || ""; } catch (e) {}
         if (!appdata && window.FileSystem && window.FileSystem.os && window.FileSystem.path) {
@@ -29,7 +24,7 @@
         }
         var toolsFolder = appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend") : "C:\\AniSmoothTools";
 
-        // Extend system PATH so Python processes can find ffmpeg / ffprobe
+        
         var env = {};
         for (var key in process.env) {
           if (process.env.hasOwnProperty(key)) {
@@ -144,7 +139,7 @@
             }
           }
           
-          // Check root C:\
+          
           if (fs.existsSync("C:\\")) {
             var rootDirs = fs.readdirSync("C:\\");
             for (var k = 0; k < rootDirs.length; k++) {
@@ -158,7 +153,7 @@
             }
           }
 
-          // Check WindowsApps store path
+          
           if (localappdata) {
             var storePath = path.join(localappdata, "Microsoft", "WindowsApps", "python.exe");
             if (fs.existsSync(storePath)) {
@@ -170,13 +165,11 @@
       return null;
     },
 
-    /**
-     * Attempts to parse progress from terminal outputs
-     */
+    
     parseProgress: function (text, onProgress) {
       if (!onProgress) return;
       
-      // Match typical progress logs e.g., "50%", "Progress: 12/100", or "12.34%"
+      
       var match = text.match(/(\d+(?:\.\d+)?)\s*%/);
       if (match) {
         onProgress(parseFloat(match[1]));
@@ -193,9 +186,7 @@
       }
     },
 
-    /**
-     * Cancels the active running process
-     */
+    
     cancelActiveProcess: function () {
       if (this.activeProcess) {
         dbg('info', 'ModelHandler', 'Killing active process...');
@@ -206,9 +197,7 @@
       return false;
     },
 
-    /**
-     * Helper to resolve arguments for RIFE Interpolation
-     */
+    
     interpolateClip: function (inputPath, outputPath, modelKey, options, callbacks) {
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
       
@@ -232,9 +221,7 @@
       this.executeModel(pythonCmd, args, callbacks);
     },
 
-    /**
-     * Helper to resolve arguments for upscaling
-     */
+    
     upscaleClip: function (inputPath, outputPath, modelKey, options, callbacks) {
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
       
@@ -258,9 +245,7 @@
       this.executeModel(pythonCmd, args, callbacks);
     },
 
-    /**
-     * Helper to resolve arguments for duplicate frame removal
-     */
+    
     dedupeClip: function (inputPath, outputPath, threshold, options, callbacks) {
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
 

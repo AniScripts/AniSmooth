@@ -79,7 +79,7 @@
         }, 300);
       }
 
-      // Defer GPU detection to avoid blocking startup
+      
       var self = this;
       setTimeout(function () {
         self.refreshGpuInfo();
@@ -182,13 +182,13 @@
         window.SysmonPanel.stopPolling();
       }
 
-      // Stop any running layer poll
+      
       if (this._layerPollTimer) {
         clearInterval(this._layerPollTimer);
         this._layerPollTimer = null;
       }
 
-      // Start layer info polling on interpolation/upscale tabs
+      
       if (tab === "interpolation" || tab === "upscale" || tab === "deadframes") {
         var self = this;
         var panelMap = { interpolation: window.InterpolationPanel, upscale: window.UpscalePanel, deadframes: window.DeadframesPanel };
@@ -220,7 +220,7 @@
       this._buildModelManager();
       this._initPresets();
 
-      // Auto-save preset on relevant UI changes
+      
       var self = this;
       var autoSaveInputs = [
         "interpolationModel", "upscaleModel", "upscaleScale",
@@ -243,7 +243,7 @@
         });
       }
 
-      // Output prefix
+      
       var prefixInput = document.getElementById("outputPrefix");
       if (prefixInput) {
         prefixInput.value = this.settings.outputPrefix;
@@ -254,7 +254,7 @@
         });
       }
 
-      // Output toggles
+      
       var tsCheck = document.getElementById("outputTimestamp");
       if (tsCheck) {
         tsCheck.checked = this.settings.outputTimestamp;
@@ -360,7 +360,7 @@
                 var entry = JSON.parse(line);
                 if (entry.type === "gpu_info") {
                   var raw = entry.msg;
-                  // msg is already a JSON string from run_gpu_info
+                  
                   try {
                     raw = JSON.parse(raw);
                   } catch (_) {}
@@ -398,7 +398,7 @@
       var ptVariant = info.pytorch_variant || "cpu";
       var driverVer = info.nvidia_driver || "";
 
-      // Indicator
+      
       var indicator = document.getElementById("gpuIndicator");
       if (indicator) {
         if (cuda) {
@@ -413,7 +413,7 @@
         }
       }
 
-      // Main name
+      
       var nameEl = document.getElementById("gpuName");
       if (nameEl) {
         if (cuda) {
@@ -425,7 +425,7 @@
         }
       }
 
-      // Meta line
+      
       var metaEl = document.getElementById("gpuMeta");
       if (metaEl) {
         var parts = [];
@@ -440,7 +440,7 @@
         metaEl.textContent = parts.join("  |  ");
       }
 
-      // VRAM bar
+      
       var fill = document.getElementById("gpuVramFill");
       var text = document.getElementById("gpuVramText");
       if (fill && text && totalMb > 0) {
@@ -457,7 +457,7 @@
         text.textContent = cuda ? "VRAM: N/A" : (nvidiaGpu ? "VRAM: N/A" : "N/A");
       }
 
-      // Badges
+      
       var badgesEl = document.getElementById("gpuBadges");
       if (badgesEl) {
         badgesEl.innerHTML = "";
@@ -488,13 +488,13 @@
         details.style.display = "";
       }
 
-      // Fill CUDA info panel
+      
       this._buildCudaInfo(cuda, nvidiaGpu, cudaVer, torchVer, ptVariant, info.nvidia_cuda_ver, info.nvidia_driver);
 
-      // Fill System info panel
+      
       this._buildSysInfo(info);
 
-      // GPU install action
+      
       var actionsEl = document.getElementById("gpuActions");
       if (actionsEl) {
         if (nvidiaGpu && !cuda) {
@@ -550,7 +550,7 @@
       window.showConfirm(
         "Reinstall PyTorch with CUDA support? The panel will be unresponsive for a few minutes while pip downloads GPU packages (~2.5 GB).",
         function () {
-          // Show progress inside the GPU card
+          
           var actionsEl = document.getElementById("gpuActions");
           var logEl = document.getElementById("gpuInstallLog");
 
@@ -618,7 +618,7 @@
       var clean = String(line).replace(/[<>]/g, "");
       el.innerHTML += '\n' + clean;
       if (count > 0 && count <= 50) el.scrollTop = el.scrollHeight;
-      // Move progress bar to simulate activity
+      
       var bar = document.getElementById("gpuInstallBar");
       if (bar && count > 0) {
         var fake = Math.min(95, 5 + count * 3);
@@ -768,7 +768,7 @@
         var firstVisible = null;
         var activeFound = false;
 
-        // First pass: determine visibility per option
+        
         for (var i = 0; i < children.length; i++) {
           var child = children[i];
           if (child.classList.contains("select-sep")) continue;
@@ -783,7 +783,7 @@
           }
         }
 
-        // Second pass: apply visibility + hide empty separators
+        
         var sectionHasVisible = false;
         for (var i = 0; i < children.length; i++) {
           var child = children[i];
@@ -808,33 +808,33 @@
 
       var rows = [];
 
-      // Python
+      
       (function () {
         var pyPath = this.settings.pythonPath || "python";
         rows.push({ icon: "fa-brands fa-python", label: "Python", value: pyPath, ok: pyPath !== "python" });
       }).call(this);
 
-      // FFmpeg
+      
       (function () {
         var ffmpeg = this.anismoothToolsFolder ? window.FileSystem.path.join(this.anismoothToolsFolder, "ffmpeg.exe") : "";
         var found = ffmpeg && window.FileSystem.fs.existsSync(ffmpeg);
         rows.push({ icon: "fa-solid fa-film", label: "FFmpeg", value: found ? ffmpeg : "Not found", ok: found });
       }).call(this);
 
-      // FFprobe
+      
       (function () {
         var ffprobe = this.anismoothToolsFolder ? window.FileSystem.path.join(this.anismoothToolsFolder, "ffprobe.exe") : "";
         var found = ffprobe && window.FileSystem.fs.existsSync(ffprobe);
         rows.push({ icon: "fa-solid fa-magnifying-glass", label: "FFprobe", value: found ? ffprobe : "Not found", ok: found });
       }).call(this);
 
-      // PyTorch — defer to GPU check
+      
       rows.push({ icon: "fa-solid fa-cubes", label: "PyTorch", value: "Check GPU tab", ok: null });
 
-      // OpenCV
+      
       rows.push({ icon: "fa-solid fa-image", label: "OpenCV", value: "Check GPU tab", ok: null });
 
-      // Model weights dir
+      
       (function () {
         var wd = this.anismoothToolsFolder ? window.FileSystem.path.join(this.anismoothToolsFolder, "weights") : "";
         var exists = wd && window.FileSystem.fs.existsSync(wd);
@@ -913,7 +913,7 @@
 
       var rows = [];
 
-      // OS info via Python or Node fallback
+      
       if (info && info.sys_os) {
         rows.push({ label: "OS", value: info.sys_os });
         rows.push({ label: "Arch", value: info.sys_arch || "N/A" });
@@ -941,10 +941,10 @@
         } catch (e) {}
       }
 
-      // Python path
+      
       rows.push({ label: "Python", value: this.settings.pythonPath || "python" });
 
-      // Panel info
+      
       rows.push({ label: "AppData", value: this.anismoothToolsFolder || "N/A" });
 
       var html = "";
@@ -1142,7 +1142,7 @@
     },
 
     _applyState: function (preset) {
-      // Support both new (_meta + settings) and old flat format
+      
       var state = preset.settings || preset;
       if (state.interpolation) {
         var modelInt = document.getElementById("interpolationModel");
@@ -1208,7 +1208,7 @@
       var noneBtn = document.getElementById("sectionSelectNone");
 
       if (!overlay || !togglesEl) {
-        // Fallback: save all
+        
         self._savePreset(name, description);
         return;
       }
@@ -1350,7 +1350,7 @@
       if (!this._activePreset) return;
       try {
         var data = this._captureState();
-        // Merge into existing preset (keep meta)
+        
         var existing = this._loadPresets()[this._activePreset] || {};
         var meta = existing._meta || {};
         existing.settings = data;
@@ -1433,7 +1433,7 @@
       for (var i = 0; i < names.length; i++) {
         var name = names[i];
         var p = presets[name];
-        // Support both new (_meta + settings) and old flat format
+        
         var meta = p._meta || {};
         var state = p.settings || p;
         var displayName = meta.name || name;
@@ -1603,7 +1603,7 @@
     var close = document.getElementById("toastClose");
     if (!toast || !text) return;
 
-    // Clear previous timer
+    
     if (toast._timer) clearTimeout(toast._timer);
 
     text.textContent = msg;

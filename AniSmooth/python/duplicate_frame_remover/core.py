@@ -9,10 +9,6 @@ try:
 except ImportError:
     HAS_TORCH_CUDA = False
 
-# ---------------------------------------------------------------------------
-# Core analysis classes
-# ---------------------------------------------------------------------------
-
 class CadenceDetector:
     def __init__(self, window_size: int = 24):
         self.window_size = window_size
@@ -36,7 +32,6 @@ class CadenceDetector:
         matches = sum(1 for i in range(len(pattern) - period) if pattern[i] == pattern[i + period])
         total = len(pattern) - period
         return (matches / total) > 0.8 if total > 0 else False
-
 
 class AdvancedDuplicateRemover:
     def __init__(
@@ -97,13 +92,13 @@ class AdvancedDuplicateRemover:
 
         scores = []
 
-        # 1. Region Analysis
+        
         region_result = self._analyze_regions(gray1, gray2)
         result['changed_regions'] = region_result['changed_regions']
         result['details']['region_score'] = region_result['score']
         scores.append(('region', region_result['score'], 0.3))
 
-        # 2. Optical Flow Analysis
+        
         if self.use_optical_flow:
             flow_result = self._analyze_optical_flow(gray1, gray2)
             result['motion_magnitude'] = flow_result['magnitude']
@@ -120,17 +115,17 @@ class AdvancedDuplicateRemover:
             elif flow_result['magnitude'] > self.motion_threshold:
                 result['motion_type'] = 'local'
 
-        # 3. Edge Analysis
+        
         edge_result = self._analyze_edges(gray1, gray2)
         result['details']['edge_score'] = edge_result['score']
         scores.append(('edge', edge_result['score'], self.edge_sensitivity))
 
-        # 4. Perceptual Hash Analysis
+        
         phash_result = self._perceptual_hash_compare(gray1, gray2)
         result['details']['phash_score'] = phash_result['score']
         scores.append(('phash', phash_result['score'], 0.15))
 
-        # 5. Block Motion Analysis
+        
         block_result = self._analyze_block_motion(gray1, gray2)
         result['details']['block_score'] = block_result['score']
         scores.append(('block', block_result['score'], 0.2))
@@ -138,7 +133,7 @@ class AdvancedDuplicateRemover:
         total_weight = sum(w for _, _, w in scores)
         combined_score = sum(s * w for _, s, w in scores) / total_weight if total_weight > 0 else 0
 
-        # Cache values at return points to avoid recalculations in consecutive frames
+        
         def cache_and_return(res_dict):
             self.prev_phash = phash_result.get('current_phash')
             self.prev_edges = getattr(self, 'current_edges', None)
@@ -202,7 +197,7 @@ class AdvancedDuplicateRemover:
                     'total_diff': total_diff
                 }
             except Exception:
-                pass # Fallback to CPU
+                pass 
 
         h, w = gray1.shape
         rows, cols = self.region_grid
@@ -225,7 +220,7 @@ class AdvancedDuplicateRemover:
         }
 
     def _analyze_optical_flow(self, gray1, gray2) -> Dict:
-        # Optimization: Downscale flow specifically to 160 max dim for 16x speedup!
+        
         h, w = gray1.shape
         flow_scale = min(1.0, 160 / max(h, w))
         if flow_scale < 1.0:
@@ -240,13 +235,13 @@ class AdvancedDuplicateRemover:
             iterations=3, poly_n=5, poly_sigma=1.2, flags=0
         )
         
-        # Save flow and scale for block motion to extract extremely quickly
+        
         self._last_flow = flow
         self._last_flow_scale = flow_scale
 
         mag, _ = cv2.cartToPolar(flow[..., 0], flow[..., 1])
         
-        # Scale back up to reflect original dimensions
+        
         if flow_scale < 1.0:
             mag = mag / flow_scale
             flow_dx = np.mean(flow[..., 0]) / flow_scale
@@ -325,13 +320,13 @@ class AdvancedDuplicateRemover:
                 'max_diff': max_diff, 'correlation': correlation, 'edge_changed_ratio': edge_changed_ratio}
 
     def _analyze_edges(self, gray1, gray2) -> Dict:
-        # Optimization: Cache previous Canny edges
+        
         if self.prev_edges is not None:
             edges1 = self.prev_edges
         else:
             edges1 = cv2.Canny(gray1, 50, 150)
         edges2 = cv2.Canny(gray2, 50, 150)
-        self.current_edges = edges2  # Store for next frame
+        self.current_edges = edges2  
 
         if self.use_gpu:
             try:
@@ -356,7 +351,7 @@ class AdvancedDuplicateRemover:
             dct_low = dct[:hash_size // 2, :hash_size // 2]
             return (dct_low > np.median(dct_low)).flatten()
             
-        # Optimization: Cache previous phash
+        
         if self.prev_phash is not None:
             h1 = self.prev_phash
         else:
@@ -367,8 +362,8 @@ class AdvancedDuplicateRemover:
         return {'score': hamming / len(h1), 'hamming_distance': int(hamming), 'current_phash': h2}
 
     def _analyze_block_motion(self, gray1, gray2) -> Dict:
-        # Optimization: Derive block motion directly from calculated flow field!
-        # Bypasses 4 nested Python loops to execute in <1ms (200x speedup).
+        
+        
         if self.use_optical_flow and hasattr(self, '_last_flow'):
             flow = self._last_flow
             flow_scale = self._last_flow_scale
@@ -405,7 +400,7 @@ class AdvancedDuplicateRemover:
             motion_ratio = motion_blocks / total_blocks if total_blocks > 0 else 0
             return {'score': min(1.0, motion_ratio * 5), 'motion_blocks': motion_blocks, 'total_blocks': total_blocks}
 
-        # Optimized fallback when optical flow is disabled (downsampled shift comparison)
+        
         h, w = gray1.shape
         scale_f = min(1.0, 160 / max(h, w))
         if scale_f < 1.0:

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class SEBlock(nn.Module):
     def __init__(self, in_channels, reduction=8):
         super(SEBlock, self).__init__()
@@ -20,7 +19,6 @@ class SEBlock(nn.Module):
         y = self.fc(y).view(B, C, 1, 1)
         return x * y
 
-
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1,
                  padding=1, use_se=True):
@@ -33,7 +31,6 @@ class ConvBlock(nn.Module):
 
     def forward(self, x):
         return self.se(self.act(self.norm(self.conv(x))))
-
 
 class InvertedResBlock(nn.Module):
     def __init__(self, in_channels, out_channels, expand_ratio=2, use_se=True):
@@ -64,7 +61,6 @@ class InvertedResBlock(nn.Module):
             out = out + x
         return out
 
-
 class DecoderBlock(nn.Module):
     def __init__(self, in_channels, skip_channels, out_channels):
         super(DecoderBlock, self).__init__()
@@ -85,7 +81,6 @@ class DecoderBlock(nn.Module):
         x = self.conv1(x)
         return self.conv2(x)
 
-
 class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DownBlock, self).__init__()
@@ -95,7 +90,6 @@ class DownBlock(nn.Module):
     def forward(self, x):
         x = self.conv1(x)
         return self.conv2(x)
-
 
 class ShuffleCUGANModel(nn.Module):
     def __init__(self, model_version="adore", scale=2):

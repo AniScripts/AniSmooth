@@ -112,14 +112,14 @@ window.exportLog = function() {
     window.FileSystem.fs.writeFileSync(filePath, text, "utf8");
     dbg("success", "Console", "Log exported: " + filePath);
 
-    // Open the folder in Explorer
+    
     try {
       var childProcess = window.FileSystem.childProcess;
       childProcess.exec('explorer /select,"' + filePath + '"');
     } catch (e) {}
   } catch (e) {
     dbg("error", "Console", "Export failed: " + (e.message || e));
-    // Fallback: try the blob approach
+    
     try {
       var blob = new Blob([text], { type: "text/plain" });
       var url = URL.createObjectURL(blob);

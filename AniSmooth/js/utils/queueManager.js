@@ -180,15 +180,15 @@
           item.status = "done";
           item.progress = 100;
           dbg("success", "Queue", "Done: " + outputPath);
-          // Delete temp render, keep pre-render copy
+          
           if (res.isTemp && window.FileSystem && window.FileSystem.fs) {
             try { window.FileSystem.fs.unlinkSync(inputPath); } catch (e) {}
           }
-          // Import processed output to AE
+          
           if (settings.outputAutoImport !== false) {
             window.App.importFileToAfterEffects(outputPath);
           }
-          // Also import pre-render if we saved it
+          
           if (preRenderPath && settings.outputAutoImport !== false) {
             window.App.importFileToAfterEffects(preRenderPath);
           }
@@ -205,7 +205,7 @@
           if (res.isTemp && window.FileSystem && window.FileSystem.fs) {
             try { window.FileSystem.fs.unlinkSync(inputPath); } catch (e) {}
           }
-          // Still keep pre-render if saved
+          
           if (preRenderPath && settings.outputAutoImport !== false) {
             window.App.importFileToAfterEffects(preRenderPath);
           }

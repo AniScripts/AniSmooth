@@ -5,7 +5,6 @@ import urllib.request
 import urllib.error
 from http.client import IncompleteRead
 
-
 def _get_appdata_dir():
     appdata = os.environ.get("APPDATA", "")
     if appdata:
@@ -13,11 +12,9 @@ def _get_appdata_dir():
     home = os.path.expanduser("~")
     return os.path.join(home, "AppData", "Roaming", "com.moongetsu.extensions", "AniSmooth", "backend")
 
-
 WEIGHTS_DIR = os.path.join(_get_appdata_dir(), "weights")
 
 TASURL = "https://github.com/NevermindNilas/TAS-Models-Host/releases/download/main/"
-
 
 def _model_filename(model_key):
     mapping = {
@@ -33,12 +30,10 @@ def _model_filename(model_key):
         raise ValueError("Unknown model key: " + model_key)
     return name
 
-
 def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
     out.update(kw)
     print(json.dumps(out), flush=True)
-
 
 def ensure_weights_dir():
     try:
@@ -48,19 +43,16 @@ def ensure_weights_dir():
         raise
     return WEIGHTS_DIR
 
-
 def get_weight_path(model_key):
     subdir = model_key
     filename = _model_filename(model_key)
     return os.path.join(WEIGHTS_DIR, subdir, filename)
-
 
 def is_weight_downloaded(model_key):
     try:
         return os.path.exists(get_weight_path(model_key))
     except ValueError:
         return False
-
 
 def download_weights(model_key, force=False, retries=3):
     filename = _model_filename(model_key)
@@ -142,7 +134,6 @@ def download_weights(model_key, force=False, retries=3):
 
     return False
 
-
 def _remap_state_dict_keys(state_dict, model):
     """Remap checkpoint keys to match model's expected key names.
     Handles common prefix mismatches: 'flownet.', 'module.', 'module.flownet.'
@@ -150,17 +141,17 @@ def _remap_state_dict_keys(state_dict, model):
     model_keys = set(model.state_dict().keys())
     ckpt_keys = set(state_dict.keys())
 
-    # If keys already match, return as-is
+    
     if ckpt_keys & model_keys:
         overlap = len(ckpt_keys & model_keys)
         if overlap == len(model_keys) or overlap == len(ckpt_keys):
             return state_dict
 
-    # Try common prefix transformations
+    
     prefixes_to_strip = ["module.flownet.", "module.", "flownet."]
     prefixes_to_add = ["flownet.", "module.", "module.flownet."]
 
-    # First try stripping prefixes from checkpoint keys
+    
     for prefix in prefixes_to_strip:
         remapped = {}
         for k, v in state_dict.items():
@@ -171,7 +162,7 @@ def _remap_state_dict_keys(state_dict, model):
             log("info", "Remapped weights: stripped '" + prefix + "' prefix (" + str(overlap) + " keys matched)")
             return remapped
 
-    # Then try adding prefixes to checkpoint keys
+    
     for prefix in prefixes_to_add:
         remapped = {}
         for k, v in state_dict.items():
@@ -182,9 +173,8 @@ def _remap_state_dict_keys(state_dict, model):
             log("info", "Remapped weights: added '" + prefix + "' prefix (" + str(overlap) + " keys matched)")
             return remapped
 
-    # No better mapping found, return original
+    
     return state_dict
-
 
 def load_weights_if_available(model, model_key, device=None):
     import torch
@@ -206,13 +196,13 @@ def load_weights_if_available(model, model_key, device=None):
         state_dict = torch.load(weight_path, map_location=device or "cpu",
                                 weights_only=True)
 
-        # Remap keys to handle prefix mismatches (flownet., module., etc.)
+        
         state_dict = _remap_state_dict_keys(state_dict, model)
 
-        # Load with strict=False but validate that keys actually matched
+        
         result = model.load_state_dict(state_dict, strict=False)
 
-        # Log diagnostic info about key matching
+        
         model_param_count = len(model.state_dict())
         loaded_count = model_param_count - len(result.missing_keys)
 

@@ -6,10 +6,6 @@ from typing import Optional, Dict
 
 from duplicate_frame_remover.core import AdvancedDuplicateRemover
 
-# ---------------------------------------------------------------------------
-# Per-file processing
-# ---------------------------------------------------------------------------
-
 def process_single_video(
     input_path: Path,
     output_path: Path,
@@ -135,7 +131,7 @@ def process_single_video(
             if analysis.get('motion_type') == 'camera_only':
                 cam_only_removed += 1
 
-        # Live callbacks for thread-safe GUI or progress logging
+        
         if progress_callback:
             if frame_index % 10 == 0 or frame_index == total_frames:
                 progress_callback(frame_index, total_frames, unique_count, dup_count)

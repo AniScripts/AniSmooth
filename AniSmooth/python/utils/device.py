@@ -2,18 +2,15 @@ import json
 import subprocess
 import torch
 
-
 def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
     out.update(kw)
     print(json.dumps(out), flush=True)
 
-
 def get_device():
     if torch.cuda.is_available():
         return torch.device("cuda")
     return torch.device("cpu")
-
 
 def _run_nvidia_smi():
     try:
@@ -47,11 +44,9 @@ def _run_nvidia_smi():
         pass
     return None
 
-
 def _pytorch_has_cuda():
     ver = torch.__version__
     return "+cu" in ver or "+cuda" in ver
-
 
 def get_gpu_info():
     nvidia = _run_nvidia_smi()
@@ -95,14 +90,12 @@ def get_gpu_info():
 
     return info
 
-
 def check_tensorrt():
     try:
         import tensorrt
         return True
     except ImportError:
         return False
-
 
 def print_gpu_info():
     info = get_gpu_info()

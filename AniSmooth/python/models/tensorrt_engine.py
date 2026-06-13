@@ -15,7 +15,6 @@ try:
 except ImportError:
     pass
 
-
 def _get_appdata_dir():
     appdata = os.environ.get("APPDATA", "")
     if appdata:
@@ -23,15 +22,12 @@ def _get_appdata_dir():
     home = os.path.expanduser("~")
     return os.path.join(home, "AppData", "Roaming", "com.moongetsu.extensions", "AniSmooth", "backend")
 
-
 ENGINES_DIR = os.path.join(_get_appdata_dir(), "models", "engines")
-
 
 def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
     out.update(kw)
     print(json.dumps(out), flush=True)
-
 
 def ensure_engines_dir():
     try:
@@ -41,16 +37,13 @@ def ensure_engines_dir():
         raise
     return ENGINES_DIR
 
-
 def get_engine_path(model_key, resolution, precision="fp16"):
     h, w = resolution
     engine_name = f"{model_key}_{w}x{h}_{precision}.engine"
     return os.path.join(ENGINES_DIR, engine_name)
 
-
 def is_tensorrt_available():
     return TENSORRT_AVAILABLE
-
 
 def build_rife_onnx(model, model_key, resolution, device):
     import torch
@@ -71,8 +64,8 @@ def build_rife_onnx(model, model_key, resolution, device):
             self.model = model
 
         def forward(self, img0, img1, timestep):
-            # Extract scalar timestep from the spatial tensor
-            # Use the center pixel value as the timestep scalar
+            
+            
             t = timestep[:, 0, 0, 0]
             return self.model(img0, img1, t)
 
@@ -95,7 +88,6 @@ def build_rife_onnx(model, model_key, resolution, device):
     )
     log("info", f"ONNX model exported: {onnx_path}")
     return onnx_path
-
 
 def build_rife_tensorrt_engine(onnx_path, engine_path, precision="fp16"):
     if not TENSORRT_AVAILABLE:
@@ -149,7 +141,6 @@ def build_rife_tensorrt_engine(onnx_path, engine_path, precision="fp16"):
     log("info", f"TensorRT engine saved: {engine_path}")
     return engine_path
 
-
 def load_tensorrt_engine(engine_path):
     if not TENSORRT_AVAILABLE:
         log("error", "TensorRT is not available.")
@@ -170,7 +161,6 @@ def load_tensorrt_engine(engine_path):
 
     log("info", f"Loaded TensorRT engine: {engine_path}")
     return engine
-
 
 class TensorRTInferenceEngine:
     def __init__(self, engine):
@@ -215,8 +205,8 @@ class TensorRTInferenceEngine:
             if name in self.inputs:
                 self.inputs[name].copy_(tensor)
             elif name in self.input_names:
-                # Dynamically allocate buffer for inputs not pre-allocated
-                # (e.g., timestep with varying shapes)
+                
+                
                 buf = tensor.contiguous()
                 self.inputs[name] = buf
 
@@ -225,7 +215,7 @@ class TensorRTInferenceEngine:
                 self.context.set_input_shape(name, tuple(self.inputs[name].shape))
                 self.context.set_tensor_address(name, self.inputs[name].data_ptr())
         for name in self.output_names:
-            # Re-query output shape in case it changed due to dynamic inputs
+            
             shape = self.context.get_tensor_shape(name)
             if tuple(self.outputs[name].shape) != tuple(shape):
                 self.outputs[name] = torch.empty(shape, dtype=torch.float16, device="cuda").contiguous()
@@ -235,7 +225,6 @@ class TensorRTInferenceEngine:
         self.stream.synchronize()
 
         return {name: self.outputs[name].clone() for name in self.output_names}
-
 
 def build_upscale_tensorrt_engine(model, model_key, resolution, device, precision="fp16"):
     if not TENSORRT_AVAILABLE:

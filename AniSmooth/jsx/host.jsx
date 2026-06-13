@@ -1,5 +1,3 @@
-// host.jsx - ExtendScript runner for AniSmooth After Effects extension
-
 function importFileToAE(filePath) {
   app.beginUndoGroup("Import AniSmooth Output");
   try {
@@ -16,7 +14,7 @@ function importFileToAE(filePath) {
     importOptions.importAs = ImportAsType.FOOTAGE;
     var footage = app.project.importFile(importOptions);
     
-    // Add to active comp if exists
+    
     var comp = app.project.activeItem;
     if (comp && comp instanceof CompItem) {
       var layer = comp.layers.add(footage);
@@ -36,7 +34,7 @@ function getSelectedLayerFile() {
       return "{\"ok\":false,\"message\":\"No After Effects project open.\"}";
     }
 
-    // Active Comp selection
+    
     var comp = app.project.activeItem;
     if (comp && comp instanceof CompItem && comp.selectedLayers && comp.selectedLayers.length > 0) {
       for (var i = 0; i < comp.selectedLayers.length; i++) {
@@ -50,7 +48,7 @@ function getSelectedLayerFile() {
       }
     }
 
-    // Project selection fallback
+    
     if (app.project.selection && app.project.selection.length > 0) {
       for (var j = 0; j < app.project.selection.length; j++) {
         var item = app.project.selection[j];
@@ -79,7 +77,7 @@ function getSelectedLayerInfo() {
     var layer = null;
     var footage = null;
 
-    // Try timeline layer selection
+    
     if (comp && comp instanceof CompItem) {
       var sel = comp.selectedLayers;
       if (sel && sel.length > 0) {
@@ -92,7 +90,7 @@ function getSelectedLayerInfo() {
             footage = src;
             break;
           }
-          // Also accept layers whose source has width/height (solids, etc.)
+          
           if (src && src.width > 0 && src.height > 0) {
             layer = lyr;
             footage = src;
@@ -102,7 +100,7 @@ function getSelectedLayerInfo() {
       }
     }
 
-    // Fallback to project panel selection
+    
     if (!footage && app.project.selection && app.project.selection.length > 0) {
       for (var j = 0; j < app.project.selection.length; j++) {
         var itm = app.project.selection[j];
@@ -113,7 +111,7 @@ function getSelectedLayerInfo() {
       }
     }
 
-    // Also check if the activeItem itself is footage
+    
     if (!footage && comp instanceof FootageItem) {
       footage = comp;
     }
@@ -156,8 +154,8 @@ function getSelectedLayerInfo() {
 }
 
 function removeDuplicateDeadframes(threshold) {
-  // Placeholder implementation for duplicate deadframe removal.
-  // The user will provide their custom ExtendScript later.
+  
+  
   app.beginUndoGroup("Remove Duplicate Deadframes");
   try {
     var comp = app.project.activeItem;
@@ -166,7 +164,7 @@ function removeDuplicateDeadframes(threshold) {
       return "{\"ok\":false,\"message\":\"No active composition found.\"}";
     }
     
-    // Placeholder success response simulating finding deadframes
+    
     app.endUndoGroup();
     return "{\"ok\":true,\"message\":\"Duplicate deadframes removal complete (placeholder).\"}";
   } catch (err) {
@@ -193,7 +191,7 @@ function renderSelectedLayer(outputPathDir, layerName) {
     }
 
     var layer = null;
-    // Find by name if provided, otherwise use first selected
+    
     if (layerName) {
       for (var i = 1; i <= comp.numLayers; i++) {
         if (comp.layer(i).name === layerName) { layer = comp.layer(i); break; }
@@ -206,7 +204,7 @@ function renderSelectedLayer(outputPathDir, layerName) {
       layer = comp.selectedLayers[0];
     }
     
-    // Save original solo states of all layers
+    
     for (var i = 1; i <= comp.numLayers; i++) {
       var lyr = comp.layer(i);
       if (lyr.enabled) {
@@ -217,7 +215,7 @@ function renderSelectedLayer(outputPathDir, layerName) {
       }
     }
 
-    // Solo the selected layer
+    
     for (var i = 1; i <= comp.numLayers; i++) {
       var lyr = comp.layer(i);
       if (lyr.enabled) {
@@ -225,19 +223,19 @@ function renderSelectedLayer(outputPathDir, layerName) {
       }
     }
 
-    // Add to render queue
+    
     var rq = app.project.renderQueue;
     var item = rq.items.add(comp);
     
-    // Set time span to the layer's duration
+    
     item.timeSpanStart = layer.inPoint;
     item.timeSpanDuration = layer.outPoint - layer.inPoint;
     
-    // Set output path
+    
     var outputModule = item.outputModule(1);
     
-    // Detect default extension from the output module's default file
-    var extension = ".avi"; // Default fallback
+    
+    var extension = ".avi"; 
     if (outputModule.file) {
       var defaultName = outputModule.file.name;
       var dotIdx = defaultName.lastIndexOf(".");
@@ -246,15 +244,15 @@ function renderSelectedLayer(outputPathDir, layerName) {
       }
     }
     
-    // Generate a unique temp name
+    
     var tempBaseName = "AniSmooth_Render_" + new Date().getTime();
     var tempPath = outputPathDir + "/" + tempBaseName + extension;
     outputModule.file = new File(tempPath);
     
-    // Render
+    
     rq.render();
     
-    // Restore original solo states
+    
     for (var i = 0; i < originalSolos.length; i++) {
       try {
         var oLyr = originalSolos[i].layer;
@@ -264,17 +262,17 @@ function renderSelectedLayer(outputPathDir, layerName) {
       } catch (e) {}
     }
     
-    // Remove from render queue
+    
     item.remove();
     
-    // Verify the rendered file exists
+    
     var finalFile = new File(tempPath);
     var finalPath = "";
     
     if (finalFile.exists) {
       finalPath = finalFile.fsName;
     } else {
-      // Fallback: search for file starting with tempBaseName in the directory
+      
       var folder = new Folder(outputPathDir);
       var files = folder.getFiles(tempBaseName + "*");
       if (files && files.length > 0) {
@@ -289,7 +287,7 @@ function renderSelectedLayer(outputPathDir, layerName) {
 
     return "{\"ok\":true,\"filePath\":\"" + jsonEscape(finalPath) + "\",\"name\":\"" + jsonEscape(layer.name) + "\",\"isTemp\":true}";
   } catch (err) {
-    // Restore original solo states on error
+    
     if (originalSolos) {
       for (var i = 0; i < originalSolos.length; i++) {
         try { originalSolos[i].layer.solo = originalSolos[i].solo; } catch (e) {}
@@ -342,7 +340,7 @@ function renderSelectedLayerPreview(outputPathDir, previewDuration) {
     debugLog += "setPath=" + tempPath + " ";
     rq.render();
 
-    // After render, check what AE actually wrote
+    
     var actualFile = outputModule.file;
     debugLog += "aeFile=" + (actualFile ? actualFile.fsName : "null") + " ";
 
@@ -356,16 +354,16 @@ function renderSelectedLayerPreview(outputPathDir, previewDuration) {
     }
     item.remove();
 
-    // Check multiple locations
+    
     var finalFile = new File(tempPath);
     if (finalFile.exists) {
       return "{\"ok\":true,\"filePath\":\"" + jsonEscape(finalFile.fsName) + "\",\"name\":\"" + jsonEscape(layer.name) + "\",\"isTemp\":true,\"isPreview\":true,\"duration\":" + (endTime - startTime) + "}";
     }
-    // Try AE's actual output path
+    
     if (actualFile && actualFile.exists) {
       return "{\"ok\":true,\"filePath\":\"" + jsonEscape(actualFile.fsName) + "\",\"name\":\"" + jsonEscape(layer.name) + "\",\"isTemp\":true,\"isPreview\":true,\"duration\":" + (endTime - startTime) + "}";
     }
-    // Search directory for matching files
+    
     var folder = new Folder(outputPathDir);
     var files = folder.getFiles(tempBaseName + "*");
     if (files && files.length > 0) {

@@ -17,12 +17,10 @@ from models.tensorrt_engine import (
     load_tensorrt_engine, TensorRTInferenceEngine, get_engine_path, ensure_engines_dir,
 )
 
-
 def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
     out.update(kw)
     print(json.dumps(out), flush=True)
-
 
 def tensor_to_frame(tensor, device="cuda"):
     frame = tensor.squeeze(0).permute(1, 2, 0).detach()
@@ -32,13 +30,11 @@ def tensor_to_frame(tensor, device="cuda"):
     frame = (frame.clip(0, 1) * 255).astype(np.uint8)
     return cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-
 def frame_to_tensor(frame, device):
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     tensor = torch.from_numpy(frame_rgb).float() / 255.0
     tensor = tensor.permute(2, 0, 1).unsqueeze(0)
     return tensor.to(device)
-
 
 def pad_to_mod(tensor, mod=32):
     """Pad tensor height and width to be divisible by `mod`.
@@ -48,10 +44,9 @@ def pad_to_mod(tensor, mod=32):
     pad_w = (mod - w % mod) % mod
     if pad_h == 0 and pad_w == 0:
         return tensor, (0, 0)
-    # Pad right and bottom (F.pad order: left, right, top, bottom)
+    
     padded = F.pad(tensor, (0, pad_w, 0, pad_h), mode="replicate")
     return padded, (pad_h, pad_w)
-
 
 def unpad(tensor, pad_hw):
     """Remove padding added by pad_to_mod."""
@@ -61,7 +56,6 @@ def unpad(tensor, pad_hw):
     h = tensor.shape[2] - pad_h
     w = tensor.shape[3] - pad_w
     return tensor[:, :, :h, :w]
-
 
 def detect_scene_change(frame_a, frame_b, threshold=0.40):
     """Detect if two frames are from different scenes by comparing
@@ -74,7 +68,6 @@ def detect_scene_change(frame_a, frame_b, threshold=0.40):
     gray_b = cv2.resize(gray_b, small_size).astype(np.float32) / 255.0
     diff = np.mean(np.abs(gray_a - gray_b))
     return diff > threshold
-
 
 def load_interpolation_model(model_name, device):
     log("info", f"Loading RIFE model: {model_name}")
@@ -95,11 +88,10 @@ def load_interpolation_model(model_name, device):
 
     return model
 
-
 def load_upscale_model(model_name, scale, device):
     log("info", f"Loading upscale model: {model_name}, scale: {scale}x")
 
-    # Ensure weights are available
+    
     if not is_weight_downloaded(model_name):
         log("info", f"No cached weights for {model_name}. Attempting download...")
         success = download_weights(model_name)
@@ -114,7 +106,7 @@ def load_upscale_model(model_name, scale, device):
     except ValueError:
         pass
 
-    # Try spandrel first — it auto-detects architecture from weight files
+    
     try:
         import spandrel
         if weight_path and os.path.exists(weight_path):
@@ -128,7 +120,7 @@ def load_upscale_model(model_name, scale, device):
     except Exception as e:
         log("warn", f"spandrel loading failed ({e}). Falling back to built-in architecture.")
 
-    # Fallback: try built-in ShuffleCUGANModel (may not match weight keys)
+    
     log("info", f"Using built-in ShuffleCUGAN architecture for {model_name}")
     model = ShuffleCUGANModel(model_name, scale).to(device)
     model.eval()
@@ -139,7 +131,6 @@ def load_upscale_model(model_name, scale, device):
         log("warn", "Output quality will be poor until proper weights are downloaded.")
 
     return model
-
 
 def run_interpolation(input_path, output_path, model_name, factor):
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
@@ -158,7 +149,7 @@ def run_interpolation(input_path, output_path, model_name, factor):
     video.setup_writer(fps * factor)
     log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
-    # Check if dimensions need padding for RIFE's U-Net architecture
+    
     pad_h = (32 - h % 32) % 32
     pad_w = (32 - w % 32) % 32
     if pad_h > 0 or pad_w > 0:
@@ -171,7 +162,7 @@ def run_interpolation(input_path, output_path, model_name, factor):
         log("info", "Initializing TensorRT engine...")
         base_key = model_name.replace("-tensorrt", "")
         ensure_engines_dir()
-        # Use padded dimensions for engine building
+        
         engine_h = h + pad_h
         engine_w = w + pad_w
         engine_path = get_engine_path(base_key, (engine_h, engine_w), "fp16")
@@ -207,16 +198,16 @@ def run_interpolation(input_path, output_path, model_name, factor):
 
     for frame in video.read_frames():
         if prev_frame is not None:
-            # Detect scene changes to avoid ghosting at hard cuts
+            
             is_scene_change = detect_scene_change(prev_frame, frame)
             if is_scene_change:
                 scene_changes += 1
-                # At scene changes, duplicate prev_frame for the intermediate slots
-                # instead of interpolating (which would create ghosting)
+                
+                
                 for _ in range(1, factor):
                     video.writer.write(prev_frame)
             elif use_tensorrt and trt_engine is not None:
-                # TensorRT inference path
+                
                 t0 = frame_to_tensor(prev_frame, device).half()
                 t1 = frame_to_tensor(frame, device).half()
                 t0, pad_info = pad_to_mod(t0, 32)
@@ -224,7 +215,7 @@ def run_interpolation(input_path, output_path, model_name, factor):
                 for f in range(1, factor):
                     alpha = f / factor
                     with torch.no_grad():
-                        # Pass timestep to TensorRT engine
+                        
                         timestep_tensor = torch.full(
                             (1, 1, t0.shape[2], t0.shape[3]),
                             alpha, dtype=t0.dtype, device=device
@@ -236,7 +227,7 @@ def run_interpolation(input_path, output_path, model_name, factor):
                     interp = tensor_to_frame(mid, str(device))
                     video.writer.write(interp)
             else:
-                # PyTorch CUDA inference path
+                
                 t0 = frame_to_tensor(prev_frame, device)
                 t1 = frame_to_tensor(frame, device)
                 t0_padded, pad_info = pad_to_mod(t0, 32)
@@ -244,9 +235,9 @@ def run_interpolation(input_path, output_path, model_name, factor):
                 with torch.no_grad():
                     for f in range(1, factor):
                         alpha = f / factor
-                        # Each intermediate frame is independently interpolated
-                        # between the original pair with the correct timestep.
-                        # This is the correct RIFE usage — never chain results.
+                        
+                        
+                        
                         mid = model(t0_padded, t1_padded, alpha)
                         mid = unpad(mid, pad_info)
                         interp_frame = tensor_to_frame(mid, str(device))
@@ -275,7 +266,6 @@ def run_interpolation(input_path, output_path, model_name, factor):
     mux_audio(output_path, input_path)
     log("success", "Interpolation process completed successfully.")
 
-
 def run_upscaling(input_path, output_path, model_name, scale):
     log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
 
@@ -299,7 +289,7 @@ def run_upscaling(input_path, output_path, model_name, scale):
         with torch.no_grad():
             upscaled = model(tensor)
 
-        # Clamp output to valid range and convert to frame
+        
         upscaled = torch.clamp(upscaled, 0, 1)
         result = tensor_to_frame(upscaled, str(device))
         video.writer.write(result)
@@ -316,7 +306,6 @@ def run_upscaling(input_path, output_path, model_name, scale):
     mux_audio(output_path, input_path)
     log("success", "Upscaling process completed successfully.")
 
-
 def run_gpu_info():
     import torch
     import platform
@@ -327,12 +316,12 @@ def run_gpu_info():
     info["torch_version"] = torch.__version__
     info["python_version"] = sys.version
 
-    # System Info
+    
     info["sys_os"] = f"{platform.system()} {platform.release()}"
     info["sys_arch"] = platform.machine()
     info["sys_hostname"] = platform.node()
 
-    # CPU
+    
     cpu = ""
     try:
         if platform.system() == "Windows":
@@ -347,7 +336,7 @@ def run_gpu_info():
         cpu = platform.processor() or "Unknown"
     info["sys_cpu"] = cpu
 
-    # RAM
+    
     ram = 0
     try:
         if platform.system() == "Windows":
@@ -383,7 +372,6 @@ def run_gpu_info():
 
     log("gpu_info", json.dumps(info))
 
-
 def run_sys_metrics():
     import platform
     import subprocess
@@ -402,12 +390,12 @@ def run_sys_metrics():
         "gpu_mem_percent": 0.0
     }
 
-    # 1. CPU Percent
+    
     try:
         import psutil
         metrics["cpu_percent"] = psutil.cpu_percent(interval=0.1)
     except ImportError:
-        # Fallback for Windows
+        
         if platform.system() == "Windows":
             try:
                 out = subprocess.check_output("wmic cpu get loadpercentage", shell=True).decode().split()
@@ -416,7 +404,7 @@ def run_sys_metrics():
             except Exception:
                 pass
 
-    # 2. RAM
+    
     try:
         import psutil
         mem = psutil.virtual_memory()
@@ -451,7 +439,7 @@ def run_sys_metrics():
             except Exception:
                 pass
 
-    # 3. GPU Info via nvidia-smi
+    
     try:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=name,utilization.gpu,utilization.memory,temperature.gpu,memory.used,memory.total",
@@ -472,7 +460,6 @@ def run_sys_metrics():
 
     log("sys_metrics", json.dumps(metrics))
 
-
 def run_dedupe(
     input_path,
     output_path,
@@ -489,7 +476,7 @@ def run_dedupe(
     import sys
     from pathlib import Path
 
-    # Find ffmpeg.exe in the same directory as this script (backend tools folder)
+    
     ffmpeg_exe = None
     script_dir = Path(__file__).parent
     local_ffmpeg = script_dir / "ffmpeg.exe"
@@ -502,7 +489,7 @@ def run_dedupe(
     gpu_info = get_gpu_info()
     use_gpu = gpu_info.get("cuda_available", False)
 
-    # Convert difference threshold (UI 0.05) to similarity threshold (Python 0.95)
+    
     similarity_threshold = 1.0 - threshold
 
     def progress_cb(current, total, unique, dupes):
@@ -529,7 +516,6 @@ def run_dedupe(
     except Exception as e:
         log("error", f"Deduplication failed: {e}")
         sys.exit(1)
-
 
 def main():
     parser = argparse.ArgumentParser(description="AniSmooth PyTorch Pipeline")
@@ -599,7 +585,6 @@ def main():
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

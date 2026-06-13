@@ -6,12 +6,10 @@ import os
 import shutil
 from pathlib import Path
 
-
 def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
     out.update(kw)
     print(json.dumps(out), flush=True)
-
 
 def _find_ffmpeg():
     script_dir = Path(__file__).parent.parent
@@ -22,7 +20,6 @@ def _find_ffmpeg():
     if which:
         return which
     return None
-
 
 def mux_audio(video_path, audio_source_path):
     """
@@ -81,7 +78,6 @@ def mux_audio(video_path, audio_source_path):
                 pass
         return False
 
-
 class VideoProcessor:
     def __init__(self, input_path, output_path):
         self.input_path = input_path
@@ -95,7 +91,7 @@ class VideoProcessor:
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         
-        # Guard against 0 or negative frame counts
+        
         total = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.total_frames = total if total > 0 else 1
         self.writer = None
@@ -107,7 +103,7 @@ class VideoProcessor:
         out_w = self.width * scale
         out_h = self.height * scale
         
-        # Determine fourcc codec dynamically based on extension
+        
         ext = self.output_path.split('.')[-1].lower()
         if ext == 'avi':
             fourcc = cv2.VideoWriter_fourcc(*'XVID')

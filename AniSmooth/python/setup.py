@@ -124,7 +124,6 @@ def _detect_cuda_pytorch_index():
         pass
     return None
 
-
 def install_pip_packages():
     """Install required pip packages for custom PyTorch workflows."""
     missing = []
@@ -199,7 +198,6 @@ def force_gpu_pytorch():
     else:
         log("error", "CUDA PyTorch install failed with code " + str(proc.returncode))
     return ok
-
 
 def main():
     import argparse

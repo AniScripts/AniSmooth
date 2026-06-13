@@ -89,7 +89,7 @@
       '<div class="setup-step-labels"><span>Welcome</span><span>Check</span><span>Install</span></div>';
   }
 
-  // ── WELCOME ──────────────────────────────────────────
+  
   function renderWelcomeStep() {
     return '<div class="setup-card">' +
       '<div class="setup-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>' +
@@ -112,7 +112,7 @@
     '</div></div>';
   }
 
-  // ── CHECK ────────────────────────────────────────────
+  
   function renderCheckStep() {
     var ffmpegFound = false, ffprobeFound = false;
     if (window.FileSystem && window.FileSystem.fs) {
@@ -188,7 +188,7 @@
     '</div>';
   }
 
-  // ── ASYNC CHECKS ─────────────────────────────────────
+  
   function checkPythonAsync() {
     var commands = ['python', 'python3'];
     try {
@@ -294,7 +294,7 @@
     } catch (e) { _pytorchChecked = true; renderSetupStep(); }
   }
 
-  // ── INSTALL ───────────────────────────────────────────
+  
   function renderAutoInstallStep() {
     var needs = [];
     if (!_ffmpegFound()) needs.push('FFmpeg');
@@ -362,7 +362,7 @@
     if (label) label.textContent = _installedCount + ' / ' + _totalSteps + ' components';
   }
 
-  // ── PORTABLE PYTHON ──────────────────────────────────
+  
   function downloadAndInstallPortablePython() {
     _step = 'autoinstall';
     _installRunning = true;
@@ -414,7 +414,7 @@
     request.on('error', function (err) { addInstallLog('[ERR] Download error: ' + err.message); finishAutoInstall(false); });
   }
 
-  // ── AUTO INSTALL ─────────────────────────────────────
+  
   function startAutoInstall() {
     if (_installRunning) return;
     _installRunning = true;
@@ -510,7 +510,7 @@
     finishAutoInstall(false);
   }
 
-  // ── COMPLETE ─────────────────────────────────────────
+  
   function renderCompleteStep() {
     var allOk = _pythonOk;
     var gpuOk = _gpuInfo && _gpuInfo.cuda_available;
@@ -535,7 +535,7 @@
       '</div></div>';
   }
 
-  // ── HELPERS ──────────────────────────────────────────
+  
   function escapeHtml(text) {
     return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }

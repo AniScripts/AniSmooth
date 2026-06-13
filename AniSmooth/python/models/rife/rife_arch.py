@@ -2,11 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 tenGrid = {}
 tenFlowDiv = {}
-
 
 def warp(tenInput, tenFlow):
     k = (str(tenFlow.device), str(tenFlow.size()), str(tenFlow.dtype))
@@ -38,14 +36,12 @@ def warp(tenInput, tenFlow):
         align_corners=True,
     )
 
-
 def conv(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1):
     return nn.Sequential(
         nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride,
                   padding=padding, dilation=dilation, bias=True),
         nn.LeakyReLU(0.2, True),
     )
-
 
 class Head(nn.Module):
     def __init__(self):
@@ -68,7 +64,6 @@ class Head(nn.Module):
             return [x0, x1, x2, x3]
         return x3
 
-
 class ResConv(nn.Module):
     def __init__(self, c, dilation=1):
         super(ResConv, self).__init__()
@@ -78,7 +73,6 @@ class ResConv(nn.Module):
 
     def forward(self, x):
         return self.relu(self.conv(x) * self.beta + x)
-
 
 class IFBlock(nn.Module):
     def __init__(self, in_planes, c=64):
@@ -124,7 +118,6 @@ class IFBlock(nn.Module):
         mask = tmp[:, 4:5]
         feat = tmp[:, 5:]
         return flow, mask, feat
-
 
 class IFNet(nn.Module):
     def __init__(self, heavy=False, dynamicScale=False, scale=1):
@@ -217,7 +210,6 @@ class IFNet(nn.Module):
         mask = torch.sigmoid(mask)
         result = warped_img0 * mask + warped_img1 * (1 - mask)
         return result
-
 
 class RIFEModel(nn.Module):
     def __init__(self, model_version="rife4.25"):

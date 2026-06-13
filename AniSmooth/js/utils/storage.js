@@ -25,7 +25,7 @@
       }
     },
 
-    // Queue for batch processing
+    
     loadProcessingQueue() {
       try {
         const raw = this.getItem("anismooth_processing_queue", "[]");
@@ -40,7 +40,7 @@
       this.setItem("anismooth_processing_queue", JSON.stringify(queue || []));
     },
 
-    // Processing History
+    
     loadSessionHistory() {
       try {
         const raw = this.getItem("anismooth_history", "[]");

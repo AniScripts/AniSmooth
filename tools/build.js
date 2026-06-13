@@ -43,17 +43,17 @@ function getFiles(dir, extension, files_ = []) {
 async function runBuild() {
     console.log(`🚀 Starting ${EXTENSION_NAME} AE Extension Build Process...`);
 
-    // Clean existing build
+    
     if (fs.existsSync(DIST_DIR)) {
         console.log('🧹 Cleaning existing dist directory...');
         fs.rmSync(DIST_DIR, { recursive: true, force: true });
     }
 
-    // Copy src files
+    
     console.log('📂 Copying files to dist...');
     copyFolderSync(SRC_DIR, DIST_DIR);
 
-    // Obfuscate JS
+    
     console.log('🔒 Obfuscating JavaScript files...');
     const jsFiles = getFiles(DIST_DIR, '.js');
 
@@ -95,7 +95,7 @@ async function runBuild() {
         }
     }
 
-    // Compile host.jsx to host.jsxbin
+    
     const jsxPath = path.join(DIST_DIR, 'jsx', 'host.jsx');
     const jsxbinPath = path.join(DIST_DIR, 'jsx', 'host.jsxbin');
 
@@ -113,7 +113,7 @@ async function runBuild() {
         console.warn('⚠️ host.jsx not found in dist/jsx/');
     }
 
-    // Update manifest reference to load jsxbin
+    
     const manifestPath = path.join(DIST_DIR, 'CSXS', 'manifest.xml');
     if (fs.existsSync(manifestPath)) {
         console.log('📝 Updating manifest.xml to load host.jsxbin...');
@@ -134,7 +134,7 @@ async function runBuild() {
 
     console.log(`\n✨ Build process completed! Obfuscated extension files are in "dist/Extension Folder/${EXTENSION_NAME}".`);
 
-    // Package to ZXP
+    
     console.log('\n📦 Packaging and signing ZXP...');
     const certPath = path.join(__dirname, 'cert.p12');
     const zxpDir = path.join(__dirname, '..', 'dist', 'ZXP Install');
@@ -176,7 +176,7 @@ async function runBuild() {
         }
     }
 
-    // Build Inno Setup Installer EXE if ISCC compiler is found
+    
     console.log('\n🛠️ Building Inno Setup EXE Installer...');
     const isccPaths = [
         'C:\\Program Files\\Inno Setup 6\\ISCC.exe',
