@@ -13,7 +13,7 @@
         return;
       }
 
-      // Validate command path (reject UNC/network/non-python executables)
+      
       var lowerCmd = command.toLowerCase();
       if (lowerCmd !== "python" && lowerCmd !== "python3") {
         if (command.indexOf("\\\\") === 0 || command.indexOf("//") === 0 || lowerCmd.indexOf("python") === -1) {
@@ -41,7 +41,7 @@
           }
         }
         
-        // Ensure critical Windows environment variables are preserved in CEP
+        
         if (process.platform === 'win32') {
           if (!env.SystemRoot) env.SystemRoot = process.env.SystemRoot || "C:\\Windows";
           if (!env.windir) env.windir = process.env.windir || "C:\\Windows";

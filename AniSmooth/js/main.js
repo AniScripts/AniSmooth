@@ -1231,11 +1231,11 @@
     _validatePythonPath: function (pPath) {
       if (!pPath) return false;
       if (pPath === "python" || pPath === "python3") return true;
-      // Reject UNC paths and network shares
+      
       if (pPath.indexOf("\\\\") === 0 || pPath.indexOf("//") === 0) {
         return false;
       }
-      // Must look like a local path
+      
       var lower = pPath.toLowerCase();
       if (lower.indexOf("python") === -1) {
         return false;

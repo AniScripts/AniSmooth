@@ -95,7 +95,7 @@ def install_ffmpeg():
     if not download_file(FFMPEG_URL, zip_path, "FFmpeg"):
         return False
 
-    # Download SHA-256 and verify
+    
     sha_path = zip_path + ".sha256"
     if download_file(FFMPEG_URL + ".sha256", sha_path, "FFmpeg checksum"):
         try:
