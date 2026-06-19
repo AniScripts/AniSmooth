@@ -4,6 +4,7 @@
   var _pythonCmd = '';
   var _pythonOk = false;
   var _pythonChecked = false;
+  var _gpuChoice = null;
   var _gpuInfo = null;
   var _gpuChecked = false;
   var _pytorchOk = false;
@@ -36,6 +37,7 @@
     gate.style.display = 'flex';
     _step = 'welcome';
     _pythonChecked = false;
+    _gpuChoice = window.StorageManager.getItem('anismooth_gpu_choice', null);
     _gpuChecked = false;
     _pytorchChecked = false;
     _installRunning = false;
@@ -52,12 +54,13 @@
   function renderSetupStep() {
     var gate = document.getElementById('tools-setup-gate');
     if (!gate) return;
-    var steps = ['welcome', 'check', 'autoinstall', 'complete'];
+    var steps = ['welcome', 'gpuchoice', 'check', 'autoinstall', 'complete'];
     var stepIdx = steps.indexOf(_step);
-    var pct = (stepIdx / 3) * 100;
+    var pct = (stepIdx / 4) * 100;
     var html = renderStepIndicator(pct);
     switch (_step) {
       case 'welcome': html += renderWelcomeStep(); break;
+      case 'gpuchoice': html += renderGpuChoiceStep(); break;
       case 'check': html += renderCheckStep(); break;
       case 'autoinstall': html += renderAutoInstallStep(); break;
       case 'complete': html += renderCompleteStep(); break;
@@ -69,14 +72,14 @@
   }
 
   function renderStepIndicator(progress) {
-    var stepClasses = ['', '', ''];
-    var idx = ['welcome', 'check', 'autoinstall', 'complete'].indexOf(_step);
-    for (var i = 0; i < 3; i++) {
+    var stepClasses = ['', '', '', ''];
+    var idx = ['welcome', 'gpuchoice', 'check', 'autoinstall', 'complete'].indexOf(_step);
+    for (var i = 0; i < 4; i++) {
       if (i < idx) stepClasses[i] = 'done';
       else if (i === idx) stepClasses[i] = 'active';
     }
     var stepsHtml = '';
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 4; i++) {
       stepsHtml += '<div class="setup-step ' + stepClasses[i] + '">' +
         (stepClasses[i] === 'done' ? '<i class="fa-solid fa-check"></i>' : '<span>' + (i + 1) + '</span>') +
         '</div>';
@@ -86,7 +89,7 @@
         '<div class="setup-step-progress" style="width:' + progress + '%"></div>' +
         '<div class="setup-steps">' + stepsHtml + '</div>' +
       '</div>' +
-      '<div class="setup-step-labels"><span>Welcome</span><span>Check</span><span>Install</span></div>';
+      '<div class="setup-step-labels"><span>Welcome</span><span>Hardware</span><span>Check</span><span>Install</span></div>';
   }
 
   
@@ -107,9 +110,161 @@
       '</div>' +
       '<div class="setup-nav">' +
         '<button class="btn btn-ghost" onclick="skipToolsSetup()">Skip</button>' +
-        '<button class="btn btn-primary" onclick="goToSetupStep(\'check\')"><i class="fa-solid fa-magnifying-glass"></i> Scan System</button>' +
+        '<button class="btn btn-primary" onclick="goToSetupStep(\'gpuchoice\')"><i class="fa-solid fa-arrow-right"></i> Next</button>' +
       '</div>' +
     '</div></div>';
+  }
+
+  
+  function renderGpuChoiceStep() {
+    var html = '<div class="setup-card">' +
+      '<h2>Choose Hardware Mode</h2>' +
+      '<p class="setup-desc">Select how you want to run AniSmooth. GPU mode provides much faster processing but requires an NVIDIA GPU with CUDA support.</p>' +
+      '<div class="ts-gpu-choice">' +
+        '<div class="ts-gpu-option' + (_gpuChoice === 'gpu' ? ' ts-gpu-selected' : '') + '" onclick="selectGpuChoice(\'gpu\')">' +
+          '<div class="ts-gpu-option-icon"><i class="fa-solid fa-microchip"></i></div>' +
+          '<div class="ts-gpu-option-info">' +
+            '<div class="ts-gpu-option-title">GPU Acceleration</div>' +
+            '<div class="ts-gpu-option-desc">NVIDIA GPU with CUDA. Requires ~2.5GB download for PyTorch CUDA.</div>' +
+          '</div>' +
+          '<div class="ts-gpu-option-check">' + (_gpuChoice === 'gpu' ? '<i class="fa-solid fa-circle-check"></i>' : '') + '</div>' +
+        '</div>' +
+        '<div class="ts-gpu-option' + (_gpuChoice === 'cpu' ? ' ts-gpu-selected' : '') + '" onclick="selectGpuChoice(\'cpu\')">' +
+          '<div class="ts-gpu-option-icon"><i class="fa-solid fa-computer"></i></div>' +
+          '<div class="ts-gpu-option-info">' +
+            '<div class="ts-gpu-option-title">CPU Only</div>' +
+            '<div class="ts-gpu-option-desc">Slower processing but works on any system. No GPU required.</div>' +
+          '</div>' +
+          '<div class="ts-gpu-option-check">' + (_gpuChoice === 'cpu' ? '<i class="fa-solid fa-circle-check"></i>' : '') + '</div>' +
+        '</div>' +
+      '</div>';
+
+    if (_gpuChoice === 'gpu' && _gpuDownloadState) {
+      html += '<div class="ts-gpu-download-status">' +
+        '<div class="ts-gpu-download-progress">' +
+          '<div class="setup-progress-track"><div id="ts-gpu-download-bar" class="setup-progress-fill" style="width:' + _gpuDownloadState.progress + '%"></div></div>' +
+        '</div>' +
+        '<div class="ts-gpu-download-msg">' + escapeHtml(_gpuDownloadState.message) + '</div>' +
+        (_gpuDownloadState.log && _gpuDownloadState.log.length > 0 ? '<div class="ts-gpu-download-log">' + _gpuDownloadState.log.map(function(l) { return '<div>' + escapeHtml(l) + '</div>'; }).join('') + '</div>' : '') +
+      '</div>';
+    }
+
+    html += '<div class="setup-nav">' +
+      '<button class="btn btn-ghost" onclick="goToSetupStep(\'welcome\')">Back</button>' +
+      '<button class="btn btn-primary" onclick="confirmGpuChoice()"' + (!_gpuChoice || (_gpuChoice === 'gpu' && _gpuDownloadState && _gpuDownloadState.running) ? ' disabled' : '') + '>' +
+        (_gpuChoice === 'gpu' && _gpuDownloadState && _gpuDownloadState.running ? '<i class="fa-solid fa-spinner fa-spin"></i> Downloading...' : '<i class="fa-solid fa-arrow-right"></i> Continue') +
+      '</button>' +
+    '</div></div>';
+
+    return html;
+  }
+
+  var _gpuDownloadState = null;
+
+  function selectGpuChoice(choice) {
+    _gpuChoice = choice;
+    _gpuDownloadState = null;
+    renderSetupStep();
+  }
+
+  function confirmGpuChoice() {
+    if (!_gpuChoice) return;
+    if (_gpuChoice === 'gpu') {
+      if (_gpuDownloadState && _gpuDownloadState.running) return;
+      if (!_gpuDownloadState || !_gpuDownloadState.done) {
+        startGpuDownload();
+        return;
+      }
+    }
+    goToSetupStep('check');
+  }
+
+  function startGpuDownload() {
+    _gpuDownloadState = { running: true, done: false, progress: 0, message: 'Preparing to download PyTorch CUDA...', log: [] };
+    renderSetupStep();
+
+    var pythonCmd = _pythonCmd || 'python';
+    var extPath = "";
+    try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
+    var sourceSetup = (window.FileSystem.path && extPath) ? window.FileSystem.path.join(extPath, 'python', 'setup.py') : 'setup.py';
+    var destSetup = window.FileSystem.path.join(_toolsFolder, 'setup.py');
+
+    try {
+      window.FileSystem.createFolder(_toolsFolder);
+      var content = window.FileSystem.fs.readFileSync(sourceSetup, 'utf8');
+      window.FileSystem.fs.writeFileSync(destSetup, content, 'utf8');
+      _gpuDownloadState.log.push('[OK] Setup script ready');
+    } catch (e) {
+      _gpuDownloadState.log.push('[ERR] Failed to copy setup script: ' + e.message);
+      _gpuDownloadState.running = false;
+      _gpuDownloadState.message = 'Failed to prepare installer';
+      renderSetupStep();
+      return;
+    }
+
+    _gpuDownloadState.message = 'Installing PyTorch CUDA (~2.5GB download)...';
+    _gpuDownloadState.log.push('--- Installing PyTorch CUDA ---');
+    renderSetupStep();
+
+    try {
+      _installProc = window.FileSystem.childProcess.spawn(pythonCmd, ['setup.py', '--force-gpu'], { cwd: _toolsFolder, windowsHide: true });
+      var proc = _installProc;
+      var buf = '';
+      proc.stdout.on('data', function (d) {
+        buf += d.toString();
+        var lines = buf.split('\n');
+        buf = lines.pop();
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line) continue;
+          _gpuDownloadState.log.push(line);
+          if (_gpuDownloadState.log.length > 50) _gpuDownloadState.log.shift();
+          try {
+            var data = JSON.parse(line);
+            if (data.type === 'progress' && data.pct !== undefined) {
+              _gpuDownloadState.progress = Math.min(95, data.pct);
+            } else if (data.type === 'success') {
+              _gpuDownloadState.progress = Math.min(95, _gpuDownloadState.progress + 10);
+            }
+          } catch (_) {}
+        }
+        renderSetupStep();
+      });
+      proc.stderr.on('data', function (d) {
+        var msg = '[WARN] ' + d.toString().trim();
+        _gpuDownloadState.log.push(msg);
+        if (_gpuDownloadState.log.length > 50) _gpuDownloadState.log.shift();
+        renderSetupStep();
+      });
+      proc.on('close', function (code) {
+        _installProc = null;
+        _gpuDownloadState.running = false;
+        if (code === 0) {
+          _gpuDownloadState.progress = 100;
+          _gpuDownloadState.done = true;
+          _gpuDownloadState.message = 'PyTorch CUDA installed successfully!';
+          _gpuDownloadState.log.push('[OK] PyTorch CUDA installation complete');
+          _pytorchOk = true;
+          _pytorchChecked = true;
+        } else {
+          _gpuDownloadState.message = 'Installation failed (code ' + code + '). You can try again or switch to CPU mode.';
+          _gpuDownloadState.log.push('[ERR] Installation failed with code ' + code);
+        }
+        renderSetupStep();
+      });
+      proc.on('error', function (e) {
+        _installProc = null;
+        _gpuDownloadState.running = false;
+        _gpuDownloadState.message = 'Error: ' + e.message;
+        _gpuDownloadState.log.push('[ERR] ' + e.message);
+        renderSetupStep();
+      });
+    } catch (e) {
+      _gpuDownloadState.running = false;
+      _gpuDownloadState.message = 'Error: ' + e.message;
+      _gpuDownloadState.log.push('[ERR] ' + e.message);
+      renderSetupStep();
+    }
   }
 
   
@@ -121,17 +276,21 @@
     }
     var rows = '';
     rows += renderToolRow({ found: _pythonOk, checking: !_pythonChecked, extra: _pythonCmd }, 'Python 3', _pythonOk ? _pythonCmd : 'Not found', 'fa-brands fa-python');
-    if (_gpuChecked) {
-      if (_gpuInfo && _gpuInfo.nvidia_gpu_detected) {
-        var vram = _gpuInfo.nvidia_vram_mb ? ' (' + formatVram(_gpuInfo.nvidia_vram_mb) + ')' : '';
-        var label = _gpuInfo.nvidia_name + vram;
-        rows += renderToolRow({ found: _gpuInfo.cuda_available, extra: _gpuInfo.pytorch_variant },
-          'GPU & CUDA', _gpuInfo.cuda_available ? label + ' — CUDA OK' : label + ' — CPU PyTorch', 'fa-solid fa-microchip');
+    if (_gpuChoice === 'gpu') {
+      if (_gpuChecked) {
+        if (_gpuInfo && _gpuInfo.nvidia_gpu_detected) {
+          var vram = _gpuInfo.nvidia_vram_mb ? ' (' + formatVram(_gpuInfo.nvidia_vram_mb) + ')' : '';
+          var label = _gpuInfo.nvidia_name + vram;
+          rows += renderToolRow({ found: _gpuInfo.cuda_available, extra: _gpuInfo.pytorch_variant },
+            'GPU & CUDA', _gpuInfo.cuda_available ? label + ' — CUDA OK' : label + ' — CPU PyTorch', 'fa-solid fa-microchip');
+        } else {
+          rows += renderToolRow({ found: false }, 'GPU', 'No NVIDIA GPU detected', 'fa-solid fa-microchip');
+        }
       } else {
-        rows += renderToolRow({ found: false }, 'GPU', 'No NVIDIA GPU detected', 'fa-solid fa-microchip');
+        rows += renderToolRow({ checking: true }, 'GPU & CUDA', 'Detecting hardware...', 'fa-solid fa-microchip');
       }
     } else {
-      rows += renderToolRow({ checking: true }, 'GPU & CUDA', 'Detecting hardware...', 'fa-solid fa-microchip');
+      rows += renderToolRow({ found: true, extra: 'cpu' }, 'Mode', 'CPU (no GPU acceleration)', 'fa-solid fa-computer');
     }
     rows += renderToolRow({ found: ffmpegFound }, 'FFmpeg', 'Video encoder', 'fa-solid fa-film');
     rows += renderToolRow({ found: ffprobeFound }, 'FFprobe', 'Metadata reader', 'fa-solid fa-magnifying-glass');
@@ -142,11 +301,14 @@
     }
 
     var canInstall = _pythonOk;
-    var gpuMismatch = _gpuInfo && _gpuInfo.nvidia_gpu_detected && !_gpuInfo.cuda_available;
+    var gpuMismatch = _gpuChoice === 'gpu' && _gpuInfo && _gpuInfo.nvidia_gpu_detected && !_gpuInfo.cuda_available;
     var allOk = _pythonOk && ffmpegFound && ffprobeFound && _pytorchOk && !gpuMismatch;
+    if (_gpuChoice === 'cpu') {
+      allOk = _pythonOk && ffmpegFound && ffprobeFound && _pytorchOk;
+    }
 
     var actions = '<div class="setup-nav">' +
-      '<button class="btn btn-ghost" onclick="goToSetupStep(\'welcome\')">Back</button>' +
+      '<button class="btn btn-ghost" onclick="goToSetupStep(\'gpuchoice\')">Back</button>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
         '<button class="btn btn-secondary" onclick="scanToolsAndRefresh()"><i class="fa-solid fa-arrows-rotate"></i> Re-scan</button>';
     if (allOk) {
@@ -168,7 +330,8 @@
     '</div></div>';
 
     if (!_pythonChecked) { setTimeout(function () { checkPythonAsync(); }, 80); }
-    if (!_gpuChecked && _pythonOk) { setTimeout(function () { checkGpuAsync(); }, 400); }
+    if (_gpuChoice === 'gpu' && !_gpuChecked && _pythonOk) { setTimeout(function () { checkGpuAsync(); }, 400); }
+    if (_gpuChoice === 'cpu' && !_gpuChecked) { _gpuChecked = true; _gpuInfo = null; }
     if (!_pytorchChecked && _pythonOk) { setTimeout(function () { checkPytorchAsync(); }, 600); }
     return html;
   }
@@ -299,7 +462,7 @@
     var needs = [];
     if (!_ffmpegFound()) needs.push('FFmpeg');
     if (!_pytorchOk) {
-      if (_gpuInfo && _gpuInfo.nvidia_gpu_detected) {
+      if (_gpuChoice === 'gpu' && _gpuInfo && _gpuInfo.nvidia_gpu_detected) {
         needs.push('PyTorch CUDA (auto-detected for ' + (_gpuInfo.nvidia_name || 'GPU') + ')');
       } else {
         needs.push('PyTorch CPU');
@@ -513,7 +676,9 @@
   
   function renderCompleteStep() {
     var allOk = _pythonOk;
-    var gpuOk = _gpuInfo && _gpuInfo.cuda_available;
+    var gpuOk = _gpuChoice === 'gpu' && _gpuInfo && _gpuInfo.cuda_available;
+    var modeLabel = _gpuChoice === 'gpu' ? 'GPU' : 'CPU';
+    var gpuName = _gpuChoice === 'gpu' ? (_gpuInfo ? (_gpuInfo.nvidia_name || 'None') : 'Unknown') : 'N/A';
     return '<div class="setup-card">' +
       '<div class="setup-icon success"><i class="fa-solid fa-circle-check"></i></div>' +
       '<h2>Setup Complete</h2>' +
@@ -521,10 +686,9 @@
         '<div class="ts-summary-row ' + (_pythonOk ? 'ts-ok' : 'ts-err') + '">' +
           '<i class="fa-solid fa-' + (_pythonOk ? 'check' : 'xmark') + '"></i> Python 3' +
         '</div>' +
-        '<div class="ts-summary-row ' + (gpuOk ? 'ts-ok' : (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? 'ts-warn' : 'ts-err')) + '">' +
-          '<i class="fa-solid fa-' + (gpuOk ? 'check' : (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? 'exclamation' : 'xmark')) + '"></i>' +
-          ' GPU ' + (_gpuInfo ? (_gpuInfo.nvidia_name || 'None') : 'Unknown') +
-          (gpuOk ? ' (CUDA)' : (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? ' (CPU PyTorch)' : ' (CPU)')) +
+        '<div class="ts-summary-row ' + (gpuOk ? 'ts-ok' : (_gpuChoice === 'gpu' ? (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? 'ts-warn' : 'ts-err') : 'ts-ok')) + '">' +
+          '<i class="fa-solid fa-' + (gpuOk ? 'check' : (_gpuChoice === 'gpu' ? (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? 'exclamation' : 'xmark') : 'check')) + '"></i>' +
+          ' ' + modeLabel + ' Mode' + (gpuOk ? ' — ' + gpuName + ' (CUDA)' : (_gpuChoice === 'cpu' ? '' : (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? ' — ' + gpuName + ' (CPU PyTorch)' : ' (CPU)'))) +
         '</div>' +
         '<div class="ts-summary-row ' + (_pytorchOk ? 'ts-ok' : 'ts-warn') + '">' +
           '<i class="fa-solid fa-' + (_pytorchOk ? 'check' : 'exclamation') + '"></i>' +
@@ -555,15 +719,19 @@
         if (pi) pi.value = _pythonCmd;
       }
     }
+    if (_gpuChoice) {
+      window.StorageManager.setItem('anismooth_gpu_choice', _gpuChoice);
+    }
     window.StorageManager.setItem('anismooth_setup_complete', '1');
     window.App.refreshGpuInfo();
     hideToolsSetup();
   }
 
-  function scanToolsAndRefresh() { _pythonChecked = false; _gpuChecked = false; _pytorchChecked = false; renderSetupStep(); }
+  function scanToolsAndRefresh() { _pythonChecked = false; _gpuChecked = false; _pytorchChecked = false; _gpuDownloadState = null; renderSetupStep(); }
 
   function goToSetupStep(step) {
     if (step === 'check') { _pythonChecked = false; _gpuChecked = false; _pytorchChecked = false; }
+    if (step === 'welcome') { _gpuChoice = null; _gpuDownloadState = null; }
     _step = step;
     renderSetupStep();
   }
@@ -582,6 +750,8 @@
   window.finishToolsSetup = finishToolsSetup;
   window.cancelAutoInstall = cancelAutoInstall;
   window.downloadAndInstallPortablePython = downloadAndInstallPortablePython;
+  window.selectGpuChoice = selectGpuChoice;
+  window.confirmGpuChoice = confirmGpuChoice;
   window.installGpuFromSetup = function () {
     hideToolsSetup();
     setTimeout(function () {

@@ -116,3 +116,30 @@
 
 .setup-gate .progress-track { background: #3c3c3c; border-radius: 2px; height: 3px; overflow: hidden; }
 .setup-gate .progress-fill { background: #ffffff; height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+
+.ts-gpu-choice { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.ts-gpu-option {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: #161616; border: 1px solid #3c3c3c; border-radius: 4px;
+  cursor: pointer; transition: border-color 0.2s, background 0.2s;
+}
+.ts-gpu-option:hover { border-color: #555555; background: #1a1a1a; }
+.ts-gpu-option.ts-gpu-selected { border-color: #ffffff; background: rgba(255,255,255,0.03); }
+.ts-gpu-option-icon { width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #aaaaaa; }
+.ts-gpu-option.ts-gpu-selected .ts-gpu-option-icon { color: #ffffff; }
+.ts-gpu-option-info { flex: 1; min-width: 0; }
+.ts-gpu-option-title { font-size: 10px; font-weight: 600; color: #e5e7eb; }
+.ts-gpu-option-desc { font-size: 8px; color: #aaaaaa; margin-top: 2px; line-height: 1.3; }
+.ts-gpu-option-check { width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #ffffff; }
+
+.ts-gpu-download-status { margin-bottom: 10px; }
+.ts-gpu-download-progress { margin-bottom: 6px; }
+.ts-gpu-download-msg { font-size: 9px; color: #e5e7eb; margin-bottom: 4px; }
+.ts-gpu-download-log {
+  background: #161616; border: 1px solid #3c3c3c; border-radius: 4px;
+  padding: 4px 6px; max-height: 80px; overflow-y: auto;
+  font-family: 'Consolas','Courier New',monospace; font-size: 8px; line-height: 1.4; text-align: left;
+}
+.ts-gpu-download-log div { color: #aaaaaa; white-space: pre-wrap; word-break: break-all; }
+
+.setup-gate .btn[disabled] { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
