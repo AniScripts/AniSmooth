@@ -48,29 +48,71 @@ def _run_nvidia_smi():
             capture_output=True, text=True, timeout=10
         )
         if result.returncode != 0 or not result.stdout.strip():
-            return None
-        parts = result.stdout.strip().split(",")
-        if len(parts) < 2:
-            return None
-        info = {
-            "name": parts[0].strip(),
-            "memory_total_mb": int(parts[1].strip()),
-            "driver_version": parts[2].strip() if len(parts) > 2 else None,
-            "cuda_driver_version": None,
-        }
-        cuda_result = subprocess.run(
-            [smi_path], capture_output=True, text=True, timeout=10
-        )
-        if cuda_result.returncode == 0:
-            for line in cuda_result.stdout.split("\n"):
-                if "CUDA Version:" in line:
-                    raw = line.strip().split("CUDA Version:")[-1].strip()
-                    info["cuda_driver_version"] = raw.split(" ")[0]
-                    break
-        return info
+            # Query format might not be supported (System32 stub) — fall back to plain smi
+            result = subprocess.run(
+                [smi_path], capture_output=True, text=True, timeout=10
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
+
+        stdout = result.stdout.strip()
+        parts = stdout.split(",")
+        if len(parts) >= 2 and "name" not in stdout.lower() and "nvidia" not in stdout.lower():
+            # Looks like CSV output, parse it
+            pass
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
-        pass
-    return None
+        return None
+    
+    if stdout is None:
+        return None
+
+    # Parse GPU name and memory from output
+    gpu_name = None
+    memory_total_mb = 0
+    driver_version = None
+    cuda_driver_version = None
+
+    if len(parts) >= 2 and "," in result.stdout and not any(kw in result.stdout.lower() for kw in ["utilization", "n/a"]):
+        # CSV query output
+        gpu_name = parts[0].strip()
+        memory_total_mb = int(parts[1].strip()) if parts[1].strip().isdigit() else 0
+        driver_version = parts[2].strip() if len(parts) > 2 and parts[2].strip().lower() != "n/a" else None
+    else:
+        # Plain nvidia-smi output — parse text
+        for line in result.stdout.split("\n"):
+            if "CUDA Version:" in line:
+                raw = line.strip().split("CUDA Version:")[-1].strip()
+                cuda_driver_version = raw.split(" ")[0]
+            if "Driver Version:" in line:
+                raw = line.strip().split("Driver Version:")[-1].strip()
+                driver_version = raw.split(" ")[0]
+            if gpu_name is None and "NVIDIA" in line:
+                gpu_name = line.strip()
+
+    # Get CUDA version via second smi call if not from text parsing
+    if not cuda_driver_version:
+        try:
+            cuda_result = subprocess.run(
+                [smi_path], capture_output=True, text=True, timeout=10
+            )
+            if cuda_result.returncode == 0:
+                for line in cuda_result.stdout.split("\n"):
+                    if "CUDA Version:" in line:
+                        raw = line.strip().split("CUDA Version:")[-1].strip()
+                        cuda_driver_version = raw.split(" ")[0]
+                        break
+        except Exception:
+            pass
+
+    if not gpu_name:
+        return None
+
+    return {
+        "name": gpu_name,
+        "memory_total_mb": memory_total_mb,
+        "driver_version": driver_version,
+        "cuda_driver_version": cuda_driver_version,
+    }
 
 def _pytorch_has_cuda():
     ver = torch.__version__
