@@ -324,9 +324,10 @@
 
     var gpuDiagHtml = '';
     if (_gpuChoice === 'gpu' && _gpuChecked && (!_gpuInfo || !_gpuInfo.nvidia_gpu_detected) && _gpuDiag.length > 0) {
-      gpuDiagHtml = '<div class="ts-gpu-download-log" style="margin-top:8px;">' +
+      gpuDiagHtml = '<div class="ts-gpu-download-log" id="gpuDiagLog" style="margin-top:8px;">' +
         _gpuDiag.map(function(l) { return '<div style="color:#fca5a5;">' + escapeHtml(l) + '</div>'; }).join('') +
-        '</div>';
+        '</div>' +
+        '<button class="btn btn-sm" style="margin-top:4px;width:100%;" onclick="copyGpuDiag()"><i class="fa-solid fa-copy"></i> Copy Log</button>';
     }
 
     var html = '<div class="setup-card">' +
@@ -808,5 +809,25 @@
         window.App.installCudaPytorch();
       }
     }, 300);
+  };
+  window.copyGpuDiag = function () {
+    var text = _gpuDiag.join('\n');
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      window.showToast && window.showToast('Diagnostic log copied to clipboard.', 'ok');
+    } catch (e) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        window.showToast && window.showToast('Diagnostic log copied to clipboard.', 'ok');
+      } catch (_) {}
+    }
   };
 })();

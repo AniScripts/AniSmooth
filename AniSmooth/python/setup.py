@@ -7,8 +7,8 @@ FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 PIP_PACKAGES = [
     "torch==2.2.2",
     "torchvision==0.17.2",
-    "opencv-python==4.9.0.80",
-    "numpy==1.26.4",
+    "opencv-python>=4.10.0.84",
+    "numpy>=1.24.0,<3.0",
     "Pillow==10.2.0",
     "onnx==1.15.0",
     "onnxruntime==1.17.1",
@@ -324,6 +324,22 @@ def force_gpu_pytorch():
         log("pip", line.strip())
     proc.wait()
     ok = proc.returncode == 0
+
+    # Fix numpy/cv2 compatibility: PyTorch install may pull NumPy 2.x which breaks opencv
+    log("info", "Checking NumPy/OpenCV compatibility...")
+    try:
+        fix_cmd = [sys.executable, "-m", "pip", "install", "opencv-python>=4.10.0.84", "numpy>=1.24.0,<3"]
+        fix_proc = subprocess.Popen(fix_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        for line in fix_proc.stdout:
+            log("pip", line.strip())
+        fix_proc.wait()
+        if fix_proc.returncode == 0:
+            log("info", "NumPy/OpenCV compatibility fixed")
+        else:
+            log("warn", "Failed to fix NumPy/OpenCV compatibility")
+    except Exception as e:
+        log("warn", f"NumPy/OpenCV fix skipped: {e}")
+
     if ok:
         log("success", "CUDA PyTorch installed. Restart the panel to detect GPU.")
     else:
