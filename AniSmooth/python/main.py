@@ -442,20 +442,35 @@ def run_sys_metrics():
 
     
     try:
-        result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,utilization.gpu,utilization.memory,temperature.gpu,memory.used,memory.total",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            parts = result.stdout.strip().split(",")
-            if len(parts) >= 6:
-                metrics["gpu_name"] = parts[0].strip()
-                metrics["gpu_util"] = float(parts[1].strip())
-                metrics["gpu_mem_percent"] = float(parts[2].strip())
-                metrics["gpu_temp"] = float(parts[3].strip())
-                metrics["gpu_mem_used_mb"] = float(parts[4].strip())
-                metrics["gpu_mem_total_mb"] = float(parts[5].strip())
+        import shutil
+        smi_path = shutil.which("nvidia-smi")
+        if not smi_path:
+            # Try common Windows locations
+            common_paths = [
+                r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+                r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+                r"C:\Windows\System32\nvidia-smi.exe",
+            ]
+            for p in common_paths:
+                if os.path.exists(p):
+                    smi_path = p
+                    break
+        
+        if smi_path:
+            result = subprocess.run(
+                [smi_path, "--query-gpu=name,utilization.gpu,utilization.memory,temperature.gpu,memory.used,memory.total",
+                 "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                parts = result.stdout.strip().split(",")
+                if len(parts) >= 6:
+                    metrics["gpu_name"] = parts[0].strip()
+                    metrics["gpu_util"] = float(parts[1].strip())
+                    metrics["gpu_mem_percent"] = float(parts[2].strip())
+                    metrics["gpu_temp"] = float(parts[3].strip())
+                    metrics["gpu_mem_used_mb"] = float(parts[4].strip())
+                    metrics["gpu_mem_total_mb"] = float(parts[5].strip())
     except Exception:
         pass
 

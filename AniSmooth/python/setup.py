@@ -155,12 +155,41 @@ def install_ffmpeg():
         log("error", "Could not extract FFmpeg from the downloaded archive")
         return False
 
+def _find_nvidia_smi():
+    """Find nvidia-smi executable in common locations."""
+    import shutil
+    
+    # First try PATH
+    smi = shutil.which("nvidia-smi")
+    if smi:
+        return smi
+    
+    # Common Windows locations
+    common_paths = [
+        r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+        r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+        r"C:\Windows\System32\nvidia-smi.exe",
+    ]
+    
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
 def _detect_cuda_pytorch_index():
+    """Detect CUDA version and return appropriate PyTorch index URL."""
+    smi_path = _find_nvidia_smi()
+    if not smi_path:
+        log("warn", "nvidia-smi not found in PATH or common locations")
+        return None
+    
     try:
         result = subprocess.run(
-            ["nvidia-smi"], capture_output=True, text=True, timeout=10
+            [smi_path], capture_output=True, text=True, timeout=10
         )
         if result.returncode != 0:
+            log("warn", f"nvidia-smi failed with code {result.returncode}")
             return None
         for line in result.stdout.split("\n"):
             if "CUDA Version:" in line:
@@ -171,8 +200,8 @@ def _detect_cuda_pytorch_index():
                 elif major >= 11:
                     return "https://download.pytorch.org/whl/cu118"
                 break
-    except Exception:
-        pass
+    except Exception as e:
+        log("warn", f"Failed to detect CUDA version: {e}")
     return None
 
 def install_pip_packages():
@@ -227,10 +256,19 @@ def install_pip_packages():
 
 def force_gpu_pytorch():
     log("section", "GPU PyTorch Installer", step=1, total=1)
+    
+    smi_path = _find_nvidia_smi()
+    if not smi_path:
+        log("error", "nvidia-smi not found. Cannot detect NVIDIA GPU.")
+        log("error", "Please install NVIDIA drivers from https://www.nvidia.com/drivers")
+        return False
+    
+    log("info", f"Found nvidia-smi at: {smi_path}")
+    
     cuda_index = _detect_cuda_pytorch_index()
     if not cuda_index:
-        log("error", "No NVIDIA GPU detected via nvidia-smi. Cannot install CUDA PyTorch.")
-        log("error", "Make sure NVIDIA drivers are installed.")
+        log("error", "Could not detect CUDA version. Drivers may be outdated or corrupted.")
+        log("error", "Try updating NVIDIA drivers from https://www.nvidia.com/drivers")
         return False
 
     log("info", "Reinstalling PyTorch + torchvision with CUDA...")

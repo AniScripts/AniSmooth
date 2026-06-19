@@ -1,5 +1,7 @@
 import json
 import subprocess
+import shutil
+import os
 import torch
 
 def log(msg_type, msg, **kw):
@@ -12,10 +14,34 @@ def get_device():
         return torch.device("cuda")
     return torch.device("cpu")
 
+def _find_nvidia_smi():
+    """Find nvidia-smi executable in common locations."""
+    # First try PATH
+    smi = shutil.which("nvidia-smi")
+    if smi:
+        return smi
+    
+    # Common Windows locations
+    common_paths = [
+        r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+        r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+        r"C:\Windows\System32\nvidia-smi.exe",
+    ]
+    
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
 def _run_nvidia_smi():
+    smi_path = _find_nvidia_smi()
+    if not smi_path:
+        return None
+    
     try:
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total,driver_version",
+            [smi_path, "--query-gpu=name,memory.total,driver_version",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=10
         )
@@ -31,7 +57,7 @@ def _run_nvidia_smi():
             "cuda_driver_version": None,
         }
         cuda_result = subprocess.run(
-            ["nvidia-smi"], capture_output=True, text=True, timeout=10
+            [smi_path], capture_output=True, text=True, timeout=10
         )
         if cuda_result.returncode == 0:
             for line in cuda_result.stdout.split("\n"):
