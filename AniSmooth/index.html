@@ -310,6 +310,34 @@
           <div class="panel">
             <div class="panel-head">
               <i class="fa-solid fa-microchip panel-head-icon"></i>
+              <span class="panel-title">Hardware Mode</span>
+            </div>
+            <div class="form-group">
+              <div class="ts-gpu-choice" id="settingsGpuChoice">
+                <div class="ts-gpu-option" id="settingsGpuOptionGpu" onclick="changeGpuMode('gpu')">
+                  <div class="ts-gpu-option-icon"><i class="fa-solid fa-microchip"></i></div>
+                  <div class="ts-gpu-option-info">
+                    <div class="ts-gpu-option-title">GPU Acceleration</div>
+                    <div class="ts-gpu-option-desc">NVIDIA GPU with CUDA. Faster processing.</div>
+                  </div>
+                  <div class="ts-gpu-option-check" id="settingsGpuCheckGpu"></div>
+                </div>
+                <div class="ts-gpu-option" id="settingsGpuOptionCpu" onclick="changeGpuMode('cpu')">
+                  <div class="ts-gpu-option-icon"><i class="fa-solid fa-computer"></i></div>
+                  <div class="ts-gpu-option-info">
+                    <div class="ts-gpu-option-title">CPU Only</div>
+                    <div class="ts-gpu-option-desc">Slower but works on any system.</div>
+                  </div>
+                  <div class="ts-gpu-option-check" id="settingsGpuCheckCpu"></div>
+                </div>
+              </div>
+              <div id="settingsGpuStatus" style="margin-top:8px;"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-microchip panel-head-icon"></i>
               <span class="panel-title">GPU</span>
             </div>
             <div class="gpu-card" id="gpuCard">

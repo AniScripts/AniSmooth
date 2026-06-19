@@ -202,6 +202,10 @@
           }, 2000);
         }
       }
+
+      if (tab === "settings" && this._buildGpuModeSelector) {
+        this._buildGpuModeSelector();
+      }
     },
 
     initSettingsPanel: function () {
@@ -219,6 +223,7 @@
       this._buildFolderActions();
       this._buildModelManager();
       this._initPresets();
+      this._buildGpuModeSelector();
 
       
       var self = this;
@@ -708,9 +713,38 @@
         var tab = this._tabConfig[i];
         var key = "anismooth_tab_" + tab.id;
         var visible = window.StorageManager.getItem(key, "1") !== "0";
-        var btn = document.getElementById(tab.id + "TabBtn");
+        var btn = document.getElementById(tab + "TabBtn");
         if (btn) {
           btn.style.display = visible ? "" : "none";
+        }
+      }
+    },
+
+    _buildGpuModeSelector: function () {
+      var currentMode = window.StorageManager.getItem("anismooth_gpu_choice", null);
+      var gpuOption = document.getElementById("settingsGpuOptionGpu");
+      var cpuOption = document.getElementById("settingsGpuOptionCpu");
+      var gpuCheck = document.getElementById("settingsGpuCheckGpu");
+      var cpuCheck = document.getElementById("settingsGpuCheckCpu");
+      var statusEl = document.getElementById("settingsGpuStatus");
+
+      if (!gpuOption || !cpuOption) return;
+
+      if (currentMode === "gpu") {
+        gpuOption.classList.add("ts-gpu-selected");
+        gpuCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      } else if (currentMode === "cpu") {
+        cpuOption.classList.add("ts-gpu-selected");
+        cpuCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      }
+
+      if (statusEl) {
+        if (currentMode === "gpu") {
+          statusEl.innerHTML = '<span class="form-hint" style="color:#6ee7b7;"><i class="fa-solid fa-check"></i> GPU mode active</span>';
+        } else if (currentMode === "cpu") {
+          statusEl.innerHTML = '<span class="form-hint" style="color:#fcd34d;"><i class="fa-solid fa-computer"></i> CPU mode active</span>';
+        } else {
+          statusEl.innerHTML = '<span class="form-hint">No mode selected. Run setup wizard to configure.</span>';
         }
       }
     },
@@ -1665,6 +1699,29 @@
     }
 
     toast._timer = setTimeout(function () { toast.style.display = "none"; }, 4000);
+  };
+
+  window.changeGpuMode = function (mode) {
+    var currentMode = window.StorageManager.getItem("anismooth_gpu_choice", null);
+    if (mode === currentMode) return;
+
+    if (mode === "gpu") {
+      window.showConfirm(
+        "Switch to GPU mode? This will install PyTorch CUDA (~2.5GB download). The panel may be unresponsive during installation.",
+        function () {
+          window.StorageManager.setItem("anismooth_gpu_choice", "gpu");
+          if (window.ToolsSetup && window.ToolsSetup.showToolsSetupForGpuInstall) {
+            window.ToolsSetup.showToolsSetupForGpuInstall();
+          }
+        }
+      );
+    } else {
+      window.StorageManager.setItem("anismooth_gpu_choice", "cpu");
+      window.showToast("Switched to CPU mode. GPU acceleration disabled.", "ok");
+      if (window.App && window.App._buildGpuModeSelector) {
+        window.App._buildGpuModeSelector();
+      }
+    }
   };
 
   window.addEventListener("DOMContentLoaded", function () {

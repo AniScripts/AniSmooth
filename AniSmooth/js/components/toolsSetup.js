@@ -724,6 +724,9 @@
     }
     window.StorageManager.setItem('anismooth_setup_complete', '1');
     window.App.refreshGpuInfo();
+    if (window.App && window.App._buildGpuModeSelector) {
+      window.App._buildGpuModeSelector();
+    }
     hideToolsSetup();
   }
 
@@ -736,6 +739,26 @@
     renderSetupStep();
   }
 
+  function showToolsSetupForGpuInstall() {
+    var gate = document.getElementById('tools-setup-gate');
+    if (!gate) {
+      gate = document.createElement('div');
+      gate.id = 'tools-setup-gate';
+      gate.className = 'setup-gate';
+      document.body.appendChild(gate);
+    }
+    gate.style.display = 'flex';
+    _step = 'gpuchoice';
+    _gpuChoice = 'gpu';
+    _gpuDownloadState = null;
+    _gpuChecked = false;
+    _pytorchChecked = false;
+    _installRunning = false;
+    _installLines = [];
+    _toolsFolder = (window.App && window.App.anismoothToolsFolder) || _resolveDefaultFolder();
+    renderSetupStep();
+  }
+
   function checkAndShowIfNeeded() {
     var complete = window.StorageManager.getItem('anismooth_setup_complete', '0');
     var skipped = window.StorageManager.getItem('anismooth_setup_skipped', '0');
@@ -743,7 +766,7 @@
     return false;
   }
 
-  window.ToolsSetup = { showToolsSetup: showToolsSetup, checkAndShowIfNeeded: checkAndShowIfNeeded };
+  window.ToolsSetup = { showToolsSetup: showToolsSetup, showToolsSetupForGpuInstall: showToolsSetupForGpuInstall, checkAndShowIfNeeded: checkAndShowIfNeeded };
   window.goToSetupStep = goToSetupStep;
   window.scanToolsAndRefresh = scanToolsAndRefresh;
   window.skipToolsSetup = skipToolsSetup;
