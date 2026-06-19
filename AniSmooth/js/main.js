@@ -86,6 +86,14 @@
       }, 800);
     },
 
+    _resolvePythonCmd: function () {
+      var venvPython = window.FileSystem.path.join(this.anismoothToolsFolder, ".venv", "Scripts", "python.exe");
+      if (window.FileSystem.fs && window.FileSystem.fs.existsSync(venvPython)) {
+        return venvPython;
+      }
+      return this.settings.pythonPath || "python";
+    },
+
     bindGlobalEvents: function () {
       var self = this;
 
@@ -333,7 +341,7 @@
     },
 
     refreshGpuInfo: function () {
-      var pythonCmd = this.settings.pythonPath || "python";
+      var pythonCmd = this._resolvePythonCmd();
 
       var extPath = "";
       try {
@@ -578,7 +586,7 @@
             logEl.innerHTML = '<div class="gpu-install-log" id="gpuInstallLogInner">Starting pip install...</div>';
           }
 
-          var pythonCmd = self.settings.pythonPath || "python";
+          var pythonCmd = self._resolvePythonCmd();
           var extPath = "";
           try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
           var scriptPath = (window.FileSystem.path && extPath)

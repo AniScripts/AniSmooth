@@ -26,6 +26,14 @@
     return base ? window.FileSystem.path.join(base, "backend") : "C:\\AniSmoothTools";
   }
 
+  function _resolvePythonCmd() {
+    var venvPython = window.FileSystem.path.join(_toolsFolder, ".venv", "Scripts", "python.exe");
+    if (window.FileSystem.fs && window.FileSystem.fs.existsSync(venvPython)) {
+      return venvPython;
+    }
+    return _pythonCmd || "python";
+  }
+
   function showToolsSetup() {
     var gate = document.getElementById('tools-setup-gate');
     if (!gate) {
@@ -428,7 +436,7 @@
     var scriptPath = (window.FileSystem.path && extPath) ? window.FileSystem.path.join(extPath, 'python', 'main.py') : 'main.py';
     _gpuDiag = [];
     try {
-      var proc = window.FileSystem.childProcess.spawn(_pythonCmd || 'python', [scriptPath, '--mode', 'gpu-info']);
+      var       proc = window.FileSystem.childProcess.spawn(_resolvePythonCmd(), [scriptPath, '--mode', 'gpu-info']);
       var stdout = '';
       var stderr = '';
       proc.stdout.on('data', function (d) { stdout += d.toString(); });
@@ -467,7 +475,7 @@
   var _pytorchExtra = '';
   function checkPytorchAsync() {
     try {
-      var proc = window.FileSystem.childProcess.spawn(_pythonCmd || 'python', ['-c', 'import torch; print(torch.__version__); import cv2; print("cv2-ok")']);
+      var proc = window.FileSystem.childProcess.spawn(_resolvePythonCmd(), ['-c', 'import torch; print(torch.__version__); import cv2; print("cv2-ok")']);
       var stdout = '';
       proc.stdout.on('data', function (d) { stdout += d.toString(); });
       proc.on('close', function (code) {
@@ -738,19 +746,22 @@
   function skipToolsSetup() { window.StorageManager.setItem('anismooth_setup_skipped', '1'); hideToolsSetup(); }
 
   function finishToolsSetup() {
-    if (_pythonOk && _pythonCmd) {
-      window.StorageManager.setItem('anismooth_python_path', _pythonCmd);
+    var pythonPath = _resolvePythonCmd();
+    if (pythonPath) {
+      window.StorageManager.setItem('anismooth_python_path', pythonPath);
       if (window.App && window.App.settings) {
-        window.App.settings.pythonPath = _pythonCmd;
+        window.App.settings.pythonPath = pythonPath;
         var pi = document.getElementById("pythonPathInput");
-        if (pi) pi.value = _pythonCmd;
+        if (pi) pi.value = pythonPath;
       }
     }
     if (_gpuChoice) {
       window.StorageManager.setItem('anismooth_gpu_choice', _gpuChoice);
     }
     window.StorageManager.setItem('anismooth_setup_complete', '1');
-    window.App.refreshGpuInfo();
+    if (window.App && window.App.refreshGpuInfo) {
+      window.App.refreshGpuInfo();
+    }
     if (window.App && window.App._buildGpuModeSelector) {
       window.App._buildGpuModeSelector();
     }

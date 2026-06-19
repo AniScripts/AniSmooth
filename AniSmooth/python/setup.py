@@ -1,6 +1,9 @@
 import sys, os, json, shutil, tempfile, zipfile, io, subprocess
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+VENV_DIR = os.path.join(SCRIPT_DIR, ".venv")
+VENV_PYTHON = os.path.join(VENV_DIR, "Scripts", "python.exe") if os.name == "nt" else os.path.join(VENV_DIR, "bin", "python")
+VENV_PIP = os.path.join(VENV_DIR, "Scripts", "pip.exe") if os.name == "nt" else os.path.join(VENV_DIR, "bin", "pip")
 
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 
@@ -19,6 +22,22 @@ def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
     out.update(kw)
     print(json.dumps(out), flush=True)
+
+def ensure_venv():
+    """Create virtual environment if it doesn't exist. Returns path to venv python or None."""
+    if os.path.exists(VENV_PYTHON):
+        log("info", f"Virtual environment found at {VENV_DIR}")
+        return VENV_PYTHON
+
+    log("info", f"Creating virtual environment at {VENV_DIR}...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "venv", VENV_DIR], timeout=120)
+        log("success", "Virtual environment created")
+        log("venv", VENV_PYTHON)
+        return VENV_PYTHON
+    except Exception as e:
+        log("error", f"Failed to create venv: {e}")
+        return None
 
 def download_file(url, dest_path, label):
     """Download a file with progress reporting. Returns True on success."""
@@ -95,7 +114,6 @@ def install_ffmpeg():
     if not download_file(FFMPEG_URL, zip_path, "FFmpeg"):
         return False
 
-    
     sha_path = zip_path + ".sha256"
     if download_file(FFMPEG_URL + ".sha256", sha_path, "FFmpeg checksum"):
         try:
@@ -158,8 +176,7 @@ def install_ffmpeg():
 def _find_nvidia_smi():
     """Find nvidia-smi executable. Prefers NVIDIA's install dir over System32 stub."""
     import shutil
-    
-    # Prefer NVIDIA's own directory (real smi with full output)
+
     nvidia_dirs = [
         r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
         r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
@@ -167,18 +184,14 @@ def _find_nvidia_smi():
     for path in nvidia_dirs:
         if os.path.exists(path):
             return path
-    
-    # Fallback: PATH or System32
+
     smi = shutil.which("nvidia-smi")
-    if smi and "NVIDIA Corporation" not in smi:
-        # It might be the System32 stub — check NVIDIA dirs via PATH parent
-        pass
     if smi:
         return smi
-    
+
     if os.path.exists(r"C:\Windows\System32\nvidia-smi.exe"):
         return r"C:\Windows\System32\nvidia-smi.exe"
-    
+
     return None
 
 def _get_cuda_version_from_smi(smi_path):
@@ -189,13 +202,12 @@ def _get_cuda_version_from_smi(smi_path):
         )
         if result.returncode != 0:
             return None
-        
+
         for line in result.stdout.split("\n"):
             if "CUDA Version:" in line:
                 raw = line.strip().split("CUDA Version:")[-1].strip()
                 return raw.split(" ")[0]
-        
-        # Alternative: query driver_version which implies CUDA compat
+
         result2 = subprocess.run(
             [smi_path, "--query-gpu=driver_version", "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=10
@@ -214,8 +226,7 @@ def _get_cuda_version_from_smi(smi_path):
 def _detect_cuda_pytorch_index():
     """Detect CUDA version and return appropriate PyTorch index URL."""
     import shutil
-    
-    # Try multiple paths: NVIDIA dir first, then PATH/System32
+
     nvidia_paths = [
         r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
         r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
@@ -225,125 +236,125 @@ def _detect_cuda_pytorch_index():
             continue
         ver = _get_cuda_version_from_smi(p)
         if ver:
-            log("info", f"nvidia-smi: {p} → CUDA {ver}")
+            log("info", f"nvidia-smi: {p} -> CUDA {ver}")
             major = int(ver.split(".")[0])
             return "https://download.pytorch.org/whl/cu124" if major >= 12 else "https://download.pytorch.org/whl/cu118"
-    
+
     smi = shutil.which("nvidia-smi")
     if smi:
         ver = _get_cuda_version_from_smi(smi)
         if ver:
-            log("info", f"nvidia-smi: {smi} → CUDA {ver}")
+            log("info", f"nvidia-smi: {smi} -> CUDA {ver}")
             major = int(ver.split(".")[0])
             return "https://download.pytorch.org/whl/cu124" if major >= 12 else "https://download.pytorch.org/whl/cu118"
-    
+
     if os.path.exists(r"C:\Windows\System32\nvidia-smi.exe"):
         ver = _get_cuda_version_from_smi(r"C:\Windows\System32\nvidia-smi.exe")
         if ver:
-            log("info", f"nvidia-smi: System32 → CUDA {ver}")
+            log("info", f"nvidia-smi: System32 -> CUDA {ver}")
             major = int(ver.split(".")[0])
             return "https://download.pytorch.org/whl/cu124" if major >= 12 else "https://download.pytorch.org/whl/cu118"
-    
+
     return None
 
+def _run_pip(venv_python, args):
+    """Run pip inside the venv and stream output. Returns exit code."""
+    cmd = [venv_python, "-m", "pip"] + args
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    for line in proc.stdout:
+        log("pip", line.strip())
+    proc.wait()
+    return proc.returncode
+
 def install_pip_packages():
-    """Install required pip packages for custom PyTorch workflows."""
+    """Install required pip packages into the virtual environment."""
+    venv_python = ensure_venv()
+    if not venv_python:
+        log("error", "Cannot install packages without virtual environment")
+        return False
+
+    # Check which packages are missing
     missing = []
     for pkg in PIP_PACKAGES:
+        pkg_name = pkg.split("==")[0].split(">=")[0].split("<")[0].strip()
         try:
             subprocess.check_output(
-                [sys.executable, "-m", "pip", "show", pkg],
-                stderr=subprocess.DEVNULL,
-                timeout=15
+                [venv_python, "-m", "pip", "show", pkg_name],
+                stderr=subprocess.DEVNULL, timeout=15
             )
         except Exception:
             missing.append(pkg)
 
     if not missing:
-        log("info", "All essential pip packages are already installed")
+        log("info", "All pip packages already installed in venv")
         return True
 
-    log("info", f"Installing pip packages: {', '.join(missing)}...")
-    try:
-        cmd = [sys.executable, "-m", "pip", "install"]
-        if "torch" in missing or "torchvision" in missing:
-            cuda_index = _detect_cuda_pytorch_index()
-            if cuda_index:
-                log("info", "NVIDIA GPU detected. Installing CUDA PyTorch...")
-                log("info", "Using index: " + cuda_index)
-                cmd += ["torch", "torchvision", "--index-url", cuda_index]
-            else:
-                log("info", "No NVIDIA GPU found. Installing CPU PyTorch...")
-                cmd += ["torch", "torchvision"]
-            if "torch" in missing: missing.remove("torch")
-            if "torchvision" in missing: missing.remove("torchvision")
+    log("info", f"Installing pip packages into venv: {', '.join(missing)}...")
+    cmd = ["install"]
+    if "torch" in missing or "torchvision" in missing:
+        cuda_index = _detect_cuda_pytorch_index()
+        if cuda_index:
+            log("info", "NVIDIA GPU detected. Installing CUDA PyTorch...")
+            log("info", "Using index: " + cuda_index)
+            cmd += ["torch", "torchvision", "--index-url", cuda_index]
+        else:
+            log("info", "No NVIDIA GPU found. Installing CPU PyTorch...")
+            cmd += ["torch", "torchvision"]
+        if "torch" in missing: missing.remove("torch")
+        if "torchvision" in missing: missing.remove("torchvision")
 
-        if missing:
-            cmd += missing
+    if missing:
+        cmd += missing
 
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
-        for line in proc.stdout:
-            log("pip", line.strip())
-
-        proc.wait()
-        return proc.returncode == 0
-    except Exception as e:
-        log("error", f"pip installation failed: {e}")
-        return False
+    rc = _run_pip(venv_python, cmd)
+    return rc == 0
 
 def force_gpu_pytorch():
+    """Install CUDA PyTorch into the virtual environment."""
     log("section", "GPU PyTorch Installer", step=1, total=1)
-    
+
     smi_path = _find_nvidia_smi()
     if not smi_path:
         log("error", "nvidia-smi not found. Cannot detect NVIDIA GPU.")
         log("error", "Please install NVIDIA drivers from https://www.nvidia.com/drivers")
         return False
-    
+
     log("info", f"Found nvidia-smi at: {smi_path}")
-    
+
     cuda_index = _detect_cuda_pytorch_index()
     if not cuda_index:
         log("error", "Could not detect CUDA version. Drivers may be outdated or corrupted.")
         log("error", "Try updating NVIDIA drivers from https://www.nvidia.com/drivers")
         return False
 
+    venv_python = ensure_venv()
+    if not venv_python:
+        log("error", "Failed to create virtual environment")
+        return False
+
+    log("info", f"Using venv Python: {venv_python}")
     log("info", "Reinstalling PyTorch + torchvision with CUDA...")
     log("info", "Index: " + cuda_index)
-    cmd = [
-        sys.executable, "-m", "pip", "install", "--force-reinstall",
-        "torch", "torchvision", "--index-url", cuda_index
-    ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    for line in proc.stdout:
-        log("pip", line.strip())
-    proc.wait()
-    ok = proc.returncode == 0
 
-    # Fix numpy/cv2 compatibility: PyTorch install may pull NumPy 2.x which breaks opencv
+    rc = _run_pip(venv_python, [
+        "install", "--force-reinstall",
+        "torch", "torchvision", "--index-url", cuda_index
+    ])
+    ok = rc == 0
+
+    # Fix numpy/cv2 compatibility after PyTorch install
     log("info", "Checking NumPy/OpenCV compatibility...")
     try:
-        fix_cmd = [sys.executable, "-m", "pip", "install", "opencv-python>=4.10.0.84", "numpy>=1.24.0,<3"]
-        fix_proc = subprocess.Popen(fix_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        for line in fix_proc.stdout:
-            log("pip", line.strip())
-        fix_proc.wait()
-        if fix_proc.returncode == 0:
-            log("info", "NumPy/OpenCV compatibility fixed")
-        else:
-            log("warn", "Failed to fix NumPy/OpenCV compatibility")
+        _run_pip(venv_python, ["install", "opencv-python>=4.10.0.84", "numpy>=1.24.0,<3"])
+        log("info", "NumPy/OpenCV compatibility ensured")
     except Exception as e:
         log("warn", f"NumPy/OpenCV fix skipped: {e}")
 
     if ok:
-        log("success", "CUDA PyTorch installed. Restart the panel to detect GPU.")
+        log("success", "CUDA PyTorch installed into venv. Restart GPU detection.")
+        log("venv", VENV_PYTHON)
     else:
-        log("error", "CUDA PyTorch install failed with code " + str(proc.returncode))
+        log("error", "CUDA PyTorch install failed with code " + str(rc))
     return ok
 
 def main():
@@ -363,7 +374,17 @@ def main():
 
     log("info", "AniSmooth Python Setup")
     log("info", f"Target directory: {SCRIPT_DIR}")
-    log("info", f"Python version: {sys.version}")
+    log("info", f"System Python: {sys.version}")
+
+    # Create venv first
+    venv_python = ensure_venv()
+    if not venv_python:
+        log("error", "Failed to set up virtual environment. Aborting.")
+        sys.exit(1)
+
+    log("info", f"Virtual environment: {VENV_DIR}")
+    log("info", f"Venv Python: {venv_python}")
+    log("venv", VENV_PYTHON)
 
     results = {"ffmpeg": False, "ffprobe": False, "pip": False}
 
