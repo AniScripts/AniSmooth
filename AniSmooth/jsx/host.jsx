@@ -14,11 +14,17 @@ function importFileToAE(filePath) {
     importOptions.importAs = ImportAsType.FOOTAGE;
     var footage = app.project.importFile(importOptions);
     
-    
     var comp = app.project.activeItem;
     if (comp && comp instanceof CompItem) {
       var layer = comp.layers.add(footage);
       layer.startTime = comp.time;
+      // Scale to fit comp if footage is larger
+      if (footage.width > 0 && footage.height > 0 && comp.width > 0 && comp.height > 0) {
+        var scaleX = (comp.width / footage.width) * 100;
+        var scaleY = (comp.height / footage.height) * 100;
+        var fitScale = Math.min(scaleX, scaleY);
+        layer.property("Scale").setValue([fitScale, fitScale]);
+      }
     }
     app.endUndoGroup();
     return "{\"ok\":true,\"message\":\"Imported clip to After Effects.\"}";
