@@ -227,9 +227,14 @@ function renderSelectedLayer(outputPathDir, layerName) {
     var rq = app.project.renderQueue;
     var item = rq.items.add(comp);
     
-    
-    item.timeSpanStart = layer.inPoint;
-    item.timeSpanDuration = layer.outPoint - layer.inPoint;
+     
+    var startTime = layer.inPoint;
+    var endTime = layer.outPoint;
+    if (comp.displayStartTime > startTime) {
+      startTime = comp.displayStartTime;
+    }
+    item.timeSpanStart = startTime;
+    item.timeSpanDuration = endTime - startTime;
     
     
     var outputModule = item.outputModule(1);
@@ -310,6 +315,9 @@ function renderSelectedLayerPreview(outputPathDir, previewDuration) {
     }
     var layer = comp.selectedLayers[0];
     var startTime = layer.inPoint;
+    if (comp.displayStartTime > startTime) {
+      startTime = comp.displayStartTime;
+    }
     var duration = parseFloat(previewDuration) || 3;
     var endTime = Math.min(startTime + duration, layer.outPoint);
     debugLog += "start=" + startTime + " dur=" + (endTime - startTime) + " ";
