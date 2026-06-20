@@ -189,9 +189,7 @@
             window.App.importFileToAfterEffects(outputPath);
           }
           
-          if (preRenderPath && settings.outputAutoImport !== false) {
-            window.App.importFileToAfterEffects(preRenderPath);
-          }
+          // Prerender stays on disk only — never imported into AE
           item.outputPath = outputPath;
           item.preRenderPath = preRenderPath;
           self._notify();
@@ -204,10 +202,6 @@
           dbg("error", "Queue", "Error: " + err);
           if (res.isTemp && window.FileSystem && window.FileSystem.fs) {
             try { window.FileSystem.fs.unlinkSync(inputPath); } catch (e) {}
-          }
-          
-          if (preRenderPath && settings.outputAutoImport !== false) {
-            window.App.importFileToAfterEffects(preRenderPath);
           }
           self._notify();
           self._processNext();
