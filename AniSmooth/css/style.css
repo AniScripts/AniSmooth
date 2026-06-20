@@ -74,17 +74,16 @@ body {
   width: 3px; height: 3px; border-radius: 50%; background: #ffffff;
 }
 
-.stopwatch {
-  display: flex; align-items: center; gap: 2px; margin-left: auto;
-  padding: 2px 4px; border-radius: 4px; background: rgba(255,255,255,0.03);
-  border: 1px solid transparent; transition: border-color 0.15s;
-}
-.stopwatch.running { border-color: rgba(16,185,129,0.25); }
 .stopwatch-time {
   font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; font-weight: 600;
   color: #e5e7eb; min-width: 64px; text-align: center; letter-spacing: 0.5px;
 }
 .stopwatch.running .stopwatch-time { color: #6ee7b7; }
+.stopwatch-time-lg {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 18px; font-weight: 600; color: #e5e7eb; letter-spacing: 1px;
+}
+.stopwatch-view.running .stopwatch-time-lg { color: #6ee7b7; }
 .stopwatch-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 20px; height: 20px; background: none; border: none; border-radius: 3px;

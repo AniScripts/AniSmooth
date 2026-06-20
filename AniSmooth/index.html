@@ -29,6 +29,9 @@
         <button id="queueTabBtn" class="nav-icon" title="Queue">
           <i class="fa-solid fa-list-check"></i>
         </button>
+        <button id="stopwatchTabBtn" class="nav-icon" title="Stopwatch">
+          <i class="fa-solid fa-stopwatch"></i>
+        </button>
         <button id="sysmonTabBtn" class="nav-icon" title="System Monitor">
           <i class="fa-solid fa-chart-line"></i>
         </button>
@@ -36,11 +39,6 @@
           <i class="fa-solid fa-gear"></i>
         </button>
       </nav>
-      <div class="stopwatch" id="stopwatch" title="Stopwatch">
-        <span class="stopwatch-time" id="stopwatchTime">00:00:00</span>
-        <button class="stopwatch-btn" id="stopwatchToggle" title="Start / Stop"><i class="fa-solid fa-play"></i></button>
-        <button class="stopwatch-btn" id="stopwatchReset" title="Reset"><i class="fa-solid fa-rotate-left"></i></button>
-      </div>
     </header>
 
     <main class="content">
@@ -276,6 +274,30 @@
       </div>
 
       
+      <div id="stopwatchView" class="tab-content hidden">
+        <div class="panel" style="text-align:center;padding:10px;">
+          <div class="stopwatch-time-lg" id="stopwatchTime">00:00:00</div>
+          <div class="stopwatch-controls" style="margin-top:8px;display:flex;gap:6px;justify-content:center;">
+            <button class="btn btn-primary" id="stopwatchToggle" style="width:auto;padding:4px 14px;font-size:9px;">
+              <i class="fa-solid fa-play"></i> Start
+            </button>
+            <button class="btn btn-secondary" id="stopwatchReset" style="width:auto;padding:4px 14px;font-size:9px;">
+              <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+          </div>
+          <div class="stopwatch-settings" style="margin-top:12px;text-align:left;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="toggle-row" style="padding:0;">
+                <span class="toggle-label" style="flex:1;font-size:9px;">Auto-start on project open</span>
+                <input type="checkbox" class="toggle-input" id="stopwatchAutostart">
+                <span class="toggle-switch"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
       <div id="sysmonView" class="tab-content hidden">
         <div class="panel">
           <div class="panel-head">
@@ -414,27 +436,6 @@
           </div>
           <span class="form-hint" style="margin-bottom:8px;display:block;">Show or hide tabs in the top navigation bar. Settings cannot be hidden.</span>
           <div id="interfaceToggles"></div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <i class="fa-solid fa-stopwatch panel-head-icon"></i>
-            <span class="panel-title">Stopwatch</span>
-          </div>
-          <div class="form-group">
-            <div class="toggle-row" style="padding:0;margin-bottom:6px;">
-              <span class="toggle-label" style="flex:1;">Show stopwatch in topbar</span>
-              <input type="checkbox" class="toggle-input stopwatch-toggle" id="stopwatchVisible" checked>
-              <span class="toggle-switch"></span>
-            </div>
-          </div>
-          <div class="form-group">
-            <div class="toggle-row" style="padding:0;margin-bottom:6px;">
-              <span class="toggle-label" style="flex:1;">Auto-start on project open</span>
-              <input type="checkbox" class="toggle-input stopwatch-toggle" id="stopwatchAutostart">
-              <span class="toggle-switch"></span>
-            </div>
-          </div>
         </div>
 
         <div class="panel">

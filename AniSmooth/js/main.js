@@ -112,6 +112,9 @@
       document.getElementById("queueTabBtn").addEventListener("click", function () {
         self.switchTab("queue");
       });
+      document.getElementById("stopwatchTabBtn").addEventListener("click", function () {
+        self.switchTab("stopwatch");
+      });
       document.getElementById("sysmonTabBtn").addEventListener("click", function () {
         self.switchTab("sysmon");
       });
@@ -161,7 +164,7 @@
     },
 
     switchTab: function (tab) {
-      var tabs = ["deadframes", "interpolation", "upscale", "console", "queue", "sysmon", "settings"];
+      var tabs = ["deadframes", "interpolation", "upscale", "console", "queue", "stopwatch", "sysmon", "settings"];
       dbg('info', 'Nav', 'Switched to tab: ' + tab);
 
       for (var i = 0; i < tabs.length; i++) {
@@ -234,7 +237,6 @@
       this._applyTabVisibility();
       this._buildModelToggles();
       this._applyModelVisibility();
-      this._buildStopwatchToggles();
       this._buildEnvInfo();
       this._buildFolderActions();
       this._buildModelManager();
@@ -771,6 +773,7 @@
       { id: "upscale", icon: "fa-expand", label: "Upscale" },
       { id: "console", icon: "fa-terminal", label: "Console" },
       { id: "queue", icon: "fa-list-check", label: "Queue" },
+      { id: "stopwatch", icon: "fa-stopwatch", label: "Stopwatch" },
       { id: "sysmon", icon: "fa-chart-line", label: "System Monitor" }
     ],
 
@@ -947,24 +950,6 @@
         if (!activeFound && firstVisible) {
           select.value = firstVisible.getAttribute("data-value");
         }
-      }
-    },
-
-    _buildStopwatchToggles: function () {
-      var visibleCheck = document.getElementById("stopwatchVisible");
-      var autostartCheck = document.getElementById("stopwatchAutostart");
-      if (visibleCheck) {
-        visibleCheck.checked = window.StorageManager.getItem("anismooth_stopwatch_visible", "1") !== "0";
-        visibleCheck.addEventListener("change", function () {
-          window.StorageManager.setItem("anismooth_stopwatch_visible", this.checked ? "1" : "0");
-          if (window.Stopwatch) window.Stopwatch.setVisible(this.checked);
-        });
-      }
-      if (autostartCheck) {
-        autostartCheck.checked = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
-        autostartCheck.addEventListener("change", function () {
-          window.StorageManager.setItem("anismooth_stopwatch_autostart", this.checked ? "1" : "0");
-        });
       }
     },
 
@@ -1828,7 +1813,26 @@
   };
 
   window.changeGpuMode = function (mode) {
-    ...
+    var currentMode = window.StorageManager.getItem("anismooth_gpu_choice", null);
+    if (mode === currentMode) return;
+
+    if (mode === "gpu") {
+      window.showConfirm(
+        "Switch to GPU mode? This will install PyTorch CUDA (~2.5GB download). The panel may be unresponsive during installation.",
+        function () {
+          window.StorageManager.setItem("anismooth_gpu_choice", "gpu");
+          if (window.ToolsSetup && window.ToolsSetup.showToolsSetupForGpuInstall) {
+            window.ToolsSetup.showToolsSetupForGpuInstall();
+          }
+        }
+      );
+    } else {
+      window.StorageManager.setItem("anismooth_gpu_choice", "cpu");
+      window.showToast("Switched to CPU mode. GPU acceleration disabled.", "ok");
+      if (window.App && window.App._buildGpuModeSelector) {
+        window.App._buildGpuModeSelector();
+      }
+    }
   };
 
   var Stopwatch = {
@@ -1840,9 +1844,6 @@
     init: function () {
       this.elapsed = parseFloat(window.StorageManager.getItem("anismooth_stopwatch_elapsed", "0")) || 0;
       var autoStart = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
-      var visible = window.StorageManager.getItem("anismooth_stopwatch_visible", "1") !== "0";
-      var el = document.getElementById("stopwatch");
-      if (el) el.style.display = visible ? "" : "none";
       this.render();
       if (autoStart) this.start();
       this.bindEvents();
@@ -1852,8 +1853,15 @@
       var self = this;
       var toggle = document.getElementById("stopwatchToggle");
       var reset = document.getElementById("stopwatchReset");
+      var autostart = document.getElementById("stopwatchAutostart");
       if (toggle) toggle.addEventListener("click", function () { self.toggle(); });
       if (reset) reset.addEventListener("click", function () { self.reset(); });
+      if (autostart) {
+        autostart.checked = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
+        autostart.addEventListener("change", function () {
+          window.StorageManager.setItem("anismooth_stopwatch_autostart", this.checked ? "1" : "0");
+        });
+      }
     },
 
     toggle: function () {
@@ -1866,10 +1874,10 @@
       this.running = true;
       this._startTs = Date.now() - this.elapsed;
       var self = this;
-      var el = document.getElementById("stopwatch");
+      var view = document.getElementById("stopwatchView");
       var btn = document.getElementById("stopwatchToggle");
-      if (el) el.classList.add("running");
-      if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      if (view) view.classList.add("stopwatch-view", "running");
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
       this._timer = setInterval(function () { self.tick(); }, 100);
     },
 
@@ -1879,10 +1887,10 @@
       if (this._timer) { clearInterval(this._timer); this._timer = null; }
       this.elapsed = Date.now() - this._startTs;
       this.save();
-      var el = document.getElementById("stopwatch");
+      var view = document.getElementById("stopwatchView");
       var btn = document.getElementById("stopwatchToggle");
-      if (el) el.classList.remove("running");
-      if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+      if (view) view.classList.remove("running");
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Start';
       this.render();
     },
 
@@ -1911,12 +1919,6 @@
 
     save: function () {
       window.StorageManager.setItem("anismooth_stopwatch_elapsed", String(this.elapsed));
-    },
-
-    setVisible: function (v) {
-      var el = document.getElementById("stopwatch");
-      if (el) el.style.display = v ? "" : "none";
-      window.StorageManager.setItem("anismooth_stopwatch_visible", v ? "1" : "0");
     }
   };
 
