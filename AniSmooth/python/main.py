@@ -132,7 +132,11 @@ def load_upscale_model(model_name, scale, device):
             return model_descriptor
     except ImportError:
         log("error", "spandrel not installed and built-in architecture failed.")
-        raise RuntimeError(f"Cannot load upscale model {model_name}: no compatible architecture available")
+        log("error", "")
+        log("error", "Fix: Go to Settings > Tools > Maintenance >")
+        log("error", "\"Repair / Install Python Packages\"")
+        log("error", "Or run manually: pip install spandrel==0.3.4")
+        raise RuntimeError(f"Cannot load upscale model {model_name}: spandrel required but not installed")
     except Exception as e:
         log("error", f"spandrel loading failed ({e}).")
         raise RuntimeError(f"Failed to load upscale model {model_name}: {e}")
