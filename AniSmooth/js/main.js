@@ -145,6 +145,13 @@
         });
       }
 
+      var repairBtn = document.getElementById("repairPackagesBtn");
+      if (repairBtn) {
+        repairBtn.addEventListener("click", function () {
+          self.repairPackages();
+        });
+      }
+
       var refreshGpuBtn = document.getElementById("refreshGpuBtn");
       if (refreshGpuBtn) {
         refreshGpuBtn.addEventListener("click", function () {
@@ -654,6 +661,86 @@
         statusEl.innerHTML = ok
           ? '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> <b style="color:#6ee7b7;">' + msg + '</b>'
           : '<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> <b style="color:#fca5a5;">' + msg + '</b>';
+      }
+    },
+
+    repairPackages: function () {
+      var self = this;
+      var btn = document.getElementById("repairPackagesBtn");
+      var logEl = document.getElementById("repairLog");
+
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Installing packages...'; }
+      if (logEl) {
+        logEl.style.display = "";
+        logEl.innerHTML = '<div class="gpu-install-log" id="repairLogInner" style="max-height:180px;">Starting pip install...</div>';
+      }
+
+      var pythonCmd = this._resolvePythonCmd();
+      var extPath = "";
+      try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
+      var sourceSetup = (window.FileSystem.path && extPath)
+        ? window.FileSystem.path.join(extPath, "python", "setup.py")
+        : "setup.py";
+      var destSetup = window.FileSystem.path.join(this.anismoothToolsFolder, "setup.py");
+
+      try {
+        window.FileSystem.createFolder(this.anismoothToolsFolder);
+        var content = window.FileSystem.fs.readFileSync(sourceSetup, "utf8");
+        window.FileSystem.fs.writeFileSync(destSetup, content, "utf8");
+      } catch (e) {
+        self._repairLog("Failed to copy setup script: " + e.message);
+        self._repairDone(false);
+        return;
+      }
+
+      try {
+        var proc = window.FileSystem.childProcess.spawn(pythonCmd, ["setup.py"], { cwd: this.anismoothToolsFolder, windowsHide: true });
+        var buf = "";
+
+        proc.stdout.on("data", function (d) {
+          buf += d.toString();
+          var lines = buf.split("\n");
+          buf = lines.pop();
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line) continue;
+            self._repairLog(line);
+          }
+        });
+        proc.stderr.on("data", function (d) {
+          self._repairLog("[WARN] " + d.toString().trim());
+        });
+        proc.on("close", function (code) {
+          var ok = code === 0;
+          self._repairLog(ok ? "[OK] All packages installed." : "[ERR] Setup exited with code " + code);
+          self._repairDone(ok);
+        });
+        proc.on("error", function (e) {
+          self._repairLog("[ERR] " + e.message);
+          self._repairDone(false);
+        });
+      } catch (e) {
+        self._repairLog("[ERR] " + e.message);
+        self._repairDone(false);
+      }
+    },
+
+    _repairLog: function (msg) {
+      var el = document.getElementById("repairLogInner");
+      if (!el) return;
+      el.innerHTML += "\n" + String(msg).replace(/[<>]/g, "");
+      el.scrollTop = el.scrollHeight;
+    },
+
+    _repairDone: function (ok) {
+      var btn = document.getElementById("repairPackagesBtn");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-cubes"></i> Repair / Install Python Packages';
+      }
+      if (ok) {
+        var self = this;
+        setTimeout(function () { self.refreshGpuInfo(); }, 1500);
       }
     },
 
