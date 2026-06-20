@@ -276,9 +276,11 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         torch.cuda.empty_cache()
     mux_audio(output_path, input_path)
     if target_size_mb and target_size_mb > 0:
-        from utils.video import reencode_to_size
+        from utils.video import reencode_to_size, reencode_high_quality
         log("info", f"Re-encoding to target size: {target_size_mb} MB")
-        reencode_to_size(output_path, input_path, target_size_mb)
+        if not reencode_to_size(output_path, input_path, target_size_mb):
+            log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
+            reencode_high_quality(output_path)
     else:
         from utils.video import reencode_high_quality
         reencode_high_quality(output_path)
@@ -336,9 +338,11 @@ def run_upscaling(input_path, output_path, model_name, scale):
         torch.cuda.empty_cache()
     mux_audio(output_path, input_path)
     if target_size_mb and target_size_mb > 0:
-        from utils.video import reencode_to_size
+        from utils.video import reencode_to_size, reencode_high_quality
         log("info", f"Re-encoding to target size: {target_size_mb} MB")
-        reencode_to_size(output_path, input_path, target_size_mb)
+        if not reencode_to_size(output_path, input_path, target_size_mb):
+            log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
+            reencode_high_quality(output_path)
     else:
         from utils.video import reencode_high_quality
         reencode_high_quality(output_path)

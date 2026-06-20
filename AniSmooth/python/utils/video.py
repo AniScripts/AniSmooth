@@ -199,8 +199,8 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
-        "-maxrate", f"{video_bitrate_kbps * 2}k",
-        "-bufsize", f"{video_bitrate_kbps * 4}k",
+        "-maxrate", f"{min(video_bitrate_kbps * 1.5, 120000)}k",
+        "-bufsize", f"{min(video_bitrate_kbps * 2, 200000)}k",
         "-preset", "medium",
         "-an", "-pass", "1", "-f", "null", null_path
     ]
@@ -219,8 +219,8 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
-        "-maxrate", f"{video_bitrate_kbps * 2}k",
-        "-bufsize", f"{video_bitrate_kbps * 4}k",
+        "-maxrate", f"{min(video_bitrate_kbps * 1.5, 120000)}k",
+        "-bufsize", f"{min(video_bitrate_kbps * 2, 200000)}k",
         "-preset", "medium",
         "-pass", "2",
         "-c:a", "aac", "-b:a", f"{audio_bitrate_kbps}k",
