@@ -167,9 +167,12 @@
       var callbacks = {
         onStart: function () {
           self._currentProc = window.ModelHandler.activeProcess;
+          item.startedAt = Date.now();
+          item.elapsed = 0;
         },
         onProgress: function (p) {
           item.progress = p;
+          if (item.startedAt) item.elapsed = Date.now() - item.startedAt;
           self._notify();
         },
         onLog: function (l) {
@@ -179,7 +182,8 @@
           self._currentProc = null;
           item.status = "done";
           item.progress = 100;
-          dbg("success", "Queue", "Done: " + outputPath);
+          if (item.startedAt) item.elapsed = Date.now() - item.startedAt;
+          dbg("success", "Queue", "Done: " + outputPath + " (" + formatDuration(item.elapsed) + ")");
           
           if (res.isTemp && window.FileSystem && window.FileSystem.fs) {
             try { window.FileSystem.fs.unlinkSync(inputPath); } catch (e) {}
@@ -199,6 +203,7 @@
           self._currentProc = null;
           item.status = "error";
           item.error = err;
+          if (item.startedAt) item.elapsed = Date.now() - item.startedAt;
           dbg("error", "Queue", "Error: " + err);
           if (res.isTemp && window.FileSystem && window.FileSystem.fs) {
             try { window.FileSystem.fs.unlinkSync(inputPath); } catch (e) {}
@@ -217,6 +222,18 @@
       }
     }
   };
+
+  function formatDuration(ms) {
+    if (!ms || ms < 0) return "0s";
+    var s = Math.floor(ms / 1000);
+    if (s < 60) return s + "s";
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    if (m < 60) return m + "m " + s + "s";
+    var h = Math.floor(m / 60);
+    m = m % 60;
+    return h + "h " + m + "m";
+  }
 
   window.QueueManager = QueueManager;
 })();

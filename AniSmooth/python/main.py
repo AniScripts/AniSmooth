@@ -279,6 +279,8 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         from utils.video import reencode_to_size
         log("info", f"Re-encoding to target size: {target_size_mb} MB")
         reencode_to_size(output_path, input_path, target_size_mb)
+    from utils.video import fix_faststart
+    fix_faststart(output_path)
     log("success", "Interpolation process completed successfully.")
 
 def run_upscaling(input_path, output_path, model_name, scale):
@@ -334,6 +336,8 @@ def run_upscaling(input_path, output_path, model_name, scale):
         from utils.video import reencode_to_size
         log("info", f"Re-encoding to target size: {target_size_mb} MB")
         reencode_to_size(output_path, input_path, target_size_mb)
+    from utils.video import fix_faststart
+    fix_faststart(output_path)
     log("success", "Upscaling process completed successfully.")
 
 def run_gpu_info():

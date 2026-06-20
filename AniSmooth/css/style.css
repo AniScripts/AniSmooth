@@ -74,6 +74,25 @@ body {
   width: 3px; height: 3px; border-radius: 50%; background: #ffffff;
 }
 
+.stopwatch {
+  display: flex; align-items: center; gap: 2px; margin-left: auto;
+  padding: 2px 4px; border-radius: 4px; background: rgba(255,255,255,0.03);
+  border: 1px solid transparent; transition: border-color 0.15s;
+}
+.stopwatch.running { border-color: rgba(16,185,129,0.25); }
+.stopwatch-time {
+  font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; font-weight: 600;
+  color: #e5e7eb; min-width: 64px; text-align: center; letter-spacing: 0.5px;
+}
+.stopwatch.running .stopwatch-time { color: #6ee7b7; }
+.stopwatch-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; background: none; border: none; border-radius: 3px;
+  color: #888888; font-size: 9px; cursor: pointer; transition: color 0.15s, background 0.15s;
+}
+.stopwatch-btn:hover { color: #ffffff; background: rgba(255,255,255,0.08); }
+.stopwatch.running .stopwatch-btn:hover { color: #6ee7b7; }
+
 /* ---- Content ---- */
 .content { flex: 1; padding: 6px; overflow-y: auto; min-height: 0; }
 .tab-content { animation: fadeIn 0.15s ease; }
@@ -543,10 +562,14 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: #ffffff; }
 .q-meta { font-size: 8px; color: #aaaaaa; margin-top: 1px; display: flex; align-items: center; gap: 3px; }
 .q-meta i { font-size: 7px; }
 .q-err { font-size: 8px; color: #fca5a5; margin-top: 1px; }
-.q-progress-wrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.q-progress-wrap { margin-top: 4px; }
 .q-progress-track { flex: 1; background: #161616; border-radius: 2px; height: 2px; overflow: hidden; }
 .q-progress-fill { background: #ffffff; height: 100%; border-radius: 2px; transition: width 0.3s ease; }
-.q-progress-pct { font-size: 8px; color: #888888; flex-shrink: 0; }
+.q-progress-info { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.q-progress-pct { font-size: 8px; color: #888888; }
+.q-elapsed { font-size: 8px; color: #6ee7b7; }
+.q-eta { font-size: 8px; color: #aaaaaa; margin-left: auto; }
+.q-took { font-size: 8px; color: #888888; margin-top: 2px; }
 .q-remove {
   background: none; border: none; color: #888888; cursor: pointer; font-size: 10px;
   padding: 2px 4px; border-radius: 2px; flex-shrink: 0; transition: color 0.1s, background 0.1s; margin-top: 1px;

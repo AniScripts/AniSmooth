@@ -76,13 +76,26 @@
 
         var progressHtml = "";
         if (item.status === "processing" && typeof item.progress === "number") {
+          var elapsedMs = item.elapsed || (item.startedAt ? Date.now() - item.startedAt : 0);
+          var elapsedStr = formatDur(elapsedMs);
+          var etaStr = "";
+          if (item.progress > 0 && item.progress < 100) {
+            var remainingMs = (elapsedMs / item.progress) * (100 - item.progress);
+            etaStr = '<span class="q-eta">~' + formatDur(remainingMs) + ' left</span>';
+          }
           progressHtml =
             '<div class="q-progress-wrap">' +
               '<div class="q-progress-track">' +
                 '<div class="q-progress-fill" style="width:' + item.progress + '%"></div>' +
               '</div>' +
-              '<span class="q-progress-pct">' + item.progress + '%</span>' +
+              '<div class="q-progress-info">' +
+                '<span class="q-progress-pct">' + item.progress + '%</span>' +
+                '<span class="q-elapsed">' + elapsedStr + '</span>' +
+                etaStr +
+              '</div>' +
             '</div>';
+        } else if ((item.status === "done" || item.status === "error") && item.elapsed) {
+          progressHtml = '<div class="q-took">Took ' + formatDur(item.elapsed) + '</div>';
         }
 
         html +=
@@ -121,6 +134,26 @@
     div.appendChild(document.createTextNode(text || ""));
     return div.innerHTML;
   }
+
+  function formatDur(ms) {
+    if (!ms || ms < 0) return "0s";
+    var s = Math.floor(ms / 1000);
+    if (s < 60) return s + "s";
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    if (m < 60) return m + "m " + s + "s";
+    var h = Math.floor(m / 60);
+    m = m % 60;
+    return h + "h " + m + "m";
+  }
+
+  // Auto-refresh elapsed time while processing
+  setInterval(function () {
+    var running = window.QueueManager && window.QueueManager._running;
+    if (running && QueuePanel.view && !QueuePanel.view.classList.contains("hidden")) {
+      QueuePanel.render();
+    }
+  }, 1000);
 
   window.QueuePanel = QueuePanel;
 })();

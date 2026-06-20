@@ -36,6 +36,11 @@
           <i class="fa-solid fa-gear"></i>
         </button>
       </nav>
+      <div class="stopwatch" id="stopwatch" title="Stopwatch">
+        <span class="stopwatch-time" id="stopwatchTime">00:00:00</span>
+        <button class="stopwatch-btn" id="stopwatchToggle" title="Start / Stop"><i class="fa-solid fa-play"></i></button>
+        <button class="stopwatch-btn" id="stopwatchReset" title="Reset"><i class="fa-solid fa-rotate-left"></i></button>
+      </div>
     </header>
 
     <main class="content">
@@ -409,6 +414,27 @@
           </div>
           <span class="form-hint" style="margin-bottom:8px;display:block;">Show or hide tabs in the top navigation bar. Settings cannot be hidden.</span>
           <div id="interfaceToggles"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-stopwatch panel-head-icon"></i>
+            <span class="panel-title">Stopwatch</span>
+          </div>
+          <div class="form-group">
+            <div class="toggle-row" style="padding:0;margin-bottom:6px;">
+              <span class="toggle-label" style="flex:1;">Show stopwatch in topbar</span>
+              <input type="checkbox" class="toggle-input stopwatch-toggle" id="stopwatchVisible" checked>
+              <span class="toggle-switch"></span>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="toggle-row" style="padding:0;margin-bottom:6px;">
+              <span class="toggle-label" style="flex:1;">Auto-start on project open</span>
+              <input type="checkbox" class="toggle-input stopwatch-toggle" id="stopwatchAutostart">
+              <span class="toggle-switch"></span>
+            </div>
+          </div>
         </div>
 
         <div class="panel">

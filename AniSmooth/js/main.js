@@ -234,6 +234,7 @@
       this._applyTabVisibility();
       this._buildModelToggles();
       this._applyModelVisibility();
+      this._buildStopwatchToggles();
       this._buildEnvInfo();
       this._buildFolderActions();
       this._buildModelManager();
@@ -946,6 +947,24 @@
         if (!activeFound && firstVisible) {
           select.value = firstVisible.getAttribute("data-value");
         }
+      }
+    },
+
+    _buildStopwatchToggles: function () {
+      var visibleCheck = document.getElementById("stopwatchVisible");
+      var autostartCheck = document.getElementById("stopwatchAutostart");
+      if (visibleCheck) {
+        visibleCheck.checked = window.StorageManager.getItem("anismooth_stopwatch_visible", "1") !== "0";
+        visibleCheck.addEventListener("change", function () {
+          window.StorageManager.setItem("anismooth_stopwatch_visible", this.checked ? "1" : "0");
+          if (window.Stopwatch) window.Stopwatch.setVisible(this.checked);
+        });
+      }
+      if (autostartCheck) {
+        autostartCheck.checked = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
+        autostartCheck.addEventListener("change", function () {
+          window.StorageManager.setItem("anismooth_stopwatch_autostart", this.checked ? "1" : "0");
+        });
       }
     },
 
@@ -1809,30 +1828,105 @@
   };
 
   window.changeGpuMode = function (mode) {
-    var currentMode = window.StorageManager.getItem("anismooth_gpu_choice", null);
-    if (mode === currentMode) return;
+    ...
+  };
 
-    if (mode === "gpu") {
-      window.showConfirm(
-        "Switch to GPU mode? This will install PyTorch CUDA (~2.5GB download). The panel may be unresponsive during installation.",
-        function () {
-          window.StorageManager.setItem("anismooth_gpu_choice", "gpu");
-          if (window.ToolsSetup && window.ToolsSetup.showToolsSetupForGpuInstall) {
-            window.ToolsSetup.showToolsSetupForGpuInstall();
-          }
-        }
-      );
-    } else {
-      window.StorageManager.setItem("anismooth_gpu_choice", "cpu");
-      window.showToast("Switched to CPU mode. GPU acceleration disabled.", "ok");
-      if (window.App && window.App._buildGpuModeSelector) {
-        window.App._buildGpuModeSelector();
-      }
+  var Stopwatch = {
+    elapsed: 0,
+    running: false,
+    _startTs: 0,
+    _timer: null,
+
+    init: function () {
+      this.elapsed = parseFloat(window.StorageManager.getItem("anismooth_stopwatch_elapsed", "0")) || 0;
+      var autoStart = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
+      var visible = window.StorageManager.getItem("anismooth_stopwatch_visible", "1") !== "0";
+      var el = document.getElementById("stopwatch");
+      if (el) el.style.display = visible ? "" : "none";
+      this.render();
+      if (autoStart) this.start();
+      this.bindEvents();
+    },
+
+    bindEvents: function () {
+      var self = this;
+      var toggle = document.getElementById("stopwatchToggle");
+      var reset = document.getElementById("stopwatchReset");
+      if (toggle) toggle.addEventListener("click", function () { self.toggle(); });
+      if (reset) reset.addEventListener("click", function () { self.reset(); });
+    },
+
+    toggle: function () {
+      if (this.running) this.stop();
+      else this.start();
+    },
+
+    start: function () {
+      if (this.running) return;
+      this.running = true;
+      this._startTs = Date.now() - this.elapsed;
+      var self = this;
+      var el = document.getElementById("stopwatch");
+      var btn = document.getElementById("stopwatchToggle");
+      if (el) el.classList.add("running");
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      this._timer = setInterval(function () { self.tick(); }, 100);
+    },
+
+    stop: function () {
+      if (!this.running) return;
+      this.running = false;
+      if (this._timer) { clearInterval(this._timer); this._timer = null; }
+      this.elapsed = Date.now() - this._startTs;
+      this.save();
+      var el = document.getElementById("stopwatch");
+      var btn = document.getElementById("stopwatchToggle");
+      if (el) el.classList.remove("running");
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+      this.render();
+    },
+
+    reset: function () {
+      this.elapsed = 0;
+      if (this.running) this._startTs = Date.now();
+      this.save();
+      this.render();
+    },
+
+    tick: function () {
+      if (!this.running) return;
+      this.elapsed = Date.now() - this._startTs;
+      this.render();
+    },
+
+    render: function () {
+      var el = document.getElementById("stopwatchTime");
+      if (!el) return;
+      var ms = Math.max(0, this.elapsed);
+      var h = Math.floor(ms / 3600000);
+      var m = Math.floor((ms % 3600000) / 60000);
+      var s = Math.floor((ms % 60000) / 1000);
+      el.textContent = pad2(h) + ":" + pad2(m) + ":" + pad2(s);
+    },
+
+    save: function () {
+      window.StorageManager.setItem("anismooth_stopwatch_elapsed", String(this.elapsed));
+    },
+
+    setVisible: function (v) {
+      var el = document.getElementById("stopwatch");
+      if (el) el.style.display = v ? "" : "none";
+      window.StorageManager.setItem("anismooth_stopwatch_visible", v ? "1" : "0");
     }
   };
+
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+
+  window.Stopwatch = Stopwatch;
 
   window.addEventListener("DOMContentLoaded", function () {
     App.init();
     window.App = App;
+    if (window.Stopwatch) window.Stopwatch.init();
   });
 })();

@@ -78,6 +78,33 @@ def mux_audio(video_path, audio_source_path):
                 pass
         return False
 
+def fix_faststart(video_path):
+    """Remux video to move moov atom to beginning for web playback (Discord, etc.)."""
+    ffmpeg = _find_ffmpeg()
+    if not ffmpeg:
+        return False
+    tmp = str(video_path) + ".fs.mp4"
+    cmd = [
+        ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+        "-i", str(video_path),
+        "-c", "copy",
+        "-movflags", "+faststart",
+        tmp
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode == 0 and os.path.exists(tmp) and os.path.getsize(tmp) > 1024:
+            os.replace(tmp, str(video_path))
+            return True
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    except Exception as e:
+        log("warn", f"Faststart remux error: {e}")
+        if os.path.exists(tmp):
+            try: os.unlink(tmp)
+            except: pass
+    return False
+
 def reencode_to_size(video_path, audio_source_path, target_mb):
     """Re-encode video to target file size using FFmpeg two-pass encoding.
     Returns True on success. Overwrites video_path in-place."""
@@ -118,11 +145,17 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
     except Exception:
         pass
 
-    # Calculate video bitrate
+    # Calculate video bitrate with safety caps
     total_bits = target_mb * 8 * 1000 * 1000
     audio_bits = audio_bitrate_kbps * 1000 * duration
     video_bits = total_bits - audio_bits
-    video_bitrate_kbps = max(200, int(video_bits / 1000 / duration))
+    video_bitrate_kbps = max(500, int(video_bits / 1000 / duration))
+
+    # Cap at x264 level 5.1 max (100 Mbps), scale by resolution
+    max_bitrate = 100000
+    if video_bitrate_kbps > max_bitrate:
+        log("warn", f"Requested bitrate {video_bitrate_kbps}kbps exceeds x264 limit. Capping at {max_bitrate}kbps.")
+        video_bitrate_kbps = max_bitrate
 
     log("info", f"Target: {target_mb}MB, Duration: {duration:.1f}s, Video bitrate: {video_bitrate_kbps}kbps")
 
@@ -134,6 +167,8 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
+        "-maxrate", f"{video_bitrate_kbps * 2}k",
+        "-bufsize", f"{video_bitrate_kbps * 4}k",
         "-preset", "medium",
         "-pass", "1", "-f", "null", null_path
     ]
@@ -141,6 +176,7 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         r1 = subprocess.run(cmd1, capture_output=True, text=True, timeout=600)
         if r1.returncode != 0:
             log("error", f"Pass 1 failed: {r1.stderr.strip()[-200:]}")
+            log("error", "Re-encode failed. Original quality file preserved.")
             return False
     except Exception as e:
         log("error", f"Pass 1 error: {e}")
@@ -151,6 +187,8 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
+        "-maxrate", f"{video_bitrate_kbps * 2}k",
+        "-bufsize", f"{video_bitrate_kbps * 4}k",
         "-preset", "medium",
         "-pass", "2",
         "-c:a", "aac", "-b:a", f"{audio_bitrate_kbps}k",
@@ -161,16 +199,24 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=600)
         if r2.returncode != 0:
             log("error", f"Pass 2 failed: {r2.stderr.strip()[-200:]}")
+            log("error", "Re-encode failed. Original quality file preserved.")
             if os.path.exists(tmp):
                 os.unlink(tmp)
             return False
-        os.replace(tmp, str(video_path))
-        # Clean up ffmpeg pass logs
-        for fname in ["ffmpeg2pass-0.log", "ffmpeg2pass-0.log.mbtree"]:
-            if os.path.exists(fname):
-                os.unlink(fname)
-        log("info", f"Re-encoded to ~{target_mb}MB at {video_bitrate_kbps}kbps")
-        return True
+        # Check that the output is valid
+        if os.path.exists(tmp) and os.path.getsize(tmp) > 1024:
+            os.replace(tmp, str(video_path))
+            # Clean up ffmpeg pass logs
+            for fname in ["ffmpeg2pass-0.log", "ffmpeg2pass-0.log.mbtree"]:
+                if os.path.exists(fname):
+                    os.unlink(fname)
+            log("info", f"Re-encoded to ~{target_mb}MB at {video_bitrate_kbps}kbps")
+            return True
+        else:
+            log("error", "Re-encoded file is empty or too small. Original preserved.")
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+            return False
     except Exception as e:
         log("error", f"Pass 2 error: {e}")
         if os.path.exists(tmp):
