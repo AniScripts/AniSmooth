@@ -721,9 +721,21 @@
         var tab = this._tabConfig[i];
         var key = "anismooth_tab_" + tab.id;
         var visible = window.StorageManager.getItem(key, "1") !== "0";
-        var btn = document.getElementById(tab + "TabBtn");
+        var btn = document.getElementById(tab.id + "TabBtn");
         if (btn) {
           btn.style.display = visible ? "" : "none";
+        }
+      }
+      // If current active button is now hidden, switch to first visible tab
+      var activeBtn = document.querySelector(".topbar-nav .nav-icon.active");
+      if (activeBtn && activeBtn.style.display === "none") {
+        for (var j = 0; j < this._tabConfig.length; j++) {
+          var t = this._tabConfig[j];
+          var b = document.getElementById(t.id + "TabBtn");
+          if (b && b.style.display !== "none") {
+            this.switchTab(t.id);
+            break;
+          }
         }
       }
     },
