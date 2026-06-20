@@ -109,6 +109,20 @@ def load_upscale_model(model_name, scale, device):
     except ValueError:
         pass
 
+    # Try built-in ShuffleCUGAN first — these weights are designed for this architecture
+    try:
+        log("info", f"Loading {model_name} via built-in ShuffleCUGAN architecture...")
+        model = ShuffleCUGANModel(model_name, scale).to(device)
+        model.eval()
+        if weight_path and os.path.exists(weight_path):
+            if load_weights_if_available(model, model_name, device):
+                log("info", f"Built-in ShuffleCUGAN loaded successfully for {model_name}")
+                return model
+        log("warn", f"Built-in ShuffleCUGAN failed to load weights for {model_name}. Trying spandrel...")
+    except Exception as e:
+        log("warn", f"Built-in ShuffleCUGAN failed ({e}). Trying spandrel...")
+
+    # Fallback: try spandrel auto-detection
     try:
         import spandrel
         if weight_path and os.path.exists(weight_path):
@@ -117,21 +131,13 @@ def load_upscale_model(model_name, scale, device):
             log("info", f"Spandrel loaded model: {model_descriptor.architecture}")
             return model_descriptor
     except ImportError:
-        log("warn", "spandrel not installed. Falling back to built-in ShuffleCUGAN architecture.")
-        log("warn", "Install spandrel for proper model loading: pip install spandrel")
+        log("error", "spandrel not installed and built-in architecture failed.")
+        raise RuntimeError(f"Cannot load upscale model {model_name}: no compatible architecture available")
     except Exception as e:
-        log("warn", f"spandrel loading failed ({e}). Falling back to built-in architecture.")
+        log("error", f"spandrel loading failed ({e}).")
+        raise RuntimeError(f"Failed to load upscale model {model_name}: {e}")
 
-    log("info", f"Using built-in ShuffleCUGAN architecture for {model_name}")
-    model = ShuffleCUGANModel(model_name, scale).to(device)
-    model.eval()
-    if weight_path and os.path.exists(weight_path):
-        if not load_weights_if_available(model, model_name, device):
-            raise RuntimeError(f"Failed to load weights for {model_name}")
-    else:
-        raise RuntimeError(f"Weights not available for {model_name}")
-
-    return model
+    raise RuntimeError(f"Weights not available for {model_name}")
 
 def run_interpolation(input_path, output_path, model_name, factor):
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
@@ -283,6 +289,7 @@ def run_upscaling(input_path, output_path, model_name, scale):
 
     log("info", "Starting frame upscaling...")
     frame_idx = 0
+    black_warned = False
 
     for frame in video.read_frames():
         tensor = frame_to_tensor(frame, device)
@@ -290,7 +297,17 @@ def run_upscaling(input_path, output_path, model_name, scale):
         with torch.no_grad():
             upscaled = model(tensor)
 
-        
+        # Validate output on first frame
+        if frame_idx == 0:
+            out_min = upscaled.min().item()
+            out_max = upscaled.max().item()
+            out_mean = upscaled.mean().item()
+            log("info", f"Upscale output stats — min: {out_min:.4f}, max: {out_max:.4f}, mean: {out_mean:.4f}")
+            if out_max < 0.01:
+                log("error", "Model output is nearly all-black! Model weights may not be loaded correctly.")
+                log("error", "Try removing the weight file and letting it re-download, or check console for weight-loading warnings.")
+                black_warned = True
+
         upscaled = torch.clamp(upscaled, 0, 1)
         result = tensor_to_frame(upscaled, str(device))
         video.writer.write(result)

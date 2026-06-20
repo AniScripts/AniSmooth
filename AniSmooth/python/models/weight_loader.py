@@ -230,15 +230,22 @@ def load_weights_if_available(model, model_key, device=None):
     try:
         state_dict = torch.load(weight_path, map_location=device or "cpu",
                                 weights_only=True)
-
         
+        # Remap key prefixes to match model architecture
         state_dict = _remap_state_dict_keys(state_dict, model)
 
-        
-        result = model.load_state_dict(state_dict, strict=False)
-
-        
+        # Try strict load first
         model_param_count = len(model.state_dict())
+        try:
+            result = model.load_state_dict(state_dict, strict=True)
+            log("info", "All " + str(model_param_count) + " weight parameters loaded successfully for " + model_key)
+            return True
+        except RuntimeError as e:
+            # Strict failed — log mismatch details and try partial
+            log("warn", "Strict weight load failed for " + model_key + ". Key mismatch: " + str(e)[:200])
+
+        # Fall back to non-strict with threshold
+        result = model.load_state_dict(state_dict, strict=False)
         loaded_count = model_param_count - len(result.missing_keys)
 
         if len(result.missing_keys) > 0:
@@ -250,9 +257,12 @@ def load_weights_if_available(model, model_key, device=None):
                 + ", ".join(result.unexpected_keys[:5])
                 + ("..." if len(result.unexpected_keys) > 5 else ""))
 
-        if loaded_count == 0:
-            log("error", "CRITICAL: No weights were loaded for " + model_key + "! "
-                "The model will produce garbage output. Check weight file format.")
+        # Require at least 50% of model parameters to match
+        threshold = int(model_param_count * 0.5)
+        if loaded_count < threshold:
+            log("error", "CRITICAL: Only " + str(loaded_count) + "/" + str(model_param_count)
+                + " weights loaded for " + model_key + " (threshold: " + str(threshold) + "). "
+                + "Model will produce garbage output. Check architecture compatibility.")
             return False
 
         if loaded_count < model_param_count:
