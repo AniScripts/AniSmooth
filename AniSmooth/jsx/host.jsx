@@ -198,16 +198,20 @@ function renderSelectedLayer(outputPathDir, layerName) {
 
     var layer = null;
     
-    if (layerName) {
+    // Prefer currently selected layer — this is the ground truth
+    if (comp.selectedLayers && comp.selectedLayers.length > 0) {
+      layer = comp.selectedLayers[0];
+    }
+    
+    // Fallback: search by name if no selection
+    if (!layer && layerName) {
       for (var i = 1; i <= comp.numLayers; i++) {
         if (comp.layer(i).name === layerName) { layer = comp.layer(i); break; }
       }
     }
+    
     if (!layer) {
-      if (!comp.selectedLayers || comp.selectedLayers.length === 0) {
-        return "{\"ok\":false,\"message\":\"No layer selected in the timeline.\"}";
-      }
-      layer = comp.selectedLayers[0];
+      return "{\"ok\":false,\"message\":\"No layer selected in the timeline.\"}";
     }
     
     
@@ -233,17 +237,18 @@ function renderSelectedLayer(outputPathDir, layerName) {
     var rq = app.project.renderQueue;
     var item = rq.items.add(comp);
     
-    
+    // Use work area if set and within layer range, otherwise use layer in/out
     var renderStart = layer.inPoint;
     var renderEnd = layer.outPoint;
-    
     
     if (comp.workAreaStart !== undefined && comp.workAreaDuration !== undefined) {
       var waStart = comp.workAreaStart;
       var waEnd = comp.workAreaStart + comp.workAreaDuration;
-      
-      renderStart = Math.max(layer.inPoint, waStart);
-      renderEnd = Math.min(layer.outPoint, waEnd);
+      // Only use work area if it's fully within the layer range (user deliberately set it)
+      if (waStart >= layer.inPoint && waEnd <= layer.outPoint) {
+        renderStart = waStart;
+        renderEnd = waEnd;
+      }
     }
     
     item.timeSpanStart = renderStart;
