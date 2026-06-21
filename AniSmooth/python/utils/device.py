@@ -16,7 +16,7 @@ def get_device():
 
 def _find_nvidia_smi():
     """Find nvidia-smi executable. Prefers NVIDIA's install dir over System32 stub."""
-    # Prefer NVIDIA's own directory (real smi with full output)
+    
     nvidia_dirs = [
         r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
         r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
@@ -25,12 +25,12 @@ def _find_nvidia_smi():
         if os.path.exists(path):
             return path
     
-    # Fallback: PATH
+    
     smi = shutil.which("nvidia-smi")
     if smi:
         return smi
     
-    # Last resort: System32
+    
     if os.path.exists(r"C:\Windows\System32\nvidia-smi.exe"):
         return r"C:\Windows\System32\nvidia-smi.exe"
     
@@ -46,7 +46,7 @@ def _run_nvidia_smi():
     driver_version = None
     cuda_driver_version = None
 
-    # Try CSV query first (works with real NVIDIA smi)
+    
     try:
         result = subprocess.run(
             [smi_path, "--query-gpu=name,memory.total,driver_version",
@@ -64,7 +64,7 @@ def _run_nvidia_smi():
     except Exception:
         pass
 
-    # Fallback: plain nvidia-smi (works with any smi, including System32 stub)
+    
     if not gpu_name or not driver_version:
         try:
             result = subprocess.run(

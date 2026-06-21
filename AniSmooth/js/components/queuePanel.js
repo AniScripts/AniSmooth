@@ -147,7 +147,7 @@
     return h + "h " + m + "m";
   }
 
-  // Auto-refresh elapsed time while processing
+  
   setInterval(function () {
     var running = window.QueueManager && window.QueueManager._running;
     if (running && QueuePanel.view && !QueuePanel.view.classList.contains("hidden")) {

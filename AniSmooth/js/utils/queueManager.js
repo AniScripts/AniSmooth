@@ -193,7 +193,7 @@
             window.App.importFileToAfterEffects(outputPath);
           }
           
-          // Prerender stays on disk only — never imported into AE
+          
           item.outputPath = outputPath;
           item.preRenderPath = preRenderPath;
           self._notify();

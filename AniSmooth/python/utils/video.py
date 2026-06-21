@@ -153,7 +153,6 @@ def _probe_duration(ffmpeg, path):
         return None
     return None
 
-
 def reencode_to_size(video_path, audio_source_path, target_mb):
     """Re-encode ``video_path`` to a target file size using FFmpeg two-pass encoding.
 
@@ -166,14 +165,14 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         log("error", "FFmpeg not found, cannot re-encode")
         return False
 
-    # Duration of the file we are actually encoding; fall back to the source clip.
+    
     duration = _probe_duration(ffmpeg, video_path) or _probe_duration(ffmpeg, audio_source_path)
     if not duration or duration <= 0:
         log("error", "Could not determine video duration for bitrate calculation")
         return False
 
-    # Detect whether the source has audio and at what bitrate (default 192k).
-    # Only audio that actually exists should consume part of the size budget.
+    
+    
     has_audio = False
     audio_bitrate_kbps = 192
     try:
@@ -190,9 +189,9 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
     except Exception:
         pass
 
-    # Bitrate budget. A safety margin keeps container/muxing overhead from pushing
-    # the final file over hard upload limits (Discord 8/25 MB, etc.). target_mb is
-    # interpreted as decimal MB (1 MB = 1,000,000 bytes).
+    
+    
+    
     SAFETY = 0.95
     total_bits = target_mb * 8 * 1000 * 1000 * SAFETY
     audio_bits = (audio_bitrate_kbps * 1000 * duration) if has_audio else 0
@@ -207,7 +206,7 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
                      f"({video_bitrate_kbps}kbps) for {duration:.1f}s. Choose a larger target.")
         return False
 
-    # Cap at x264 level 5.1 (~100 Mbps).
+    
     max_bitrate = 100000
     if video_bitrate_kbps > max_bitrate:
         log("warn", f"Requested bitrate {video_bitrate_kbps}kbps exceeds x264 limit. Capping at {max_bitrate}kbps.")
@@ -217,10 +216,10 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
 
     tmp = str(video_path) + ".tmp.mp4"
     null_path = "NUL" if os.name == "nt" else "/dev/null"
-    # The two-pass stats log MUST live in a writable directory. FFmpeg's default
-    # (ffmpeg2pass-0.log) is written to the process CWD, which for a CEP extension
-    # is usually a read-only Program Files folder — pass 1 then fails and size
-    # targeting silently breaks. Anchor it next to the (writable) output file.
+    
+    
+    
+    
     passlog = str(video_path) + ".ffpass"
     maxrate = int(min(video_bitrate_kbps * 1.45, 120000))
     bufsize = int(min(video_bitrate_kbps * 2, 200000))
@@ -233,7 +232,7 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
                 except Exception:
                     pass
 
-    # Pass 1: analysis only (no audio, discard output).
+    
     cmd1 = [
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
@@ -255,8 +254,8 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
         _cleanup_passlog()
         return False
 
-    # Pass 2: encode video to target bitrate, taking audio (if any) from the
-    # original source so the correct track survives even if a prior mux did not.
+    
+    
     cmd2 = [
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),

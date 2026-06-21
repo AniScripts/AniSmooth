@@ -593,7 +593,7 @@
       response.pipe(file);
       file.on('finish', function () {
         file.close(function () {
-          // Verify SHA-256
+          
           var fileBuf = fs.readFileSync(zipPath);
           var hash = crypto.createHash('sha256').update(fileBuf).digest('hex');
           if (hash !== expectedSha) {
@@ -608,7 +608,7 @@
           addInstallLog('Extracting portable Python...');
           try {
             window.FileSystem.extractZipPowerShell(zipPath, pythonDestFolder);
-            // Patch python3._pth to enable site-packages for pip
+            
             var pthPath = path.join(pythonDestFolder, 'python310._pth');
             try {
               var pthContent = fs.readFileSync(pthPath, 'utf8');
@@ -627,7 +627,7 @@
               return;
             }
             addInstallLog('[OK] Portable Python extracted');
-            // Install pip
+            
             addInstallLog('Downloading get-pip.py...');
             var pipPath = path.join(pythonDestFolder, 'get-pip.py');
             var pipReq = https.get(pipUrl, function (pipRes) {

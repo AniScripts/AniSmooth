@@ -122,10 +122,10 @@
         return false;
       }
       try {
-        // Pass the paths as environment data rather than interpolating them
-        // into the command string. PowerShell only ever sees $env:* references,
-        // so a path containing quotes/metacharacters cannot break out and
-        // execute arbitrary code. -LiteralPath also disables wildcard globbing.
+        
+        
+        
+        
         const env = Object.assign({}, process.env, {
           ANISMOOTH_ZIP: String(zipPath || ""),
           ANISMOOTH_DEST: String(destFolder || "")

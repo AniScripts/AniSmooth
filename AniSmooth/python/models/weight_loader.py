@@ -113,7 +113,7 @@ def download_weights(model_key, force=False, retries=3):
 
             os.rename(temp_path, dest)
 
-            # Verify hash at download time
+            
             expected_hash = MODEL_HASHES.get(model_key)
             if expected_hash:
                 actual = _compute_sha256(dest)
@@ -252,20 +252,20 @@ def load_weights_if_available(model, model_key, device=None):
         state_dict = torch.load(weight_path, map_location=device or "cpu",
                                 weights_only=True)
         
-        # Remap key prefixes to match model architecture
+        
         state_dict = _remap_state_dict_keys(state_dict, model)
 
-        # Try strict load first
+        
         model_param_count = len(model.state_dict())
         try:
             result = model.load_state_dict(state_dict, strict=True)
             log("info", "All " + str(model_param_count) + " weight parameters loaded successfully for " + model_key)
             return True
         except RuntimeError as e:
-            # Strict failed — log mismatch details and try partial
+            
             log("warn", "Strict weight load failed for " + model_key + ". Key mismatch: " + str(e)[:200])
 
-        # Fall back to non-strict with threshold
+        
         result = model.load_state_dict(state_dict, strict=False)
         loaded_count = model_param_count - len(result.missing_keys)
 
@@ -278,7 +278,7 @@ def load_weights_if_available(model, model_key, device=None):
                 + ", ".join(result.unexpected_keys[:5])
                 + ("..." if len(result.unexpected_keys) > 5 else ""))
 
-        # Require at least 50% of model parameters to match
+        
         threshold = int(model_param_count * 0.5)
         if loaded_count < threshold:
             log("error", "CRITICAL: Only " + str(loaded_count) + "/" + str(model_param_count)

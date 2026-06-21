@@ -273,7 +273,7 @@ def install_pip_packages():
         log("error", "Cannot install packages without virtual environment")
         return False
 
-    # Check which packages are missing
+    
     missing = []
     for pkg in PIP_PACKAGES:
         pkg_name = pkg.split("==")[0].split(">=")[0].split("<")[0].strip()
@@ -342,7 +342,7 @@ def force_gpu_pytorch():
     ])
     ok = rc == 0
 
-    # Fix numpy/cv2 compatibility after PyTorch install
+    
     log("info", "Checking NumPy/OpenCV compatibility...")
     try:
         _run_pip(venv_python, ["install", "opencv-python>=4.10.0.84", "numpy>=1.24.0,<3"])
@@ -376,7 +376,7 @@ def main():
     log("info", f"Target directory: {SCRIPT_DIR}")
     log("info", f"System Python: {sys.version}")
 
-    # Create venv first
+    
     venv_python = ensure_venv()
     if not venv_python:
         log("error", "Failed to set up virtual environment. Aborting.")

@@ -18,7 +18,7 @@ function importFileToAE(filePath) {
     if (comp && comp instanceof CompItem) {
       var layer = comp.layers.add(footage);
       layer.startTime = comp.time;
-      // Scale to fit comp if footage is larger
+      
       if (footage.width > 0 && footage.height > 0 && comp.width > 0 && comp.height > 0) {
         var scaleX = (comp.width / footage.width) * 100;
         var scaleY = (comp.height / footage.height) * 100;
@@ -233,15 +233,15 @@ function renderSelectedLayer(outputPathDir, layerName) {
     var rq = app.project.renderQueue;
     var item = rq.items.add(comp);
     
-    // Use work area if set, otherwise use layer in/out points
+    
     var renderStart = layer.inPoint;
     var renderEnd = layer.outPoint;
     
-    // Check if work area is active and smaller than layer range
+    
     if (comp.workAreaStart !== undefined && comp.workAreaDuration !== undefined) {
       var waStart = comp.workAreaStart;
       var waEnd = comp.workAreaStart + comp.workAreaDuration;
-      // Use the intersection of work area and layer range
+      
       renderStart = Math.max(layer.inPoint, waStart);
       renderEnd = Math.min(layer.outPoint, waEnd);
     }

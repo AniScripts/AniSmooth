@@ -109,7 +109,7 @@ def load_upscale_model(model_name, scale, device):
     except ValueError:
         pass
 
-    # Try built-in ShuffleCUGAN first — these weights are designed for this architecture
+    
     try:
         log("info", f"Loading {model_name} via built-in ShuffleCUGAN architecture...")
         model = ShuffleCUGANModel(model_name, scale).to(device)
@@ -122,7 +122,7 @@ def load_upscale_model(model_name, scale, device):
     except Exception as e:
         log("warn", f"Built-in ShuffleCUGAN failed ({e}). Trying spandrel...")
 
-    # Fallback: try spandrel auto-detection
+    
     try:
         import spandrel
         if weight_path and os.path.exists(weight_path):
@@ -313,7 +313,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
             with torch.no_grad(), torch.cuda.amp.autocast(enabled=use_autocast):
                 upscaled = model(tensor)
 
-            # Validate output on first frame
+            
             if frame_idx == 0:
                 out_min = upscaled.min().item()
                 out_max = upscaled.max().item()
@@ -477,7 +477,7 @@ def run_sys_metrics():
         import shutil
         smi_path = shutil.which("nvidia-smi")
         if not smi_path:
-            # Try common Windows locations
+            
             common_paths = [
                 r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
                 r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",

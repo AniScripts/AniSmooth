@@ -40,7 +40,6 @@ import numpy as np
 from collections import deque
 from typing import Dict, List
 
-
 class CadenceDetector:
     """Detects a repeating duplicate/unique pattern (e.g. on-2s, on-3s)."""
 
@@ -67,7 +66,6 @@ class CadenceDetector:
         total = len(pattern) - period
         return (matches / total) > 0.8 if total > 0 else False
 
-
 class AdvancedDuplicateRemover:
     """Fast consecutive near-duplicate detector.
 
@@ -89,27 +87,27 @@ class AdvancedDuplicateRemover:
         use_gpu: bool = False,
         **_ignored,
     ):
-        # Difference threshold: duplicate when both signals are <= this value.
+        
         self.diff_threshold = float(min(1.0, max(0.0, 1.0 - base_threshold)))
-        # A per-pixel intensity delta (0-255) below which change is treated as
-        # codec noise rather than motion.
+        
+        
         self.pixel_threshold = int(pixel_threshold)
         self.thumb_size = int(thumb_size)
         self.hash_size = int(hash_size)
-        # Optional extra strictness: require at least this fraction of the
-        # thumbnail to change before a localised move counts as motion. Derived
-        # from the UI "region sensitivity" so 1 == most sensitive.
+        
+        
+        
         self.min_frac = max(0.0, (int(min_changed_regions) - 1) * 0.01)
 
-        # Anchor (last kept frame) features, recomputed only when the anchor
-        # object actually changes — kept in sync with the processor's prev_frame.
+        
+        
         self._anchor = None
         self._anchor_small = None
         self._anchor_hash = None
 
         self.frame_cadence_detector = CadenceDetector(window_size=24)
 
-    # -- feature extraction ------------------------------------------------
+    
 
     def _to_gray_small(self, frame: np.ndarray) -> np.ndarray:
         if frame.ndim == 3:
@@ -121,8 +119,8 @@ class AdvancedDuplicateRemover:
         return small.astype(np.float32)
 
     def _phash(self, small: np.ndarray) -> np.ndarray:
-        # DCT perceptual hash on a coarse grayscale; compares low-frequency
-        # structure, which is stable under compression and resampling.
+        
+        
         side = self.hash_size * 4
         img = cv2.resize(small, (side, side), interpolation=cv2.INTER_AREA)
         dct = cv2.dct(img)
@@ -133,7 +131,7 @@ class AdvancedDuplicateRemover:
         small = self._to_gray_small(frame)
         return small, self._phash(small)
 
-    # -- public API --------------------------------------------------------
+    
 
     def analyze_frame_difference(self, frame1: np.ndarray, frame2: np.ndarray) -> Dict:
         """Compare ``frame2`` (candidate) against ``frame1`` (last kept frame).
@@ -144,7 +142,7 @@ class AdvancedDuplicateRemover:
         if frame1 is None or frame2 is None:
             return {'is_duplicate': False, 'confidence': 0.0, 'motion_type': 'none'}
 
-        # Anchor features, recomputed only when the anchor frame changes.
+        
         if self._anchor is not frame1 or self._anchor_small is None:
             self._anchor = frame1
             self._anchor_small, self._anchor_hash = self._features(frame1)
@@ -155,7 +153,7 @@ class AdvancedDuplicateRemover:
         frac_changed = float(np.count_nonzero(absd > self.pixel_threshold)) / absd.size
         phash_distance = float(np.count_nonzero(self._anchor_hash != cur_hash)) / self._anchor_hash.size
 
-        # Either signal alone can flag motion (bias toward keeping real frames).
+        
         diff = max(frac_changed, phash_distance)
         effective_threshold = max(self.diff_threshold, self.min_frac)
         is_duplicate = diff <= effective_threshold

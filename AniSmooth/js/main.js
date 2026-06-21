@@ -817,7 +817,7 @@
           btn.style.display = visible ? "" : "none";
         }
       }
-      // If current active button is now hidden, switch to first visible tab
+      
       var activeBtn = document.querySelector(".topbar-nav .nav-icon.active");
       if (activeBtn && activeBtn.style.display === "none") {
         for (var j = 0; j < this._tabConfig.length; j++) {
