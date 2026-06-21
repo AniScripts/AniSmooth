@@ -117,6 +117,32 @@
       }
     },
 
+    extractZipPowerShell(zipPath, destFolder) {
+      if (!childProcess || process.platform !== "win32") {
+        return false;
+      }
+      try {
+        // Pass the paths as environment data rather than interpolating them
+        // into the command string. PowerShell only ever sees $env:* references,
+        // so a path containing quotes/metacharacters cannot break out and
+        // execute arbitrary code. -LiteralPath also disables wildcard globbing.
+        const env = Object.assign({}, process.env, {
+          ANISMOOTH_ZIP: String(zipPath || ""),
+          ANISMOOTH_DEST: String(destFolder || "")
+        });
+        childProcess.execFileSync(
+          "powershell.exe",
+          ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+           "Expand-Archive -LiteralPath $env:ANISMOOTH_ZIP -DestinationPath $env:ANISMOOTH_DEST -Force"],
+          { encoding: "utf8", windowsHide: true, env: env }
+        );
+        return true;
+      } catch (e) {
+        console.error("Zip extraction failed:", e.message);
+        return false;
+      }
+    },
+
     chooseFileWithSystemExplorer(title, startFolder, filter) {
       const safeTitle = String(title || "Choose file").replace(/'/g, "''");
       const safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");

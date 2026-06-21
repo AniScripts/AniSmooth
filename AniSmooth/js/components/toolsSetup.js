@@ -592,8 +592,7 @@
         file.close(function () {
           addInstallLog('Extracting portable Python...');
           try {
-            var psCmd = 'Expand-Archive -Path "' + zipPath + '" -DestinationPath "' + pythonDestFolder + '" -Force';
-            window.FileSystem.runPowerShellDialog(psCmd);
+            window.FileSystem.extractZipPowerShell(zipPath, pythonDestFolder);
             var exePath = path.join(pythonDestFolder, 'python.exe');
             if (fs.existsSync(exePath)) {
               addInstallLog('[OK] Portable Python installed');

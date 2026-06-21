@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from utils import VideoProcessor, get_device, check_tensorrt, print_gpu_info
-from utils.video import mux_audio
+from utils.video import mux_audio, reencode_to_size, reencode_high_quality, fix_faststart
 from models.rife import RIFEModel
 from models.upscale import ShuffleCUGANModel
 from models.weight_loader import load_weights_if_available, download_weights, is_weight_downloaded
@@ -143,6 +143,23 @@ def load_upscale_model(model_name, scale, device):
 
     raise RuntimeError(f"Weights not available for {model_name}")
 
+def finalize_output(output_path, input_path, target_size_mb=None):
+    """Mux source audio, optionally re-encode to a target size, then fix faststart.
+
+    Shared finalization for the interpolation and upscaling outputs so the two
+    paths cannot drift apart (the prior copy-pasted blocks are what let the
+    upscale signature/finalize mismatch slip in).
+    """
+    mux_audio(output_path, input_path)
+    if target_size_mb and target_size_mb > 0:
+        log("info", f"Re-encoding to target size: {target_size_mb} MB")
+        if not reencode_to_size(output_path, input_path, target_size_mb):
+            log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
+            reencode_high_quality(output_path)
+    else:
+        reencode_high_quality(output_path)
+    fix_faststart(output_path)
+
 def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None):
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
 
@@ -274,21 +291,10 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         del trt_engine
     if device.type == "cuda":
         torch.cuda.empty_cache()
-    mux_audio(output_path, input_path)
-    if target_size_mb and target_size_mb > 0:
-        from utils.video import reencode_to_size, reencode_high_quality
-        log("info", f"Re-encoding to target size: {target_size_mb} MB")
-        if not reencode_to_size(output_path, input_path, target_size_mb):
-            log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
-            reencode_high_quality(output_path)
-    else:
-        from utils.video import reencode_high_quality
-        reencode_high_quality(output_path)
-    from utils.video import fix_faststart
-    fix_faststart(output_path)
+    finalize_output(output_path, input_path, target_size_mb)
     log("success", "Interpolation process completed successfully.")
 
-def run_upscaling(input_path, output_path, model_name, scale):
+def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None):
     log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
 
     print_gpu_info()
@@ -336,18 +342,7 @@ def run_upscaling(input_path, output_path, model_name, scale):
     del model
     if device.type == "cuda":
         torch.cuda.empty_cache()
-    mux_audio(output_path, input_path)
-    if target_size_mb and target_size_mb > 0:
-        from utils.video import reencode_to_size, reencode_high_quality
-        log("info", f"Re-encoding to target size: {target_size_mb} MB")
-        if not reencode_to_size(output_path, input_path, target_size_mb):
-            log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
-            reencode_high_quality(output_path)
-    else:
-        from utils.video import reencode_high_quality
-        reencode_high_quality(output_path)
-    from utils.video import fix_faststart
-    fix_faststart(output_path)
+    finalize_output(output_path, input_path, target_size_mb)
     log("success", "Upscaling process completed successfully.")
 
 def run_gpu_info():

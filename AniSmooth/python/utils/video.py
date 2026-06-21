@@ -137,53 +137,77 @@ def reencode_high_quality(video_path):
             except: pass
     return False
 
+def _probe_duration(ffmpeg, path):
+    """Return media duration in seconds via FFmpeg, or None if undeterminable."""
+    try:
+        r = subprocess.run([ffmpeg, "-i", str(path), "-f", "null", "-"],
+                           capture_output=True, text=True, timeout=30)
+        for line in r.stderr.split("\n"):
+            if "Duration:" in line:
+                raw = line.split("Duration:")[-1].strip().split(",")[0].strip()
+                if not raw or raw.upper().startswith("N/A"):
+                    return None
+                hh, mm, ss = raw.split(":")
+                return float(hh) * 3600 + float(mm) * 60 + float(ss)
+    except Exception:
+        return None
+    return None
+
+
 def reencode_to_size(video_path, audio_source_path, target_mb):
-    """Re-encode video to target file size using FFmpeg two-pass encoding.
-    Returns True on success. Overwrites video_path in-place."""
+    """Re-encode ``video_path`` to a target file size using FFmpeg two-pass encoding.
+
+    Audio is taken directly from ``audio_source_path`` (the original clip) so the
+    correct soundtrack survives even if an earlier in-place mux did not. Returns
+    True on success. Overwrites ``video_path`` in-place.
+    """
     ffmpeg = _find_ffmpeg()
     if not ffmpeg:
         log("error", "FFmpeg not found, cannot re-encode")
         return False
 
-    # Get video duration from the processed video (not the source)
-    duration = None
-    try:
-        probe_cmd = [ffmpeg, "-i", str(video_path), "-f", "null", "-"]
-        r = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
-        for line in r.stderr.split("\n"):
-            if "Duration:" in line:
-                raw = line.strip().split("Duration:")[-1].strip().split(",")[0].strip()
-                parts = raw.split(":")
-                duration = float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
-                break
-    except Exception:
-        pass
-
+    # Duration of the file we are actually encoding; fall back to the source clip.
+    duration = _probe_duration(ffmpeg, video_path) or _probe_duration(ffmpeg, audio_source_path)
     if not duration or duration <= 0:
         log("error", "Could not determine video duration for bitrate calculation")
         return False
 
-    # Audio bitrate: detect from the processed video, default 192k
+    # Detect whether the source has audio and at what bitrate (default 192k).
+    # Only audio that actually exists should consume part of the size budget.
+    has_audio = False
     audio_bitrate_kbps = 192
     try:
-        r = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+        import re
+        r = subprocess.run([ffmpeg, "-i", str(audio_source_path), "-f", "null", "-"],
+                           capture_output=True, text=True, timeout=30)
         for line in r.stderr.split("\n"):
-            if "Audio:" in line and "kb/s" in line:
-                import re
+            if "Audio:" in line:
+                has_audio = True
                 m = re.search(r'(\d+)\s*kb/s', line)
                 if m:
                     audio_bitrate_kbps = int(m.group(1))
-                    break
+                break
     except Exception:
         pass
 
-    # Calculate video bitrate with safety caps
-    total_bits = target_mb * 8 * 1000 * 1000
-    audio_bits = audio_bitrate_kbps * 1000 * duration
+    # Bitrate budget. A safety margin keeps container/muxing overhead from pushing
+    # the final file over hard upload limits (Discord 8/25 MB, etc.). target_mb is
+    # interpreted as decimal MB (1 MB = 1,000,000 bytes).
+    SAFETY = 0.95
+    total_bits = target_mb * 8 * 1000 * 1000 * SAFETY
+    audio_bits = (audio_bitrate_kbps * 1000 * duration) if has_audio else 0
     video_bits = total_bits - audio_bits
-    video_bitrate_kbps = max(500, int(video_bits / 1000 / duration))
+    if video_bits <= 0:
+        log("error", f"Target {target_mb}MB is too small to fit {audio_bitrate_kbps}kbps audio "
+                     f"over {duration:.1f}s. Choose a larger target size.")
+        return False
+    video_bitrate_kbps = int(video_bits / 1000 / duration)
+    if video_bitrate_kbps < 100:
+        log("error", f"Target {target_mb}MB yields an unusable video bitrate "
+                     f"({video_bitrate_kbps}kbps) for {duration:.1f}s. Choose a larger target.")
+        return False
 
-    # Cap at x264 level 5.1 max (100 Mbps), scale by resolution
+    # Cap at x264 level 5.1 (~100 Mbps).
     max_bitrate = 100000
     if video_bitrate_kbps > max_bitrate:
         log("warn", f"Requested bitrate {video_bitrate_kbps}kbps exceeds x264 limit. Capping at {max_bitrate}kbps.")
@@ -193,40 +217,60 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
 
     tmp = str(video_path) + ".tmp.mp4"
     null_path = "NUL" if os.name == "nt" else "/dev/null"
+    # The two-pass stats log MUST live in a writable directory. FFmpeg's default
+    # (ffmpeg2pass-0.log) is written to the process CWD, which for a CEP extension
+    # is usually a read-only Program Files folder — pass 1 then fails and size
+    # targeting silently breaks. Anchor it next to the (writable) output file.
+    passlog = str(video_path) + ".ffpass"
+    maxrate = int(min(video_bitrate_kbps * 1.45, 120000))
+    bufsize = int(min(video_bitrate_kbps * 2, 200000))
 
-    # Pass 1: analysis (skip audio)
+    def _cleanup_passlog():
+        for p in (passlog, passlog + "-0.log", passlog + "-0.log.mbtree"):
+            if os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except Exception:
+                    pass
+
+    # Pass 1: analysis only (no audio, discard output).
     cmd1 = [
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
-        "-maxrate", f"{min(video_bitrate_kbps * 1.5, 120000)}k",
-        "-bufsize", f"{min(video_bitrate_kbps * 2, 200000)}k",
-        "-preset", "medium",
-        "-an", "-pass", "1", "-f", "null", null_path
+        "-maxrate", f"{maxrate}k", "-bufsize", f"{bufsize}k",
+        "-preset", "medium", "-pix_fmt", "yuv420p",
+        "-an", "-pass", "1", "-passlogfile", passlog,
+        "-f", "null", null_path
     ]
     try:
         r1 = subprocess.run(cmd1, capture_output=True, text=True, timeout=600)
         if r1.returncode != 0:
             log("error", f"Pass 1 failed: {r1.stderr.strip()[-200:]}")
             log("error", "Re-encode failed. Original quality file preserved.")
+            _cleanup_passlog()
             return False
     except Exception as e:
         log("error", f"Pass 1 error: {e}")
+        _cleanup_passlog()
         return False
 
-    # Pass 2: encode
+    # Pass 2: encode video to target bitrate, taking audio (if any) from the
+    # original source so the correct track survives even if a prior mux did not.
     cmd2 = [
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
-        "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
-        "-maxrate", f"{min(video_bitrate_kbps * 1.5, 120000)}k",
-        "-bufsize", f"{min(video_bitrate_kbps * 2, 200000)}k",
-        "-preset", "medium",
-        "-pass", "2",
-        "-c:a", "aac", "-b:a", f"{audio_bitrate_kbps}k",
-        "-movflags", "+faststart",
-        tmp
     ]
+    if has_audio:
+        cmd2 += ["-i", str(audio_source_path), "-map", "0:v:0", "-map", "1:a:0?"]
+    cmd2 += [
+        "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
+        "-maxrate", f"{maxrate}k", "-bufsize", f"{bufsize}k",
+        "-preset", "medium", "-pix_fmt", "yuv420p",
+        "-pass", "2", "-passlogfile", passlog,
+    ]
+    cmd2 += (["-c:a", "aac", "-b:a", f"{audio_bitrate_kbps}k"] if has_audio else ["-an"])
+    cmd2 += ["-movflags", "+faststart", tmp]
     try:
         r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=600)
         if r2.returncode != 0:
@@ -234,26 +278,27 @@ def reencode_to_size(video_path, audio_source_path, target_mb):
             log("error", "Re-encode failed. Original quality file preserved.")
             if os.path.exists(tmp):
                 os.unlink(tmp)
+            _cleanup_passlog()
             return False
-        # Check that the output is valid
         if os.path.exists(tmp) and os.path.getsize(tmp) > 1024:
             os.replace(tmp, str(video_path))
-            # Clean up ffmpeg pass logs
-            for fname in ["ffmpeg2pass-0.log", "ffmpeg2pass-0.log.mbtree"]:
-                if os.path.exists(fname):
-                    os.unlink(fname)
-            log("info", f"Re-encoded to ~{target_mb}MB at {video_bitrate_kbps}kbps")
+            _cleanup_passlog()
+            final_mb = os.path.getsize(str(video_path)) / (1000 * 1000)
+            log("info", f"Re-encoded to {final_mb:.1f}MB (target {target_mb}MB) at {video_bitrate_kbps}kbps")
             return True
-        else:
-            log("error", "Re-encoded file is empty or too small. Original preserved.")
-            if os.path.exists(tmp):
-                os.unlink(tmp)
-            return False
+        log("error", "Re-encoded file is empty or too small. Original preserved.")
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        _cleanup_passlog()
+        return False
     except Exception as e:
         log("error", f"Pass 2 error: {e}")
         if os.path.exists(tmp):
-            try: os.unlink(tmp)
-            except: pass
+            try:
+                os.unlink(tmp)
+            except Exception:
+                pass
+        _cleanup_passlog()
         return False
 
 class VideoProcessor:
@@ -262,8 +307,10 @@ class VideoProcessor:
         self.output_path = output_path
         self.cap = cv2.VideoCapture(input_path)
         if not self.cap.isOpened():
-            log("error", f"Failed to open input video: {input_path}")
-            sys.exit(1)
+            # Raise instead of sys.exit so main()'s try/except owns error
+            # reporting and the class stays reusable/testable (matches
+            # processor.py's convention).
+            raise RuntimeError(f"Failed to open input video: {input_path}")
             
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
