@@ -112,6 +112,19 @@ def download_weights(model_key, force=False, retries=3):
                 )
 
             os.rename(temp_path, dest)
+
+            # Verify hash at download time
+            expected_hash = MODEL_HASHES.get(model_key)
+            if expected_hash:
+                actual = _compute_sha256(dest)
+                if actual != expected_hash:
+                    log("error", f"Download hash mismatch for {model_key}! Expected: {expected_hash[:12]}..., Got: {actual[:12]}...")
+                    os.unlink(dest)
+                    return False
+                log("info", f"Download hash verified for {model_key}")
+            else:
+                log("info", f"No hash in registry for {model_key} — skipping integrity check")
+
             try:
                 os.rmdir(temp_folder)
             except OSError:
@@ -177,30 +190,38 @@ def _remap_state_dict_keys(state_dict, model):
     return state_dict
 
 MODEL_HASHES = {
-    "rife4.25": "040ed973997570f4f85489be3d8eb64be9c0cffdf0a9f049443b6a4838ed88f1",
-    "rife4.25-heavy": "49f7c82d3866860683992042ba8eb559b9c01fbe2600b80a53c56de05bb13b6f",
-    "adore": "443378bdc6db6cf4a75eea61ee7afc78b2c4b6a4d3b3981a40ff61f38bbc8f1a",
-    "fallin_soft": "910aa56a9a1187df97c3284177da1bc66836679350b2613191340734937e9960",
+    "rife4.25":          "040ed973997570f4f85489be3d8eb64be9c0cffdf0a9f049443b6a4838ed88f1",
+    "rife4.25-heavy":    "49f7c82d3866860683992042ba8eb559b9c01fbe2600b80a53c56de05bb13b6f",
+    "adore":             "443378bdc6db6cf4a75eea61ee7afc78b2c4b6a4d3b3981a40ff61f38bbc8f1a",
+    "fallin_soft":       "910aa56a9a1187df97c3284177da1bc66836679350b2613191340734937e9960",
+    "shufflecugan":      None,
+    "fallin_strong":     None,
 }
+
+def _compute_sha256(file_path):
+    import hashlib
+    sha256 = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while True:
+            data = f.read(65536)
+            if not data:
+                break
+            sha256.update(data)
+    return sha256.hexdigest().lower()
 
 def verify_weight_hash(model_key, weight_path):
     expected_hash = MODEL_HASHES.get(model_key)
+    if expected_hash is None:
+        log("warn", f"No verified hash for {model_key}. Skipping integrity check.")
+        return True
     if not expected_hash:
-        log("error", f"No verified hash exists for model key: {model_key}")
+        log("error", f"Model key not in hash registry: {model_key}")
         return False
-    
-    import hashlib
-    sha256 = hashlib.sha256()
+
     try:
-        with open(weight_path, "rb") as f:
-            while True:
-                data = f.read(65536)
-                if not data:
-                    break
-                sha256.update(data)
-        calculated_hash = sha256.hexdigest().lower()
+        calculated_hash = _compute_sha256(weight_path)
         if calculated_hash != expected_hash:
-            log("error", f"Model weight hash verification failed for {model_key}! Expected: {expected_hash}, Got: {calculated_hash}")
+            log("error", f"Weight hash mismatch for {model_key}! Expected: {expected_hash}, Got: {calculated_hash}")
             return False
         log("info", f"Model weight integrity verified for {model_key}.")
         return True

@@ -571,7 +571,10 @@
     var https = require('https');
     var fs = require('fs');
     var path = require('path');
+    var crypto = require('crypto');
     var zipUrl = 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip';
+    var pipUrl = 'https://bootstrap.pypa.io/get-pip.py';
+    var expectedSha = 'bd68b33221b795b7c0b8c2eebf9b119d8a2972be1e34abc64c5eb6e04bf8e6da';
     var zipPath = path.join(_toolsFolder, 'python_temp.zip');
     var pythonDestFolder = path.join(_toolsFolder, 'python');
     window.FileSystem.createFolder(_toolsFolder);
@@ -590,21 +593,98 @@
       response.pipe(file);
       file.on('finish', function () {
         file.close(function () {
+          // Verify SHA-256
+          var fileBuf = fs.readFileSync(zipPath);
+          var hash = crypto.createHash('sha256').update(fileBuf).digest('hex');
+          if (hash !== expectedSha) {
+            addInstallLog('[ERR] Python download SHA-256 mismatch! Security check failed.');
+            addInstallLog('[ERR] Expected: ' + expectedSha);
+            addInstallLog('[ERR] Got:      ' + hash);
+            try { fs.unlinkSync(zipPath); } catch (e) {}
+            finishAutoInstall(false);
+            return;
+          }
+          addInstallLog('[OK] SHA-256 verified');
           addInstallLog('Extracting portable Python...');
           try {
             window.FileSystem.extractZipPowerShell(zipPath, pythonDestFolder);
+            // Patch python3._pth to enable site-packages for pip
+            var pthPath = path.join(pythonDestFolder, 'python310._pth');
+            try {
+              var pthContent = fs.readFileSync(pthPath, 'utf8');
+              pthContent = pthContent.replace('#import site', 'import site');
+              pthContent = pthContent.replace(/^#.*Lib\/site-packages/m, 'Lib/site-packages');
+              fs.writeFileSync(pthPath, pthContent, 'utf8');
+              addInstallLog('Patched python3._pth for pip support');
+            } catch (e) {
+              addInstallLog('[WARN] Could not patch _pth file: ' + e.message);
+            }
             var exePath = path.join(pythonDestFolder, 'python.exe');
-            if (fs.existsSync(exePath)) {
-              addInstallLog('[OK] Portable Python installed');
+            if (!fs.existsSync(exePath)) {
+              addInstallLog('[ERR] python.exe not found after extraction');
+              try { fs.unlinkSync(zipPath); } catch (e) {}
+              finishAutoInstall(false);
+              return;
+            }
+            addInstallLog('[OK] Portable Python extracted');
+            // Install pip
+            addInstallLog('Downloading get-pip.py...');
+            var pipPath = path.join(pythonDestFolder, 'get-pip.py');
+            var pipReq = https.get(pipUrl, function (pipRes) {
+              if (pipRes.statusCode !== 200) {
+                addInstallLog('[WARN] get-pip.py download failed (HTTP ' + pipRes.statusCode + '). Skipping pip install.');
+                _pythonOk = true; _pythonCmd = exePath; _pythonChecked = true;
+                try { fs.unlinkSync(zipPath); } catch (e) {}
+                _installRunning = false;
+                startAutoInstall();
+                return;
+              }
+              var pipFile = fs.createWriteStream(pipPath);
+              pipRes.pipe(pipFile);
+              pipFile.on('finish', function () {
+                pipFile.close(function () {
+                  addInstallLog('Installing pip into portable Python...');
+                  try {
+                    var pipProc = window.FileSystem.childProcess.spawn(exePath, [pipPath], { cwd: pythonDestFolder, windowsHide: true });
+                    pipProc.on('close', function (code) {
+                      addInstallLog(code === 0 ? '[OK] pip installed' : '[WARN] pip install exited with code ' + code);
+                      _pythonOk = true; _pythonCmd = exePath; _pythonChecked = true;
+                      try { fs.unlinkSync(zipPath); } catch (e) {}
+                      try { fs.unlinkSync(pipPath); } catch (e) {}
+                      _installRunning = false;
+                      startAutoInstall();
+                    });
+                    pipProc.on('error', function () {
+                      addInstallLog('[WARN] Failed to run get-pip.py. Skipping.');
+                      _pythonOk = true; _pythonCmd = exePath; _pythonChecked = true;
+                      try { fs.unlinkSync(zipPath); } catch (e) {}
+                      try { fs.unlinkSync(pipPath); } catch (e) {}
+                      _installRunning = false;
+                      startAutoInstall();
+                    });
+                  } catch (e) {
+                    addInstallLog('[WARN] pip install error: ' + e.message);
+                    _pythonOk = true; _pythonCmd = exePath; _pythonChecked = true;
+                    try { fs.unlinkSync(zipPath); } catch (e) {}
+                    try { fs.unlinkSync(pipPath); } catch (e) {}
+                    _installRunning = false;
+                    startAutoInstall();
+                  }
+                });
+              });
+            });
+            pipReq.on('error', function (e) {
+              addInstallLog('[WARN] get-pip.py download error: ' + e.message);
               _pythonOk = true; _pythonCmd = exePath; _pythonChecked = true;
               try { fs.unlinkSync(zipPath); } catch (e) {}
               _installRunning = false;
               startAutoInstall();
-            } else {
-              addInstallLog('[ERR] python.exe not found after extraction');
-              finishAutoInstall(false);
-            }
-          } catch (err) { addInstallLog('[ERR] Extraction failed: ' + err.message); finishAutoInstall(false); }
+            });
+          } catch (err) {
+            addInstallLog('[ERR] Extraction failed: ' + err.message);
+            try { fs.unlinkSync(zipPath); } catch (e) {}
+            finishAutoInstall(false);
+          }
         });
       });
     });
