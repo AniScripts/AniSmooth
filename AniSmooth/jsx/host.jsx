@@ -237,22 +237,14 @@ function renderSelectedLayer(outputPathDir, layerName) {
     var rq = app.project.renderQueue;
     var item = rq.items.add(comp);
     
-    // Use work area if set and within layer range, otherwise use layer in/out
-    var renderStart = layer.inPoint;
-    var renderEnd = layer.outPoint;
+    // Save and temporarily set work area to match the selected layer
+    var savedWAStart = comp.workAreaStart;
+    var savedWADuration = comp.workAreaDuration;
+    comp.workAreaStart = layer.inPoint;
+    comp.workAreaDuration = layer.outPoint - layer.inPoint;
     
-    if (comp.workAreaStart !== undefined && comp.workAreaDuration !== undefined) {
-      var waStart = comp.workAreaStart;
-      var waEnd = comp.workAreaStart + comp.workAreaDuration;
-      // Only use work area if it's fully within the layer range (user deliberately set it)
-      if (waStart >= layer.inPoint && waEnd <= layer.outPoint) {
-        renderStart = waStart;
-        renderEnd = waEnd;
-      }
-    }
-    
-    item.timeSpanStart = renderStart;
-    item.timeSpanDuration = renderEnd - renderStart;
+    item.timeSpanStart = layer.inPoint;
+    item.timeSpanDuration = layer.outPoint - layer.inPoint;
     
     
     var outputModule = item.outputModule(1);
@@ -275,6 +267,9 @@ function renderSelectedLayer(outputPathDir, layerName) {
     
     rq.render();
     
+    // Restore work area
+    comp.workAreaStart = savedWAStart;
+    comp.workAreaDuration = savedWADuration;
     
     for (var i = 0; i < originalSolos.length; i++) {
       try {
@@ -310,6 +305,8 @@ function renderSelectedLayer(outputPathDir, layerName) {
 
     return "{\"ok\":true,\"filePath\":\"" + jsonEscape(finalPath) + "\",\"name\":\"" + jsonEscape(layer.name) + "\",\"isTemp\":true}";
   } catch (err) {
+    // Restore work area on error
+    try { comp.workAreaStart = savedWAStart; comp.workAreaDuration = savedWADuration; } catch (e) {}
     
     if (originalSolos) {
       for (var i = 0; i < originalSolos.length; i++) {
