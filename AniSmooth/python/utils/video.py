@@ -317,6 +317,14 @@ class VideoProcessor:
         total = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.total_frames = total if total > 0 else 1
         self._ffmpeg_proc = None
+        self.writer = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
     def get_info(self):
         return self.width, self.height, self.fps, self.total_frames

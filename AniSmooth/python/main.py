@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from utils import VideoProcessor, get_device, check_tensorrt, print_gpu_info
-from utils.video import mux_audio, reencode_to_size, reencode_high_quality, fix_faststart
+from utils.video import mux_audio, reencode_to_size, reencode_high_quality
 from models.rife import RIFEModel
 from models.upscale import ShuffleCUGANModel
 from models.weight_loader import load_weights_if_available, download_weights, is_weight_downloaded
@@ -168,116 +168,115 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         log("warn", "TensorRT requested but not available. Falling back to PyTorch CUDA.")
         use_tensorrt = False
 
-    video = VideoProcessor(input_path, output_path)
-    w, h, fps, total_frames = video.get_info()
-    video.setup_writer(fps * factor)
-    log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
+    with VideoProcessor(input_path, output_path) as video:
+        w, h, fps, total_frames = video.get_info()
+        video.setup_writer(fps * factor)
+        log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
-    
-    pad_h = (32 - h % 32) % 32
-    pad_w = (32 - w % 32) % 32
-    if pad_h > 0 or pad_w > 0:
-        log("info", f"Padding frames from {w}x{h} to {w + pad_w}x{h + pad_h} (mod-32 alignment)")
-
-    trt_engine = None
-    model = None
-
-    if use_tensorrt:
-        log("info", "Initializing TensorRT engine...")
-        base_key = model_name.replace("-tensorrt", "")
-        ensure_engines_dir()
         
-        engine_h = h + pad_h
-        engine_w = w + pad_w
-        engine_path = get_engine_path(base_key, (engine_h, engine_w), "fp16")
+        pad_h = (32 - h % 32) % 32
+        pad_w = (32 - w % 32) % 32
+        if pad_h > 0 or pad_w > 0:
+            log("info", f"Padding frames from {w}x{h} to {w + pad_w}x{h + pad_h} (mod-32 alignment)")
 
-        if not os.path.exists(engine_path):
-            log("info", "Building TensorRT engine from PyTorch model...")
-            pt_model = load_interpolation_model(base_key, device)
-            onnx_path = build_rife_onnx(pt_model, base_key, (engine_h, engine_w), device)
-            engine_path = build_rife_tensorrt_engine(onnx_path, engine_path, "fp16")
-            del pt_model
-            torch.cuda.empty_cache()
+        trt_engine = None
+        model = None
 
-        if engine_path and os.path.exists(engine_path):
-            engine = load_tensorrt_engine(engine_path)
-            if engine is not None:
-                trt_engine = TensorRTInferenceEngine(engine)
-                trt_engine.allocate_buffers({
-                    "img0": (1, 3, engine_h, engine_w),
-                    "img1": (1, 3, engine_h, engine_w),
-                })
-                log("info", "TensorRT engine ready for inference")
-            else:
-                log("error", "Failed to load TensorRT engine. Falling back to PyTorch.")
-                use_tensorrt = False
-
-    if not use_tensorrt:
-        model = load_interpolation_model(model_name.replace("-tensorrt", ""), device)
-
-    log("info", "Starting frame interpolation...")
-    frame_idx = 0
-    prev_frame = None
-    scene_changes = 0
-
-    for frame in video.read_frames():
-        if prev_frame is not None:
+        if use_tensorrt:
+            log("info", "Initializing TensorRT engine...")
+            base_key = model_name.replace("-tensorrt", "")
+            ensure_engines_dir()
             
-            is_scene_change = detect_scene_change(prev_frame, frame)
-            if is_scene_change:
-                scene_changes += 1
+            engine_h = h + pad_h
+            engine_w = w + pad_w
+            engine_path = get_engine_path(base_key, (engine_h, engine_w), "fp16")
+
+            if not os.path.exists(engine_path):
+                log("info", "Building TensorRT engine from PyTorch model...")
+                pt_model = load_interpolation_model(base_key, device)
+                onnx_path = build_rife_onnx(pt_model, base_key, (engine_h, engine_w), device)
+                engine_path = build_rife_tensorrt_engine(onnx_path, engine_path, "fp16")
+                del pt_model
+                torch.cuda.empty_cache()
+
+            if engine_path and os.path.exists(engine_path):
+                engine = load_tensorrt_engine(engine_path)
+                if engine is not None:
+                    trt_engine = TensorRTInferenceEngine(engine)
+                    trt_engine.allocate_buffers({
+                        "img0": (1, 3, engine_h, engine_w),
+                        "img1": (1, 3, engine_h, engine_w),
+                    })
+                    log("info", "TensorRT engine ready for inference")
+                else:
+                    log("error", "Failed to load TensorRT engine. Falling back to PyTorch.")
+                    use_tensorrt = False
+
+        if not use_tensorrt:
+            model = load_interpolation_model(model_name.replace("-tensorrt", ""), device)
+
+        log("info", "Starting frame interpolation...")
+        frame_idx = 0
+        prev_frame = None
+        scene_changes = 0
+
+        for frame in video.read_frames():
+            if prev_frame is not None:
                 
-                
-                for _ in range(1, factor):
-                    video.write_frame(prev_frame)
-            elif use_tensorrt and trt_engine is not None:
-                
-                t0 = frame_to_tensor(prev_frame, device).half()
-                t1 = frame_to_tensor(frame, device).half()
-                t0, pad_info = pad_to_mod(t0, 32)
-                t1, _ = pad_to_mod(t1, 32)
-                for f in range(1, factor):
-                    alpha = f / factor
-                    with torch.no_grad():
-                        
-                        timestep_tensor = torch.full(
-                            (1, 1, t0.shape[2], t0.shape[3]),
-                            alpha, dtype=t0.dtype, device=device
-                        )
-                        result = trt_engine.infer({
-                            "img0": t0, "img1": t1, "timestep": timestep_tensor
-                        })
-                        mid = unpad(result["output"].float(), pad_info)
-                    interp = tensor_to_frame(mid, str(device))
-                    video.write_frame(interp)
-            else:
-                
-                t0 = frame_to_tensor(prev_frame, device).to(memory_format=torch.channels_last)
-                t1 = frame_to_tensor(frame, device).to(memory_format=torch.channels_last)
-                t0_padded, pad_info = pad_to_mod(t0, 32)
-                t1_padded, _ = pad_to_mod(t1, 32)
-                with torch.no_grad(), torch.cuda.amp.autocast(enabled=device.type == "cuda"):
+                is_scene_change = detect_scene_change(prev_frame, frame)
+                if is_scene_change:
+                    scene_changes += 1
+                    
+                    
+                    for _ in range(1, factor):
+                        video.write_frame(prev_frame)
+                elif use_tensorrt and trt_engine is not None:
+                    
+                    t0 = frame_to_tensor(prev_frame, device).half()
+                    t1 = frame_to_tensor(frame, device).half()
+                    t0, pad_info = pad_to_mod(t0, 32)
+                    t1, _ = pad_to_mod(t1, 32)
                     for f in range(1, factor):
                         alpha = f / factor
-                        mid = model(t0_padded, t1_padded, alpha)
-                        mid = unpad(mid, pad_info)
-                        interp_frame = tensor_to_frame(mid.float(), str(device))
-                        video.write_frame(interp_frame)
+                        with torch.no_grad():
+                            
+                            timestep_tensor = torch.full(
+                                (1, 1, t0.shape[2], t0.shape[3]),
+                                alpha, dtype=t0.dtype, device=device
+                            )
+                            result = trt_engine.infer({
+                                "img0": t0, "img1": t1, "timestep": timestep_tensor
+                            })
+                            mid = unpad(result["output"].float(), pad_info)
+                        interp = tensor_to_frame(mid, str(device))
+                        video.write_frame(interp)
+                else:
+                    
+                    t0 = frame_to_tensor(prev_frame, device).to(memory_format=torch.channels_last)
+                    t1 = frame_to_tensor(frame, device).to(memory_format=torch.channels_last)
+                    t0_padded, pad_info = pad_to_mod(t0, 32)
+                    t1_padded, _ = pad_to_mod(t1, 32)
+                    with torch.no_grad(), torch.cuda.amp.autocast(enabled=device.type == "cuda"):
+                        for f in range(1, factor):
+                            alpha = f / factor
+                            mid = model(t0_padded, t1_padded, alpha)
+                            mid = unpad(mid, pad_info)
+                            interp_frame = tensor_to_frame(mid.float(), str(device))
+                            video.write_frame(interp_frame)
 
-            video.write_frame(frame)
-        else:
-            video.write_frame(frame)
+                video.write_frame(frame)
+            else:
+                video.write_frame(frame)
 
-        prev_frame = frame
-        frame_idx += 1
-        denom = max(total_frames, 1)
-        pct = min(100, int((frame_idx / denom) * 100))
-        log("progress", f"Interpolating frames... {frame_idx}/{denom}", pct=pct)
+            prev_frame = frame
+            frame_idx += 1
+            denom = max(total_frames, 1)
+            pct = min(100, int((frame_idx / denom) * 100))
+            log("progress", f"Interpolating frames... {frame_idx}/{denom}", pct=pct)
 
     if scene_changes > 0:
         log("info", f"Scene changes detected and skipped: {scene_changes}")
 
-    video.close()
     if model is not None:
         del model
     if trt_engine is not None:
@@ -296,45 +295,44 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
 
     model = load_upscale_model(model_name, scale, device)
 
-    video = VideoProcessor(input_path, output_path)
-    w, h, fps, total_frames = video.get_info()
-    video.setup_writer(fps, scale=scale)
-    log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
+    with VideoProcessor(input_path, output_path) as video:
+        w, h, fps, total_frames = video.get_info()
+        video.setup_writer(fps, scale=scale)
+        log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
-    log("info", "Starting frame upscaling...")
-    frame_idx = 0
-    black_warned = False
-    use_autocast = device.type == "cuda"
+        log("info", "Starting frame upscaling...")
+        frame_idx = 0
+        black_warned = False
+        use_autocast = device.type == "cuda"
 
-    for frame in video.read_frames():
-        tensor = frame_to_tensor(frame, device)
-        if use_autocast:
-            tensor = tensor.to(memory_format=torch.channels_last)
+        for frame in video.read_frames():
+            tensor = frame_to_tensor(frame, device)
+            if use_autocast:
+                tensor = tensor.to(memory_format=torch.channels_last)
 
-        with torch.no_grad(), torch.cuda.amp.autocast(enabled=use_autocast):
-            upscaled = model(tensor)
+            with torch.no_grad(), torch.cuda.amp.autocast(enabled=use_autocast):
+                upscaled = model(tensor)
 
-        # Validate output on first frame
-        if frame_idx == 0:
-            out_min = upscaled.min().item()
-            out_max = upscaled.max().item()
-            out_mean = upscaled.mean().item()
-            log("info", f"Upscale output stats — min: {out_min:.4f}, max: {out_max:.4f}, mean: {out_mean:.4f}")
-            if out_max < 0.01:
-                log("error", "Model output is nearly all-black! Model weights may not be loaded correctly.")
-                log("error", "Try removing the weight file and letting it re-download, or check console for weight-loading warnings.")
-                black_warned = True
+            # Validate output on first frame
+            if frame_idx == 0:
+                out_min = upscaled.min().item()
+                out_max = upscaled.max().item()
+                out_mean = upscaled.mean().item()
+                log("info", f"Upscale output stats — min: {out_min:.4f}, max: {out_max:.4f}, mean: {out_mean:.4f}")
+                if out_max < 0.01:
+                    log("error", "Model output is nearly all-black! Model weights may not be loaded correctly.")
+                    log("error", "Try removing the weight file and letting it re-download, or check console for weight-loading warnings.")
+                    black_warned = True
 
-        upscaled = torch.clamp(upscaled, 0, 1)
-        result = tensor_to_frame(upscaled, str(device))
-        video.write_frame(result)
+            upscaled = torch.clamp(upscaled, 0, 1)
+            result = tensor_to_frame(upscaled, str(device))
+            video.write_frame(result)
 
-        frame_idx += 1
-        denom = max(total_frames, 1)
-        pct = min(100, int((frame_idx / denom) * 100))
-        log("progress", f"Upscaling frames... {frame_idx}/{denom}", pct=pct)
+            frame_idx += 1
+            denom = max(total_frames, 1)
+            pct = min(100, int((frame_idx / denom) * 100))
+            log("progress", f"Upscaling frames... {frame_idx}/{denom}", pct=pct)
 
-    video.close()
     del model
     if device.type == "cuda":
         torch.cuda.empty_cache()
