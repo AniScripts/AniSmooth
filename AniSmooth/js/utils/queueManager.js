@@ -209,6 +209,9 @@
           if (res.isTemp && window.FileSystem && window.FileSystem.fs) {
             try { window.FileSystem.fs.unlinkSync(inputPath); } catch (e) {}
           }
+          if (window.App && window.App.settings.outputCleanupFailed !== false && outputPath && window.FileSystem && window.FileSystem.fs) {
+            try { window.FileSystem.fs.unlinkSync(outputPath); } catch (e) {}
+          }
           self._notify();
           self._processNext();
         }

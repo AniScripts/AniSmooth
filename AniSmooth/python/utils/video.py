@@ -4,6 +4,7 @@ import json
 import subprocess
 import os
 import shutil
+import threading
 from pathlib import Path
 
 def log(msg_type, msg, **kw):
@@ -339,6 +340,8 @@ class VideoProcessor:
         self.total_frames = total if total > 0 else 1
         self._ffmpeg_proc = None
         self.writer = None
+        self._ffmpeg_stderr_lines = []
+        self._ffmpeg_stderr_thread = None
 
     def __enter__(self):
         return self
@@ -367,10 +370,22 @@ class VideoProcessor:
                 cmd += ["-tune", tune]
             cmd += [
                 "-pix_fmt", "yuv420p",
+                "-x264-params", "threads=2:lookahead-threads=1:rc-lookahead=20",
+                "-threads", "2",
                 "-movflags", "+faststart",
                 str(self.output_path)
             ]
-            self._ffmpeg_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+            self._ffmpeg_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            def _read_stderr():
+                try:
+                    for line in self._ffmpeg_proc.stderr:
+                        decoded = line.decode(errors="replace").strip()
+                        if decoded:
+                            self._ffmpeg_stderr_lines.append(decoded)
+                except Exception:
+                    pass
+            self._ffmpeg_stderr_thread = threading.Thread(target=_read_stderr, daemon=True)
+            self._ffmpeg_stderr_thread.start()
         else:
             ext = self.output_path.split('.')[-1].lower()
             if ext == 'avi':
@@ -384,9 +399,11 @@ class VideoProcessor:
 
     def write_frame(self, frame):
         if self._ffmpeg_proc:
+            if self._ffmpeg_proc.poll() is not None:
+                return
             try:
                 self._ffmpeg_proc.stdin.write(frame.tobytes())
-            except BrokenPipeError:
+            except (BrokenPipeError, OSError):
                 pass
         elif self.writer:
             self.writer.write(frame)
@@ -406,5 +423,7 @@ class VideoProcessor:
             except Exception:
                 pass
             self._ffmpeg_proc.wait()
+            if self._ffmpeg_stderr_lines:
+                log("warn", f"FFmpeg stderr ({len(self._ffmpeg_stderr_lines)} lines): " + " | ".join(self._ffmpeg_stderr_lines[-5:]))
         if self.writer:
             self.writer.release()

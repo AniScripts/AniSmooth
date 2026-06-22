@@ -6,7 +6,8 @@
       outputPrefix: "AniSmooth",
       outputTimestamp: true,
       outputAutoImport: true,
-      outputKeepPrerender: true
+      outputKeepPrerender: true,
+      outputCleanupFailed: true
     },
 
     _activePreset: null,
@@ -53,6 +54,7 @@
       this.settings.outputTimestamp = window.StorageManager.getItem("anismooth_output_timestamp", "1") === "1";
       this.settings.outputAutoImport = window.StorageManager.getItem("anismooth_output_autoimport", "1") === "1";
       this.settings.outputKeepPrerender = window.StorageManager.getItem("anismooth_output_keepprerender", "1") === "1";
+      this.settings.outputCleanupFailed = window.StorageManager.getItem("anismooth_output_cleanupfailed", "1") === "1";
 
       if (path && window.FileSystem.fs) {
         window.FileSystem.createFolder(this.settings.outputPath);
@@ -310,6 +312,16 @@
         kpCheck.addEventListener("change", function () {
           self.settings.outputKeepPrerender = kpCheck.checked;
           window.StorageManager.setItem("anismooth_output_keepprerender", kpCheck.checked ? "1" : "0");
+          self._autoSavePreset();
+        });
+      }
+
+      var cfCheck = document.getElementById("outputCleanupFailed");
+      if (cfCheck) {
+        cfCheck.checked = this.settings.outputCleanupFailed;
+        cfCheck.addEventListener("change", function () {
+          self.settings.outputCleanupFailed = cfCheck.checked;
+          window.StorageManager.setItem("anismooth_output_cleanupfailed", cfCheck.checked ? "1" : "0");
           self._autoSavePreset();
         });
       }

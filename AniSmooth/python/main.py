@@ -2,6 +2,7 @@ import argparse
 import sys
 import os
 import json
+import gc
 import cv2
 import torch
 import torch.nn.functional as F
@@ -39,11 +40,11 @@ def resolve_quality(key):
 
 def tensor_to_frame(tensor, device="cuda"):
     frame = tensor.squeeze(0).permute(1, 2, 0).detach()
+    frame = torch.clamp(frame, 0, 1)
+    frame = (frame * 255).to(torch.uint8)
     if device == "cuda" or str(frame.device).startswith("cuda"):
         frame = frame.cpu()
-    frame = frame.float().numpy()
-    frame = (frame.clip(0, 1) * 255).astype(np.uint8)
-    return cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    return cv2.cvtColor(frame.numpy(), cv2.COLOR_RGB2BGR)
 
 def frame_to_tensor(frame, device):
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -312,6 +313,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
     print_gpu_info()
     device = get_device()
     log("info", f"Using device: {device}")
+    cv2.setNumThreads(2)
 
     model = load_upscale_model(model_name, scale, device)
 
@@ -333,7 +335,8 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
             with torch.no_grad(), torch.amp.autocast("cuda", enabled=use_autocast):
                 upscaled = model(tensor)
 
-            
+            del tensor
+
             if frame_idx == 0:
                 out_min = upscaled.min().item()
                 out_max = upscaled.max().item()
@@ -344,11 +347,16 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
                     log("error", "Try removing the weight file and letting it re-download, or check console for weight-loading warnings.")
                     black_warned = True
 
-            upscaled = torch.clamp(upscaled, 0, 1)
             result = tensor_to_frame(upscaled, str(device))
+            del upscaled
             video.write_frame(result)
+            del result
 
             frame_idx += 1
+            if frame_idx % 5 == 0:
+                gc.collect()
+            if device.type == "cuda" and frame_idx % 10 == 0:
+                torch.cuda.empty_cache()
             denom = max(total_frames, 1)
             pct = min(100, int((frame_idx / denom) * 100))
             log("progress", f"Upscaling frames... {frame_idx}/{denom}", pct=pct)
