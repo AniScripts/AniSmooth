@@ -3,6 +3,7 @@ import sys
 import os
 import json
 import gc
+import traceback
 import cv2
 import torch
 import torch.nn.functional as F
@@ -395,6 +396,7 @@ def run_gpu_info():
             cpu = subprocess.check_output("grep -m 1 'model name' /proc/cpuinfo | cut -d: -f2", shell=True).decode().strip()
     except Exception:
         cpu = platform.processor() or "Unknown"
+        log("warn", "CPU detection failed, using fallback", trace=traceback.format_exc())
     info["sys_cpu"] = cpu
 
     
@@ -428,7 +430,7 @@ def run_gpu_info():
                         ram = int(line.split()[1]) * 1024
                         break
     except Exception:
-        pass
+        log("warn", "RAM detection failed", trace=traceback.format_exc())
     info["sys_ram_bytes"] = ram
 
     log("gpu_info", json.dumps(info))
@@ -498,7 +500,7 @@ def run_sys_metrics():
                 metrics["ram_used_gb"] = used / (1024**3)
                 metrics["ram_percent"] = float(stat.dwMemoryLoad)
             except Exception:
-                pass
+                log("warn", "RAM metrics polling failed", trace=traceback.format_exc())
 
     
     try:
@@ -531,8 +533,8 @@ def run_sys_metrics():
                     metrics["gpu_temp"] = float(parts[3].strip())
                     metrics["gpu_mem_used_mb"] = float(parts[4].strip())
                     metrics["gpu_mem_total_mb"] = float(parts[5].strip())
-    except Exception:
-        pass
+            except Exception:
+                log("warn", "GPU metrics polling failed", trace=traceback.format_exc())
 
     log("sys_metrics", json.dumps(metrics))
 

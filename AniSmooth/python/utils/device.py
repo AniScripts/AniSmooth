@@ -2,6 +2,7 @@ import json
 import subprocess
 import shutil
 import os
+import traceback
 import torch
 
 def log(msg_type, msg, **kw):
@@ -62,7 +63,7 @@ def _run_nvidia_smi():
                 if len(parts) > 2 and parts[2].lower() != "n/a":
                     driver_version = parts[2]
     except Exception:
-        pass
+        log("warn", "nvidia-smi CSV parsing failed", trace=traceback.format_exc())
 
     
     if not gpu_name or not driver_version:
@@ -81,7 +82,7 @@ def _run_nvidia_smi():
                         raw = line.strip().split("Driver Version:")[-1].strip()
                         driver_version = raw.split(" ")[0]
         except Exception:
-            pass
+            log("warn", "nvidia-smi full output parsing failed", trace=traceback.format_exc())
 
     if not gpu_name:
         return None
@@ -140,7 +141,7 @@ def get_gpu_info():
             free_bytes, total_bytes = torch.cuda.mem_get_info(0)
             info["gpu_memory_free_mb"] = free_bytes // (1024 * 1024)
         except Exception:
-            pass
+            log("warn", "Could not read GPU free memory", trace=traceback.format_exc())
     elif nvidia:
         info["gpu_name"] = nvidia["name"]
         info["gpu_memory_total_mb"] = nvidia["memory_total_mb"]

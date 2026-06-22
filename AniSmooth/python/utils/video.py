@@ -5,6 +5,7 @@ import subprocess
 import os
 import shutil
 import threading
+import traceback
 from pathlib import Path
 
 def log(msg_type, msg, **kw):
@@ -53,7 +54,7 @@ def mux_audio(video_path, audio_source_path):
         if "audio" in r.stdout.lower():
             has_audio = True
     except Exception:
-        pass
+        log("warn", "Audio probe failed", trace=traceback.format_exc())
 
     if not has_audio:
         log("info", "No audio stream in source, skipping audio mux")
@@ -168,7 +169,7 @@ def _probe_duration(ffmpeg, path):
         if dur and dur.replace(".", "").replace("-", "").isdigit():
             return float(dur)
     except Exception:
-        pass
+        log("warn", "Duration detection failed", trace=traceback.format_exc())
     return None
 
 def reencode_to_size(video_path, audio_source_path, target_mb, x264_preset="slow", tune="animation"):
@@ -210,7 +211,7 @@ def reencode_to_size(video_path, audio_source_path, target_mb, x264_preset="slow
                             audio_bitrate_kbps = int(int(parts[1]) / 1000)
                         break
     except Exception:
-        pass
+        log("warn", "Audio bitrate detection failed", trace=traceback.format_exc())
 
     
     

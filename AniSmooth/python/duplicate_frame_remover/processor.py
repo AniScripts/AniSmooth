@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import subprocess
+import traceback
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -82,6 +83,7 @@ def process_single_video(
         except Exception as e:
             if verbose:
                 print(f"  [warn] FFmpeg failed to start ({e}), falling back to OpenCV")
+                traceback.print_exc()
             use_ffmpeg = False
 
     if not use_ffmpeg:
