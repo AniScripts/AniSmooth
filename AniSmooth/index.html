@@ -128,29 +128,6 @@
             </div>
             <div class="info-card" id="interpFactorInfo"></div>
           </div>
-          <div class="form-group">
-            <label>Target File Size (MB) — optional</label>
-            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
-              <span class="toggle-label" style="flex:1;">Enable size limit</span>
-              <input type="checkbox" class="toggle-input" id="interpEnableTargetSize">
-              <span class="toggle-switch"></span>
-            </div>
-            <input type="number" id="interpTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
-            <span class="form-hint">Re-encodes output to stay under this size. Toggle off to keep raw quality.</span>
-          </div>
-          <div class="form-group">
-            <label for="interpPreset">Encoding Preset</label>
-            <select id="interpPreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
-              <option value="ultrafast">Very Fast</option>
-              <option value="superfast">Faster</option>
-              <option value="veryfast">Fast</option>
-              <option value="medium">Medium</option>
-              <option value="slow">Slow</option>
-              <option value="slower" selected>Slower</option>
-              <option value="veryslow">Very Slow</option>
-            </select>
-            <span class="form-hint">Slower = better quality, smaller file. Faster = quicker encode, larger file.</span>
-          </div>
           <div class="btn-row">
             <button id="startInterpolateBtn" class="btn">
               <i class="fa-solid fa-plus"></i> Add to Queue
@@ -221,29 +198,6 @@
               </div>
             </div>
             <div class="info-card" id="upscaleScaleInfo"></div>
-          </div>
-          <div class="form-group">
-            <label>Target File Size (MB) — optional</label>
-            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
-              <span class="toggle-label" style="flex:1;">Enable size limit</span>
-              <input type="checkbox" class="toggle-input" id="upscaleEnableTargetSize">
-              <span class="toggle-switch"></span>
-            </div>
-            <input type="number" id="upscaleTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
-            <span class="form-hint">Re-encodes output to stay under this size. Toggle off to keep raw quality.</span>
-          </div>
-          <div class="form-group">
-            <label for="upscalePreset">Encoding Preset</label>
-            <select id="upscalePreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
-              <option value="ultrafast">Very Fast</option>
-              <option value="superfast">Faster</option>
-              <option value="veryfast">Fast</option>
-              <option value="medium">Medium</option>
-              <option value="slow">Slow</option>
-              <option value="slower" selected>Slower</option>
-              <option value="veryslow">Very Slow</option>
-            </select>
-            <span class="form-hint">Slower = better quality, smaller file. Faster = quicker encode, larger file.</span>
           </div>
           <div class="btn-row">
             <button id="startUpscaleBtn" class="btn">
@@ -572,6 +526,57 @@
             </label>
             <span class="form-hint">Keeps an extra copy of the timeline pre-render alongside the processed output.</span>
           </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-compress panel-head-icon"></i>
+            <span class="panel-title">Encoding</span>
+          </div>
+          <div class="form-group">
+            <label>Interpolation Target File Size (MB)</label>
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Enable size limit</span>
+              <input type="checkbox" class="toggle-input" id="interpEnableTargetSize">
+              <span class="toggle-switch"></span>
+            </div>
+            <input type="number" id="interpTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
+          </div>
+          <div class="form-group">
+            <label for="interpPreset">Interpolation Preset</label>
+            <select id="interpPreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
+              <option value="ultrafast">Very Fast</option>
+              <option value="superfast">Faster</option>
+              <option value="veryfast">Fast</option>
+              <option value="medium">Medium</option>
+              <option value="slow">Slow</option>
+              <option value="slower" selected>Slower</option>
+              <option value="veryslow">Very Slow</option>
+            </select>
+          </div>
+          <div style="border-top:1px solid #3c3c3c;margin:8px 0;"></div>
+          <div class="form-group">
+            <label>Upscale Target File Size (MB)</label>
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Enable size limit</span>
+              <input type="checkbox" class="toggle-input" id="upscaleEnableTargetSize">
+              <span class="toggle-switch"></span>
+            </div>
+            <input type="number" id="upscaleTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
+          </div>
+          <div class="form-group">
+            <label for="upscalePreset">Upscale Preset</label>
+            <select id="upscalePreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
+              <option value="ultrafast">Very Fast</option>
+              <option value="superfast">Faster</option>
+              <option value="veryfast">Fast</option>
+              <option value="medium">Medium</option>
+              <option value="slow">Slow</option>
+              <option value="slower" selected>Slower</option>
+              <option value="veryslow">Very Slow</option>
+            </select>
+          </div>
+          <span class="form-hint">Slower = better quality, smaller file. Faster = quicker encode.</span>
         </div>
         </div>
 
