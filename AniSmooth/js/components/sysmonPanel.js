@@ -111,7 +111,7 @@
         var r = rows[i];
         html += '<div class="env-row" style="margin-bottom: 8px; align-items: center; display: flex;">';
         html += '  <span class="env-label" style="font-weight:600; min-width: 100px;">' + r.label + '</span>';
-        html += '  <span class="env-value" style="margin-left: 12px; flex: 1;">' + r.value + '</span>';
+        html += '  <span class="env-value" style="margin-left: 12px; flex: 1;">' + escHtml(r.value) + '</span>';
         if (r.valPct !== undefined) {
           html += '  <div class="gpu-vram-bar-wrap" style="width: 120px; margin-left: 12px; height: 6px;">';
           html += '    <div class="gpu-vram-bar" style="height: 6px;">';
@@ -127,10 +127,16 @@
     renderError: function (msg) {
       var el = document.getElementById("sysmonDetails");
       if (el) {
-        el.innerHTML = '<div class="env-row"><i class="fa-solid fa-circle-exclamation env-err"></i> <span>Failed to fetch metrics: ' + msg + '</span></div>';
+        el.innerHTML = '<div class="env-row"><i class="fa-solid fa-circle-exclamation env-err"></i> <span>Failed to fetch metrics: ' + escHtml(msg) + '</span></div>';
       }
     }
   };
+
+  function escHtml(t) {
+    var d = document.createElement("div");
+    d.appendChild(document.createTextNode(t || ""));
+    return d.innerHTML;
+  }
 
   window.SysmonPanel = SysmonPanel;
 })();
