@@ -256,7 +256,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                     t1 = frame_to_tensor(frame, device).to(memory_format=torch.channels_last)
                     t0_padded, pad_info = pad_to_mod(t0, 32)
                     t1_padded, _ = pad_to_mod(t1, 32)
-                    with torch.no_grad(), torch.cuda.amp.autocast(enabled=device.type == "cuda"):
+                    with torch.no_grad(), torch.amp.autocast("cuda", enabled=device.type == "cuda"):
                         for f in range(1, factor):
                             alpha = f / factor
                             mid = model(t0_padded, t1_padded, alpha)
@@ -310,7 +310,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
             if use_autocast:
                 tensor = tensor.to(memory_format=torch.channels_last)
 
-            with torch.no_grad(), torch.cuda.amp.autocast(enabled=use_autocast):
+            with torch.no_grad(), torch.amp.autocast("cuda", enabled=use_autocast):
                 upscaled = model(tensor)
 
             
