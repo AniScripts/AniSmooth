@@ -2,6 +2,7 @@
   var QueueManager = {
     _queue: [],
     _running: false,
+    _paused: false,
     _currentProc: null,
     _listeners: [],
 
@@ -11,7 +12,7 @@
       this._queue.push(item);
       dbg("info", "Queue", "Added: " + item.name + " (" + item.task + ", " + (item.factor || item.scale) + "x)");
       this._notify();
-      if (!this._running) this._processNext();
+      if (!this._running && !this._paused) this._processNext();
     },
 
     getAll: function () {
@@ -27,6 +28,32 @@
 
     isRunning: function () {
       return this._running;
+    },
+
+    isPaused: function () {
+      return this._paused;
+    },
+
+    togglePause: function () {
+      this._paused = !this._paused;
+      if (this._paused) {
+        for (var i = 0; i < this._queue.length; i++) {
+          if (this._queue[i].status === "processing") {
+            this._queue[i].status = "queued";
+            this._queue[i].progress = 0;
+          }
+        }
+        if (this._currentProc) {
+          window.ModelHandler.cancelActiveProcess();
+          this._currentProc = null;
+        }
+        this._running = false;
+        dbg("info", "Queue", "Processing paused");
+      } else {
+        dbg("info", "Queue", "Processing resumed");
+        this._processNext();
+      }
+      this._notify();
     },
 
     remove: function (id) {
@@ -45,6 +72,7 @@
         window.ModelHandler.cancelActiveProcess();
         this._currentProc = null;
       }
+      this._paused = false;
       for (var i = 0; i < this._queue.length; i++) {
         if (this._queue[i].status === "queued") {
           this._queue[i].status = "cancelled";
@@ -74,6 +102,11 @@
 
     _processNext: function () {
       var self = this;
+      if (this._paused) {
+        this._running = false;
+        this._notify();
+        return;
+      }
       if (this._queue.length === 0) {
         this._running = false;
         this._notify();
@@ -213,6 +246,11 @@
         },
         onError: function (err) {
           self._currentProc = null;
+          if (self._paused && item.status === "queued") {
+            dbg("info", "Queue", "Paused — item queued for retry");
+            self._notify();
+            return;
+          }
           item.status = "error";
           item.error = err;
           if (item.startedAt) item.elapsed = Date.now() - item.startedAt;

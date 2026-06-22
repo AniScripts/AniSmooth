@@ -5,9 +5,15 @@
       this.view = document.getElementById("queueView");
 
       var self = this;
+      this.pauseBtn = document.getElementById("queuePauseBtn");
       this.cancelBtn = document.getElementById("queueCancelBtn");
       this.clearBtn = document.getElementById("queueClearBtn");
 
+      if (this.pauseBtn) {
+        this.pauseBtn.addEventListener("click", function () {
+          window.QueueManager.togglePause();
+        });
+      }
       if (this.cancelBtn) {
         this.cancelBtn.addEventListener("click", function () {
           window.QueueManager.cancelAll();
@@ -30,9 +36,19 @@
 
       var queue = window.QueueManager.getAll();
       var running = window.QueueManager.isRunning();
+      var paused = window.QueueManager.isPaused();
 
+      var pauseBtn = document.getElementById("queuePauseBtn");
       var cancelBtn = document.getElementById("queueCancelBtn");
       var clearBtn = document.getElementById("queueClearBtn");
+      if (pauseBtn) {
+        pauseBtn.style.display = (running || paused) ? "" : "none";
+        if (paused) {
+          pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i> Resume';
+        } else {
+          pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+        }
+      }
       if (cancelBtn) cancelBtn.style.display = running ? "" : "none";
       if (clearBtn) {
         var hasDone = false;
@@ -58,7 +74,7 @@
       var html = '';
       html += '<div class="queue-summary">' +
         queue.length + ' item' + (queue.length !== 1 ? 's' : '') +
-        (hasActive ? ' · Processing' : ' · Idle') +
+        (paused ? ' · Paused' : (hasActive ? ' · Processing' : ' · Idle')) +
       '</div>';
 
       for (var i = 0; i < queue.length; i++) {
