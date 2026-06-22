@@ -14,18 +14,20 @@
     _previewFiles: [],
 
     _presetsDir: (function () {
+      if (!window.FileSystem || !window.FileSystem.path) return "";
       var appdata = "";
       try { appdata = process.env.APPDATA || ""; } catch (e) {}
-      if (!appdata && window.FileSystem && window.FileSystem.os && window.FileSystem.path) {
+      if (!appdata && window.FileSystem.os) {
         appdata = window.FileSystem.path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
       }
-      return window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "presets");
+      return appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "presets") : "";
     })(),
 
     anismoothToolsFolder: (function () {
+      if (!window.FileSystem || !window.FileSystem.path) return "C:\\AniSmoothTools";
       var appdata = "";
       try { appdata = process.env.APPDATA || ""; } catch (e) {}
-      if (!appdata && window.FileSystem && window.FileSystem.os && window.FileSystem.path) {
+      if (!appdata && window.FileSystem.os) {
         appdata = window.FileSystem.path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
       }
       var base = appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth") : "";
@@ -33,9 +35,10 @@
     })(),
 
     anismoothPythonEnvFolder: (function () {
+      if (!window.FileSystem || !window.FileSystem.path) return "";
       var appdata = "";
       try { appdata = process.env.APPDATA || ""; } catch (e) {}
-      if (!appdata && window.FileSystem && window.FileSystem.os && window.FileSystem.path) {
+      if (!appdata && window.FileSystem.os) {
         appdata = window.FileSystem.path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
       }
       return appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth") : "";
@@ -44,10 +47,10 @@
     init: function () {
       dbg('info', 'App', 'Initializing AniSmooth...');
 
-      var path = window.FileSystem.path;
-      var os = window.FileSystem.os;
+      var path = (window.FileSystem && window.FileSystem.path) || null;
+      var os = (window.FileSystem && window.FileSystem.os) || null;
 
-      this.defaultDownloadFolder = path ? path.join(os.homedir(), "Downloads", "AniSmooth") : "";
+      this.defaultDownloadFolder = (path && os) ? path.join(os.homedir(), "Downloads", "AniSmooth") : "";
       this.settings.outputPath = window.StorageManager.getItem("anismooth_output_path") || this.defaultDownloadFolder;
       this.settings.pythonPath = window.StorageManager.getItem("anismooth_python_path") || "python";
       this.settings.outputPrefix = window.StorageManager.getItem("anismooth_output_prefix") || "AniSmooth";
