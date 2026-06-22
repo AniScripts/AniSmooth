@@ -346,7 +346,7 @@
       } else if (item.mode === "dedupe") {
         window.ModelHandler.dedupeClip(inputPath, outputPath, item.threshold || 0.05, item.options || {}, callbacks);
       } else if (item.mode === "interpolate") {
-        window.ModelHandler.interpolateClip(inputPath, outputPath, item.model, { fpsFactor: String(item.factor), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high" }, callbacks);
+        window.ModelHandler.interpolateClip(inputPath, outputPath, item.model, { fpsFactor: String(item.factor), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high", sceneThreshold: item.sceneThreshold }, callbacks);
       } else {
         item.status = "error";
         item.error = "Unknown queue mode: " + (item.mode || "undefined");

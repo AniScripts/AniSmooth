@@ -175,7 +175,7 @@ def finalize_output(output_path, input_path, target_size_mb=None, quality=None):
             log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
             reencode_high_quality(output_path, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
 
-def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high"):
+def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high", scene_threshold=0.40):
     q = resolve_quality(preset)
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
 
@@ -243,7 +243,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         for frame in video.read_frames():
             if prev_frame is not None:
                 
-                is_scene_change = detect_scene_change(prev_frame, frame)
+                is_scene_change = detect_scene_change(prev_frame, frame, scene_threshold)
                 if is_scene_change:
                     scene_changes += 1
                     
@@ -628,6 +628,8 @@ def main():
                         help="Quality preset key: archival | high | balanced | fast | draft "
                              "(maps to CRF + x264 speed + -tune animation; legacy x264 "
                              "speed names fall back to 'high')")
+    parser.add_argument("--scene-threshold", type=float, default=0.40,
+                        help="Scene change detection threshold (0.0-1.0, higher = less sensitive)")
 
     args = parser.parse_args()
 
@@ -669,7 +671,7 @@ def main():
 
     try:
         if args.mode == "interpolate":
-            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset)
+            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.scene_threshold)
         elif args.mode == "upscale":
             run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset)
     except Exception as e:
