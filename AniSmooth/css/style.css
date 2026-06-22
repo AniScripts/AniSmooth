@@ -57,13 +57,13 @@ body {
 
 /* ---- Topbar ---- */
 .topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  height: 34px; padding: 0 4px 0 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 6px 4px 4px;
   background: #1c1c1c; border-bottom: 1px solid #3c3c3c;
   flex-shrink: 0;
 }
 .topbar-brand { font-size: 9px; font-weight: 700; color: #ffffff; letter-spacing: 1px; text-transform: uppercase; }
-.topbar-nav { display: flex; align-items: center; gap: 0; overflow-x: auto; }
+.topbar-nav { display: flex; align-items: center; justify-content: center; gap: 0; overflow-x: auto; }
 .topbar-nav::-webkit-scrollbar { height: 0; }
 
 .nav-icon {
