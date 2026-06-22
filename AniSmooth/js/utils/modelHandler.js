@@ -205,13 +205,21 @@
 
     
     cancelActiveProcess: function () {
-      if (this.activeProcess) {
-        dbg('info', 'ModelHandler', 'Killing active process...');
-        this.activeProcess.kill('SIGINT');
-        this.activeProcess = null;
-        return true;
+      if (!this.activeProcess) return false;
+      dbg('info', 'ModelHandler', 'Killing active process...');
+      var proc = this.activeProcess;
+      this.activeProcess = null;
+
+      try {
+        if (process.platform === 'win32' && proc.pid) {
+          window.FileSystem.childProcess.exec('taskkill /F /T /PID ' + proc.pid, function () {});
+        } else {
+          proc.kill('SIGTERM');
+        }
+      } catch (e) {
+        try { proc.kill('SIGKILL'); } catch (e2) {}
       }
-      return false;
+      return true;
     },
 
     
