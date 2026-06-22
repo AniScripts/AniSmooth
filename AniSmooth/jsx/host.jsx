@@ -176,6 +176,7 @@ function getSelectedLayerInfo() {
       json += ",\"compDuration\":" + parseFloat(comp.duration || 0).toFixed(2);
       if (layer) {
         json += ",\"layerName\":\"" + jsonEscape(String(layer.name || "")) + "\"";
+        json += ",\"layerIndex\":" + layer.index;
         var layerIn = parseFloat(layer.inPoint) || 0;
         var layerOut = parseFloat(layer.outPoint) || 0;
         json += ",\"layerDuration\":" + (layerOut - layerIn).toFixed(2);
@@ -219,7 +220,7 @@ function jsonEscape(value) {
   return value;
 }
 
-function renderSelectedLayer(outputPathDir, layerName) {
+function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
   var originalSolos = [];
   try {
     var comp = app.project.activeItem;
@@ -229,12 +230,17 @@ function renderSelectedLayer(outputPathDir, layerName) {
 
     var layer = null;
     
-    // Prefer currently selected layer — this is the ground truth
-    if (comp.selectedLayers && comp.selectedLayers.length > 0) {
+    // Use layer index if provided — durable across selection changes
+    if (layerIndex && layerIndex > 0 && layerIndex <= comp.numLayers) {
+      layer = comp.layer(layerIndex);
+    }
+    
+    // Fallback: currently selected layer
+    if (!layer && comp.selectedLayers && comp.selectedLayers.length > 0) {
       layer = comp.selectedLayers[0];
     }
     
-    // Fallback: search by name if no selection
+    // Fallback: search by name
     if (!layer && layerName) {
       for (var i = 1; i <= comp.numLayers; i++) {
         if (comp.layer(i).name === layerName) { layer = comp.layer(i); break; }

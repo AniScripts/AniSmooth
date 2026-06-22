@@ -50,6 +50,7 @@
         mode: "dedupe",
         task: "Dedupe",
         name: s.layerName || s.name || "Footage",
+        layerIndex: s.layerIndex || 0,
         threshold: threshold,
         options: options,
         width: s.width || 0,

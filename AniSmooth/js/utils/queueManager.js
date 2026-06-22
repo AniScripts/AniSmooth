@@ -106,7 +106,8 @@
       var escapedDir = String(renderDir || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
       var escapedName = String(item.name || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
-      window.__adobe_cep__.evalScript('renderSelectedLayer("' + escapedDir + '", "' + escapedName + '")', function (renderResult) {
+      var layerIdx = item.layerIndex || 0;
+      window.__adobe_cep__.evalScript('renderSelectedLayer("' + escapedDir + '", "' + escapedName + '", ' + layerIdx + ')', function (renderResult) {
         var res = {};
         try { res = JSON.parse(renderResult || "{}"); } catch (e) {}
         if (!res.ok) {
