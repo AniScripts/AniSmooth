@@ -4,6 +4,8 @@
       this.app = app;
       this.view = document.getElementById("queueView");
 
+      window.QueueManager.init();
+
       var self = this;
       this.pauseBtn = document.getElementById("queuePauseBtn");
       this.cancelBtn = document.getElementById("queueCancelBtn");

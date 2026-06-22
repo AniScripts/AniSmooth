@@ -6,6 +6,42 @@
     _currentProc: null,
     _listeners: [],
 
+    init: function () {
+      if (this._loaded) return;
+      this._loaded = true;
+      var saved = window.StorageManager.loadProcessingQueue();
+      for (var i = 0; i < saved.length; i++) {
+        var item = saved[i];
+        if (item.status === "processing") {
+          item.status = "queued";
+          delete item.progress;
+          delete item.startedAt;
+          delete item.elapsed;
+        }
+        this._queue.push(item);
+      }
+      if (this._queue.length > 0) {
+        dbg("info", "Queue", "Restored " + this._queue.length + " queued item(s)");
+      }
+      this._notify();
+      if (!this._paused) this._processNext();
+    },
+
+    _autoSave: function () {
+      var clean = [];
+      for (var i = 0; i < this._queue.length; i++) {
+        var item = this._queue[i];
+        var copy = {};
+        for (var k in item) {
+          if (item.hasOwnProperty(k) && typeof item[k] !== "function") {
+            copy[k] = item[k];
+          }
+        }
+        clean.push(copy);
+      }
+      window.StorageManager.saveProcessingQueue(clean);
+    },
+
     add: function (item) {
       var validModes = { upscale: true, interpolate: true, dedupe: true };
       if (!item.mode || !validModes[item.mode]) {
@@ -106,6 +142,7 @@
     },
 
     _notify: function () {
+      this._autoSave();
       for (var i = 0; i < this._listeners.length; i++) {
         try { this._listeners[i](this._queue); } catch (e) {}
       }
