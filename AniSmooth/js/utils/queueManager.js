@@ -114,6 +114,21 @@
       return false;
     },
 
+    cancelItem: function () {
+      var item = this.getProcessing();
+      if (!item) return false;
+      if (this._currentProc) {
+        window.ModelHandler.cancelActiveProcess();
+        this._currentProc = null;
+      }
+      item.status = "cancelled";
+      this._running = false;
+      dbg("warn", "Queue", "Cancelled: " + item.name);
+      this._notify();
+      this._processNext();
+      return true;
+    },
+
     cancelAll: function () {
       if (this._currentProc) {
         window.ModelHandler.cancelActiveProcess();

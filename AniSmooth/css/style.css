@@ -593,6 +593,11 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: #ffffff; }
   padding: 2px 4px; border-radius: 2px; flex-shrink: 0; transition: color 0.1s, background 0.1s; margin-top: 1px;
 }
 .q-remove:hover { color: #fca5a5; background: rgba(239,68,68,.08); }
+.q-cancel {
+  background: none; border: none; color: #f59e0b; cursor: pointer; font-size: 10px;
+  padding: 2px 4px; border-radius: 2px; flex-shrink: 0; transition: color 0.1s, background 0.1s; margin-top: 1px;
+}
+.q-cancel:hover { color: #fcd34d; background: rgba(245,158,11,.08); }
 
 /* ---- Custom Dropdown ---- */
 .custom-select { position: relative; width: 100%; font-family: inherit; user-select: none; }

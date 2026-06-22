@@ -130,7 +130,9 @@
             '</div>' +
             (item.status === "queued"
               ? '<button class="q-remove" data-id="' + item.id + '"><i class="fa-solid fa-xmark"></i></button>'
-              : '') +
+              : (item.status === "processing"
+                ? '<button class="q-cancel"><i class="fa-solid fa-stop"></i></button>'
+                : '')) +
           '</div>';
       }
       container.innerHTML = html;
@@ -142,6 +144,13 @@
           e.stopPropagation();
           var id = this.getAttribute("data-id");
           if (id) window.QueueManager.remove(id);
+        });
+      }
+      var cancels = container.querySelectorAll(".q-cancel");
+      for (var k = 0; k < cancels.length; k++) {
+        cancels[k].addEventListener("click", function (e) {
+          e.stopPropagation();
+          window.QueueManager.cancelItem();
         });
       }
     }
