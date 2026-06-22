@@ -138,6 +138,19 @@
             <input type="number" id="interpTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
             <span class="form-hint">Re-encodes output to stay under this size. Toggle off to keep raw quality.</span>
           </div>
+          <div class="form-group">
+            <label for="interpPreset">Encoding Preset</label>
+            <select id="interpPreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
+              <option value="ultrafast">Very Fast</option>
+              <option value="superfast">Faster</option>
+              <option value="veryfast">Fast</option>
+              <option value="medium">Medium</option>
+              <option value="slow">Slow</option>
+              <option value="slower" selected>Slower</option>
+              <option value="veryslow">Very Slow</option>
+            </select>
+            <span class="form-hint">Slower = better quality, smaller file. Faster = quicker encode, larger file.</span>
+          </div>
           <div class="btn-row">
             <button id="startInterpolateBtn" class="btn">
               <i class="fa-solid fa-plus"></i> Add to Queue
@@ -218,6 +231,19 @@
             </div>
             <input type="number" id="upscaleTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
             <span class="form-hint">Re-encodes output to stay under this size. Toggle off to keep raw quality.</span>
+          </div>
+          <div class="form-group">
+            <label for="upscalePreset">Encoding Preset</label>
+            <select id="upscalePreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
+              <option value="ultrafast">Very Fast</option>
+              <option value="superfast">Faster</option>
+              <option value="veryfast">Fast</option>
+              <option value="medium">Medium</option>
+              <option value="slow">Slow</option>
+              <option value="slower" selected>Slower</option>
+              <option value="veryslow">Very Slow</option>
+            </select>
+            <span class="form-hint">Slower = better quality, smaller file. Faster = quicker encode, larger file.</span>
           </div>
           <div class="btn-row">
             <button id="startUpscaleBtn" class="btn">

@@ -143,7 +143,7 @@ def load_upscale_model(model_name, scale, device):
 
     raise RuntimeError(f"Weights not available for {model_name}")
 
-def finalize_output(output_path, input_path, target_size_mb=None):
+def finalize_output(output_path, input_path, target_size_mb=None, preset="slower"):
     """Mux source audio, optionally re-encode to a target size.
 
     The FFmpeg pipe already encodes with x264 CRF 18 + faststart,
@@ -152,11 +152,11 @@ def finalize_output(output_path, input_path, target_size_mb=None):
     mux_audio(output_path, input_path)
     if target_size_mb and target_size_mb > 0:
         log("info", f"Re-encoding to target size: {target_size_mb} MB")
-        if not reencode_to_size(output_path, input_path, target_size_mb):
+        if not reencode_to_size(output_path, input_path, target_size_mb, preset):
             log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
-            reencode_high_quality(output_path)
+            reencode_high_quality(output_path, preset)
 
-def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None):
+def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="slower"):
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
 
     print_gpu_info()
@@ -170,7 +170,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
 
     with VideoProcessor(input_path, output_path) as video:
         w, h, fps, total_frames = video.get_info()
-        video.setup_writer(fps * factor)
+        video.setup_writer(fps * factor, preset=preset)
         log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
         
@@ -283,10 +283,10 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         del trt_engine
     if device.type == "cuda":
         torch.cuda.empty_cache()
-    finalize_output(output_path, input_path, target_size_mb)
+    finalize_output(output_path, input_path, target_size_mb, preset)
     log("success", "Interpolation process completed successfully.")
 
-def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None):
+def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="slower"):
     log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
 
     print_gpu_info()
@@ -297,7 +297,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
 
     with VideoProcessor(input_path, output_path) as video:
         w, h, fps, total_frames = video.get_info()
-        video.setup_writer(fps, scale=scale)
+        video.setup_writer(fps, scale=scale, preset=preset)
         log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
         log("info", "Starting frame upscaling...")
@@ -336,7 +336,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
     del model
     if device.type == "cuda":
         torch.cuda.empty_cache()
-    finalize_output(output_path, input_path, target_size_mb)
+    finalize_output(output_path, input_path, target_size_mb, preset)
     log("success", "Upscaling process completed successfully.")
 
 def run_gpu_info():
@@ -586,6 +586,9 @@ def main():
                         help="Disable static subject detection")
     parser.add_argument("--target-size-mb", type=float, default=0,
                         help="Target output file size in MB (re-encodes with FFmpeg)")
+    parser.add_argument("--preset", type=str, default="slower",
+                        choices=["ultrafast","superfast","veryfast","faster","fast","medium","slow","slower","veryslow"],
+                        help="x264 encoding preset (quality vs speed)")
 
     args = parser.parse_args()
 
@@ -627,9 +630,9 @@ def main():
 
     try:
         if args.mode == "interpolate":
-            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb)
+            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset)
         elif args.mode == "upscale":
-            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb)
+            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset)
     except Exception as e:
         log("error", f"Processing failed: {e}")
         import traceback

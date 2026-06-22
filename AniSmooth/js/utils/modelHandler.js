@@ -245,6 +245,9 @@
       if (options.targetSizeMb && parseFloat(options.targetSizeMb) > 0) {
         args.push("--target-size-mb", String(parseFloat(options.targetSizeMb)));
       }
+      if (options.preset) {
+        args.push("--preset", options.preset);
+      }
 
       this.executeModel(pythonCmd, args, callbacks);
     },
@@ -271,6 +274,9 @@
       ];
       if (options.targetSizeMb && parseFloat(options.targetSizeMb) > 0) {
         args.push("--target-size-mb", String(parseFloat(options.targetSizeMb)));
+      }
+      if (options.preset) {
+        args.push("--preset", options.preset);
       }
 
       this.executeModel(pythonCmd, args, callbacks);
