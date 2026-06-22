@@ -1382,10 +1382,11 @@
       }
       
       var lower = pPath.toLowerCase();
-      if (lower.indexOf("python") === -1) {
-        return false;
+      var exeName = lower.split(/[\\\/]/).pop();
+      if (exeName === "python.exe" || exeName === "python3.exe") {
+        return true;
       }
-      return true;
+      return false;
     },
 
     _showSectionPicker: function (name, description) {

@@ -395,14 +395,6 @@
             }
           }
         }
-        var rootDirs = fs.readdirSync("C:\\");
-        for (var k = 0; k < rootDirs.length; k++) {
-          var rdir = rootDirs[k];
-          if (rdir.toLowerCase().indexOf("python3") === 0) {
-            var rpath = path.join("C:\\", rdir, "python.exe");
-            if (fs.existsSync(rpath)) commands.push(rpath);
-          }
-        }
         if (localappdata) {
           var storePath = path.join(localappdata, "Microsoft", "WindowsApps", "python.exe");
           if (fs.existsSync(storePath)) commands.push(storePath);
@@ -574,6 +566,7 @@
     var crypto = require('crypto');
     var zipUrl = 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip';
     var pipUrl = 'https://bootstrap.pypa.io/get-pip.py';
+    var expectedPipSha = 'a341e1a43e38001c551a1508a73ff23636a11970b61d901d9a1cad2a18f57055';
     var expectedSha = 'bd68b33221b795b7c0b8c2eebf9b119d8a2972be1e34abc64c5eb6e04bf8e6da';
     var zipPath = path.join(_toolsFolder, 'python_temp.zip');
     var pythonDestFolder = path.join(_toolsFolder, 'python');
@@ -643,6 +636,20 @@
               pipRes.pipe(pipFile);
               pipFile.on('finish', function () {
                 pipFile.close(function () {
+                  var pipBuf = fs.readFileSync(pipPath);
+                  var pipHash = crypto.createHash('sha256').update(pipBuf).digest('hex');
+                  if (pipHash !== expectedPipSha) {
+                    addInstallLog('[ERR] get-pip.py SHA-256 mismatch! Security check failed.');
+                    addInstallLog('[ERR] Expected: ' + expectedPipSha);
+                    addInstallLog('[ERR] Got:      ' + pipHash);
+                    try { fs.unlinkSync(pipPath); } catch (e) {}
+                    _pythonOk = true; _pythonCmd = exePath; _pythonChecked = true;
+                    try { fs.unlinkSync(zipPath); } catch (e) {}
+                    _installRunning = false;
+                    startAutoInstall();
+                    return;
+                  }
+                  addInstallLog('[OK] get-pip.py SHA-256 verified');
                   addInstallLog('Installing pip into portable Python...');
                   try {
                     var pipProc = window.FileSystem.childProcess.spawn(exePath, [pipPath], { cwd: pythonDestFolder, windowsHide: true });

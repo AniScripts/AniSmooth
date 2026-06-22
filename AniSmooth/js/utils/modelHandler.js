@@ -16,7 +16,14 @@
       
       var lowerCmd = command.toLowerCase();
       if (lowerCmd !== "python" && lowerCmd !== "python3") {
-        if (command.indexOf("\\\\") === 0 || command.indexOf("//") === 0 || lowerCmd.indexOf("python") === -1) {
+        if (command.indexOf("\\\\") === 0 || command.indexOf("//") === 0) {
+          if (callbacks.onError) {
+            callbacks.onError("UNC/network path rejected: " + command);
+          }
+          return;
+        }
+        var exeName = lowerCmd.split(/[\\\/]/).pop();
+        if (exeName !== "python.exe" && exeName !== "python3.exe") {
           if (callbacks.onError) {
             callbacks.onError("Untrusted or invalid Python executable path rejected: " + command);
           }
@@ -163,21 +170,6 @@
               }
             }
           }
-          
-          
-          if (fs.existsSync("C:\\")) {
-            var rootDirs = fs.readdirSync("C:\\");
-            for (var k = 0; k < rootDirs.length; k++) {
-              var rdir = rootDirs[k];
-              if (rdir.toLowerCase().indexOf("python3") === 0) {
-                var rpath = path.join("C:\\", rdir, "python.exe");
-                if (fs.existsSync(rpath)) {
-                  return rpath;
-                }
-              }
-            }
-          }
-
           
           if (localappdata) {
             var storePath = path.join(localappdata, "Microsoft", "WindowsApps", "python.exe");
