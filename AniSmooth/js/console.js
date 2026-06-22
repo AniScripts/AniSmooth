@@ -98,14 +98,25 @@ window.clearLog = function() {
 
 window.exportLog = function() {
   var logs = getFilteredAndSortedLogs();
+  var filter = window.consoleFilter;
+  var suffix = '';
+  if (filter.mode !== 'all') {
+    suffix = '-' + filter.mode;
+  } else if (filter.level !== 'all') {
+    suffix = '-' + filter.level;
+  }
+
   var text = 'AniSmooth Console Log\n';
+  if (filter.mode !== 'all') text += 'Category: ' + filter.mode + '\n';
+  if (filter.level !== 'all') text += 'Level: ' + filter.level + '\n';
   text += 'Export: ' + new Date().toISOString() + '\n';
   text += 'Entries: ' + logs.length + '\n';
   text += Array(60).join('-') + '\n\n';
 
   logs.forEach(function(entry) {
     var time = entry.time.toISOString().replace('T', ' ').substring(0, 19);
-    text += '[' + time + '] ' + entry.level.toUpperCase() + ' [' + entry.source + '] ' + entry.message + '\n';
+    var modeTag = entry.mode ? ' [' + entry.mode + ']' : '';
+    text += '[' + time + '] ' + entry.level.toUpperCase() + ' [' + entry.source + ']' + modeTag + ' ' + entry.message + '\n';
   });
 
   try {
@@ -116,24 +127,33 @@ window.exportLog = function() {
       outDir = window.App.settings.outputPath;
     }
     var ts = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19);
-    var filePath = window.FileSystem.path.join(outDir || "C:\\", "anismooth-log-" + ts + ".txt");
+    var defaultName = "anismooth" + suffix + "-log-" + ts + ".txt";
+
+    var filePath = window.FileSystem.chooseSaveFileWithSystemExplorer(
+      "Save Log Export", outDir, defaultName
+    );
+
+    if (!filePath) {
+      dbg("info", "Console", "Export cancelled");
+      return;
+    }
+
     window.FileSystem.fs.writeFileSync(filePath, text, "utf8");
     dbg("success", "Console", "Log exported: " + filePath);
 
-    
     try {
       var childProcess = window.FileSystem.childProcess;
       childProcess.execFile('explorer.exe', ['/select,' + filePath]);
     } catch (e) {}
   } catch (e) {
     dbg("error", "Console", "Export failed: " + (e.message || e));
-    
+
     try {
       var blob = new Blob([text], { type: "text/plain" });
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
-      a.download = "anismooth-log.txt";
+      a.download = defaultName || "anismooth-log.txt";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

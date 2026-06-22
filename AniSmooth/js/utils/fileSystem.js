@@ -177,6 +177,26 @@
         "}";
 
       return this.runPowerShellDialog(command);
+    },
+
+    chooseSaveFileWithSystemExplorer(title, startFolder, defaultName) {
+      const safeTitle = String(title || "Save file").replace(/'/g, "''");
+      const safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");
+      const safeName = String(defaultName || "log.txt").replace(/'/g, "''");
+
+      const command =
+        "Add-Type -AssemblyName System.Windows.Forms; " +
+        "$dialog = New-Object System.Windows.Forms.SaveFileDialog; " +
+        "$dialog.Title = '" + safeTitle + "'; " +
+        "$dialog.InitialDirectory = '" + safeFolder + "'; " +
+        "$dialog.FileName = '" + safeName + "'; " +
+        "$dialog.Filter = 'Text files (*.txt)|*.txt|All files (*.*)|*.*'; " +
+        "$dialog.DefaultExt = 'txt'; " +
+        "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { " +
+        "  Write-Output $dialog.FileName " +
+        "}";
+
+      return this.runPowerShellDialog(command);
     }
   };
 
