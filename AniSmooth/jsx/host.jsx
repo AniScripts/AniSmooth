@@ -1,3 +1,23 @@
+// --- Trimmed-render time helpers (issues #1 & #2) ---
+// AE quirk: Layer.inPoint/outPoint and comp.workAreaStart are in DISPLAY
+// coordinates (offset by comp.displayStartTime, i.e. what the timeline ruler
+// shows), but RenderQueueItem.timeSpanStart is ABSOLUTE 0-based time. Assigning a
+// display-relative time to timeSpanStart in a comp whose displayStartTime != 0
+// makes the span start before the comp's first real frame, which triggers AE's
+// "timeSpanStart of 0 seconds ... blank frames" warning and renders the wrong
+// range. Convert display -> absolute by subtracting displayStartTime, snap to the
+// frame grid (avoids float drift at 23.976/29.97 fps), and clamp to [0, duration].
+function snapToFrame(t, frameDur) {
+  if (!frameDur || frameDur <= 0) return t;
+  return Math.round(t / frameDur) * frameDur;
+}
+function toAbsRenderTime(displayTime, comp) {
+  var abs = snapToFrame(displayTime - comp.displayStartTime, comp.frameDuration);
+  if (abs < 0) abs = 0;
+  if (abs > comp.duration) abs = comp.duration;
+  return abs;
+}
+
 function importFileToAE(filePath) {
   app.beginUndoGroup("Import AniSmooth Output");
   try {
@@ -251,11 +271,28 @@ function renderSelectedLayer(outputPathDir, layerName) {
     // Save and temporarily set work area to match the selected layer
     var savedWAStart = comp.workAreaStart;
     var savedWADuration = comp.workAreaDuration;
-    comp.workAreaStart = layer.inPoint;
-    comp.workAreaDuration = layer.outPoint - layer.inPoint;
-    
-    item.timeSpanStart = layer.inPoint;
-    item.timeSpanDuration = layer.outPoint - layer.inPoint;
+    var fd = comp.frameDuration;
+    var dispStart = comp.displayStartTime;
+    var dispEnd = dispStart + comp.duration;
+    // Work area stays in DISPLAY coordinates (same space as layer.inPoint),
+    // clamped to the comp's display window and snapped to whole frames.
+    var waStart = snapToFrame(layer.inPoint, fd);
+    var waEnd = snapToFrame(layer.outPoint, fd);
+    if (waStart < dispStart) waStart = dispStart;
+    if (waEnd > dispEnd) waEnd = dispEnd;
+    if (waEnd - waStart < fd) waEnd = Math.min(waStart + fd, dispEnd);
+    comp.workAreaStart = waStart;
+    comp.workAreaDuration = waEnd - waStart;
+
+    // RenderQueueItem.timeSpanStart is ABSOLUTE 0-based time -> convert from the
+    // display-relative in/out points so the render matches the trim exactly and
+    // never produces blank frames (issues #1 & #2).
+    var absStart = toAbsRenderTime(layer.inPoint, comp);
+    var absEnd = toAbsRenderTime(layer.outPoint, comp);
+    var absDur = absEnd - absStart;
+    if (absDur < fd) absDur = Math.min(fd, comp.duration - absStart);
+    item.timeSpanStart = absStart;
+    item.timeSpanDuration = absDur;
     
     
     var outputModule = item.outputModule(1);
@@ -355,8 +392,15 @@ function renderSelectedLayerPreview(outputPathDir, previewDuration) {
 
     var rq = app.project.renderQueue;
     var item = rq.items.add(comp);
-    item.timeSpanStart = startTime;
-    item.timeSpanDuration = endTime - startTime;
+    // Convert display-relative preview window to ABSOLUTE 0-based render time
+    // (see toAbsRenderTime) so previews never warn about / produce blank frames.
+    var fd = comp.frameDuration;
+    var absStart = toAbsRenderTime(startTime, comp);
+    var absEnd = toAbsRenderTime(endTime, comp);
+    var absDur = absEnd - absStart;
+    if (absDur < fd) absDur = Math.min(fd, comp.duration - absStart);
+    item.timeSpanStart = absStart;
+    item.timeSpanDuration = absDur;
 
     var outputModule = item.outputModule(1);
     var extension = ".avi";

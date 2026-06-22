@@ -105,18 +105,22 @@ def fix_faststart(video_path):
             except: pass
     return False
 
-def reencode_high_quality(video_path, preset="slower"):
-    """Re-encode video with x264 CRF 18 for high quality output."""
+def reencode_high_quality(video_path, x264_preset="slow", crf=17, tune="animation"):
+    """Re-encode video with x264 at the given CRF/preset for high quality output."""
     ffmpeg = _find_ffmpeg()
     if not ffmpeg:
         log("warn", "FFmpeg not found, cannot re-encode")
         return False
-    
+
     tmp = str(video_path) + ".hq.mp4"
     cmd = [
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
-        "-c:v", "libx264", "-crf", "18", "-preset", preset,
+        "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
+    ]
+    if tune:
+        cmd += ["-tune", tune]
+    cmd += [
         "-c:a", "copy",
         "-movflags", "+faststart",
         tmp
@@ -153,7 +157,7 @@ def _probe_duration(ffmpeg, path):
         return None
     return None
 
-def reencode_to_size(video_path, audio_source_path, target_mb, preset="slower"):
+def reencode_to_size(video_path, audio_source_path, target_mb, x264_preset="slow", tune="animation"):
     """Re-encode ``video_path`` to a target file size using FFmpeg two-pass encoding.
 
     Audio is taken directly from ``audio_source_path`` (the original clip) so the
@@ -238,7 +242,7 @@ def reencode_to_size(video_path, audio_source_path, target_mb, preset="slower"):
         "-i", str(video_path),
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
         "-maxrate", f"{maxrate}k", "-bufsize", f"{bufsize}k",
-        "-preset", preset, "-pix_fmt", "yuv420p",
+        "-preset", x264_preset, "-tune", tune, "-pix_fmt", "yuv420p",
         "-an", "-pass", "1", "-passlogfile", passlog,
         "-f", "null", null_path
     ]
@@ -265,7 +269,7 @@ def reencode_to_size(video_path, audio_source_path, target_mb, preset="slower"):
     cmd2 += [
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
         "-maxrate", f"{maxrate}k", "-bufsize", f"{bufsize}k",
-        "-preset", preset, "-pix_fmt", "yuv420p",
+        "-preset", x264_preset, "-tune", tune, "-pix_fmt", "yuv420p",
         "-pass", "2", "-passlogfile", passlog,
     ]
     cmd2 += (["-c:a", "aac", "-b:a", f"{audio_bitrate_kbps}k"] if has_audio else ["-an"])
@@ -328,10 +332,10 @@ class VideoProcessor:
     def get_info(self):
         return self.width, self.height, self.fps, self.total_frames
 
-    def setup_writer(self, output_fps, scale=1, preset="slower"):
+    def setup_writer(self, output_fps, scale=1, x264_preset="slow", crf=17, tune="animation"):
         out_w = self.width * scale
         out_h = self.height * scale
-        
+
         if self.use_ffmpeg:
             ffmpeg = _find_ffmpeg()
             cmd = [
@@ -339,7 +343,11 @@ class VideoProcessor:
                 "-f", "rawvideo", "-vcodec", "rawvideo",
                 "-s", f"{out_w}x{out_h}", "-pix_fmt", "bgr24",
                 "-r", str(output_fps), "-i", "-",
-                "-c:v", "libx264", "-crf", "18", "-preset", preset,
+                "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
+            ]
+            if tune:
+                cmd += ["-tune", tune]
+            cmd += [
                 "-pix_fmt", "yuv420p",
                 "-movflags", "+faststart",
                 str(self.output_path)

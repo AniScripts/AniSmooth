@@ -22,6 +22,21 @@ def log(msg_type, msg, **kw):
     out.update(kw)
     print(json.dumps(out), flush=True)
 
+# FlowFrames-style quality presets. Each tier bundles a CRF (visual quality),
+# an x264 speed preset, and -tune animation (best for anime line-art). The UI
+# sends one of these keys via --preset; quality is decoupled from encode speed.
+QUALITY_PRESETS = {
+    "archival": {"crf": 14, "x264": "slow",      "tune": "animation"},
+    "high":     {"crf": 17, "x264": "slow",      "tune": "animation"},
+    "balanced": {"crf": 20, "x264": "medium",    "tune": "animation"},
+    "fast":     {"crf": 22, "x264": "veryfast",  "tune": "animation"},
+    "draft":    {"crf": 26, "x264": "ultrafast", "tune": "animation"},
+}
+
+def resolve_quality(key):
+    """Map a UI preset key (or a legacy x264 speed name) to a quality bundle."""
+    return QUALITY_PRESETS.get(str(key or "high").lower(), QUALITY_PRESETS["high"])
+
 def tensor_to_frame(tensor, device="cuda"):
     frame = tensor.squeeze(0).permute(1, 2, 0).detach()
     if device == "cuda" or str(frame.device).startswith("cuda"):
@@ -143,20 +158,23 @@ def load_upscale_model(model_name, scale, device):
 
     raise RuntimeError(f"Weights not available for {model_name}")
 
-def finalize_output(output_path, input_path, target_size_mb=None, preset="slower"):
+def finalize_output(output_path, input_path, target_size_mb=None, quality=None):
     """Mux source audio, optionally re-encode to a target size.
 
-    The FFmpeg pipe already encodes with x264 CRF 18 + faststart,
-    so no separate re-encode is needed unless target_size_mb is set.
+    The FFmpeg pipe already encodes at the chosen CRF + faststart, so no
+    separate re-encode is needed unless target_size_mb is set.
     """
+    q = quality or QUALITY_PRESETS["high"]
     mux_audio(output_path, input_path)
     if target_size_mb and target_size_mb > 0:
         log("info", f"Re-encoding to target size: {target_size_mb} MB")
-        if not reencode_to_size(output_path, input_path, target_size_mb, preset):
+        if not reencode_to_size(output_path, input_path, target_size_mb,
+                                x264_preset=q["x264"], tune=q["tune"]):
             log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
-            reencode_high_quality(output_path, preset)
+            reencode_high_quality(output_path, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
 
-def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="slower"):
+def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high"):
+    q = resolve_quality(preset)
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
 
     print_gpu_info()
@@ -170,7 +188,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
 
     with VideoProcessor(input_path, output_path) as video:
         w, h, fps, total_frames = video.get_info()
-        video.setup_writer(fps * factor, preset=preset)
+        video.setup_writer(fps * factor, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
         log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
         
@@ -283,10 +301,11 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         del trt_engine
     if device.type == "cuda":
         torch.cuda.empty_cache()
-    finalize_output(output_path, input_path, target_size_mb, preset)
+    finalize_output(output_path, input_path, target_size_mb, q)
     log("success", "Interpolation process completed successfully.")
 
-def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="slower"):
+def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="high"):
+    q = resolve_quality(preset)
     log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
 
     print_gpu_info()
@@ -297,7 +316,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
 
     with VideoProcessor(input_path, output_path) as video:
         w, h, fps, total_frames = video.get_info()
-        video.setup_writer(fps, scale=scale, preset=preset)
+        video.setup_writer(fps, scale=scale, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
         log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
         log("info", "Starting frame upscaling...")
@@ -336,7 +355,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
     del model
     if device.type == "cuda":
         torch.cuda.empty_cache()
-    finalize_output(output_path, input_path, target_size_mb, preset)
+    finalize_output(output_path, input_path, target_size_mb, q)
     log("success", "Upscaling process completed successfully.")
 
 def run_gpu_info():
@@ -559,7 +578,14 @@ def run_dedupe(
             progress_callback=progress_cb
         )
         log("info", f"Deduplication report: Total={stats['total_frames']}, Unique={stats['unique_frames']}, Duplicate={stats['duplicate_frames']}")
-        mux_audio(str(output_path), str(input_path))
+        # Removing frames shortens the video, so the original full-length audio would
+        # drift out of sync if muxed back on. Only re-attach audio when nothing was
+        # removed; otherwise the user lays the soundtrack over the cut clip in AE.
+        if stats.get('duplicate_frames', 0) > 0:
+            log("warn", "Frames removed — skipping audio mux to avoid A/V desync "
+                        "(add your soundtrack in After Effects).")
+        else:
+            mux_audio(str(output_path), str(input_path))
         log("success", "Duplicate frame removal completed successfully.")
     except Exception as e:
         log("error", f"Deduplication failed: {e}")
@@ -586,9 +612,10 @@ def main():
                         help="Disable static subject detection")
     parser.add_argument("--target-size-mb", type=float, default=0,
                         help="Target output file size in MB (re-encodes with FFmpeg)")
-    parser.add_argument("--preset", type=str, default="slower",
-                        choices=["ultrafast","superfast","veryfast","faster","fast","medium","slow","slower","veryslow"],
-                        help="x264 encoding preset (quality vs speed)")
+    parser.add_argument("--preset", type=str, default="high",
+                        help="Quality preset key: archival | high | balanced | fast | draft "
+                             "(maps to CRF + x264 speed + -tune animation; legacy x264 "
+                             "speed names fall back to 'high')")
 
     args = parser.parse_args()
 

@@ -34,12 +34,24 @@
         return;
       }
       var threshold = this.thresholdInput ? parseFloat(this.thresholdInput.value) : 0.05;
+      // Read the advanced controls so they actually affect the run (previously
+      // this passed {} and the four toggles/inputs were dead).
+      var regionEl = document.getElementById("deadframeRegionSensitivity");
+      var ofEl = document.getElementById("deadframeOpticalFlow");
+      var camEl = document.getElementById("deadframeCameraComp");
+      var staticEl = document.getElementById("deadframeStaticSubject");
+      var options = {
+        regionSensitivity: regionEl ? (parseInt(regionEl.value, 10) || 1) : 1,
+        useOpticalFlow: ofEl ? !!ofEl.checked : true,
+        cameraCompensation: camEl ? !!camEl.checked : true,
+        removeStaticSubject: staticEl ? !!staticEl.checked : true
+      };
       window.QueueManager.add({
         mode: "dedupe",
         task: "Dedupe",
         name: s.layerName || s.name || "Footage",
         threshold: threshold,
-        options: {},
+        options: options,
         width: s.width || 0,
         height: s.height || 0
       });

@@ -67,6 +67,7 @@ def process_single_video(
             "-c:v", "libx264",
             "-preset", "medium",
             "-crf", "18",
+            "-tune", "animation",
             "-pix_fmt", "yuv420p",
             "-movflags", "+faststart",
             str(output_path),

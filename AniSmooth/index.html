@@ -545,13 +545,11 @@
           <div class="form-group">
             <label for="interpPreset">Interpolation Preset</label>
             <select id="interpPreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
-              <option value="ultrafast">Very Fast</option>
-              <option value="superfast">Faster</option>
-              <option value="veryfast">Fast</option>
-              <option value="medium">Medium</option>
-              <option value="slow">Slow</option>
-              <option value="slower" selected>Slower</option>
-              <option value="veryslow">Very Slow</option>
+              <option value="archival">Archival — near lossless (CRF 14)</option>
+              <option value="high" selected>High Quality (CRF 17)</option>
+              <option value="balanced">Balanced (CRF 20)</option>
+              <option value="fast">Fast (CRF 22)</option>
+              <option value="draft">Draft / Preview (CRF 26)</option>
             </select>
           </div>
           <div style="border-top:1px solid #3c3c3c;margin:8px 0;"></div>
@@ -567,16 +565,14 @@
           <div class="form-group">
             <label for="upscalePreset">Upscale Preset</label>
             <select id="upscalePreset" style="width:100%;background:#161616;border:1px solid #3c3c3c;border-radius:3px;color:#e5e7eb;padding:4px 6px;font-family:inherit;font-size:9px;">
-              <option value="ultrafast">Very Fast</option>
-              <option value="superfast">Faster</option>
-              <option value="veryfast">Fast</option>
-              <option value="medium">Medium</option>
-              <option value="slow">Slow</option>
-              <option value="slower" selected>Slower</option>
-              <option value="veryslow">Very Slow</option>
+              <option value="archival">Archival — near lossless (CRF 14)</option>
+              <option value="high" selected>High Quality (CRF 17)</option>
+              <option value="balanced">Balanced (CRF 20)</option>
+              <option value="fast">Fast (CRF 22)</option>
+              <option value="draft">Draft / Preview (CRF 26)</option>
             </select>
           </div>
-          <span class="form-hint">Slower = better quality, smaller file. Faster = quicker encode.</span>
+          <span class="form-hint">Lower CRF = higher quality + larger file + slower encode. All presets use x264 with <code>-tune animation</code> for crisp anime line-art.</span>
         </div>
         </div>
 
