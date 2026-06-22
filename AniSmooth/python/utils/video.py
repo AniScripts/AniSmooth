@@ -369,10 +369,12 @@ class VideoProcessor:
             ]
             if tune:
                 cmd += ["-tune", tune]
+            cpu_cores = os.cpu_count() or 4
+            enc_threads = max(2, min(cpu_cores, 4 if out_w * out_h >= 3840 * 2160 else 8))
             cmd += [
                 "-pix_fmt", "yuv420p",
-                "-x264-params", "threads=2:lookahead-threads=1:rc-lookahead=20",
-                "-threads", "2",
+                "-x264-params", f"threads={enc_threads}:lookahead-threads=1:rc-lookahead=20",
+                "-threads", str(enc_threads),
                 "-movflags", "+faststart",
                 str(self.output_path)
             ]

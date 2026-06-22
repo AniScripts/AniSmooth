@@ -314,7 +314,8 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
     print_gpu_info()
     device = get_device()
     log("info", f"Using device: {device}")
-    cv2.setNumThreads(2)
+    cpu_threads = max(2, min(os.cpu_count() or 4, 8))
+    cv2.setNumThreads(cpu_threads)
 
     model = load_upscale_model(model_name, scale, device)
 
