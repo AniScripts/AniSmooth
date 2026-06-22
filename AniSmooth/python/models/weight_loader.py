@@ -75,23 +75,36 @@ def download_weights(model_key, force=False, retries=3):
 
     for attempt in range(retries):
         try:
-            if os.path.exists(temp_path):
+            existing = os.path.getsize(temp_path) if os.path.exists(temp_path) else 0
+
+            headers = {"User-Agent": "AniSmooth/1.0"}
+            if existing > 0 and attempt > 0:
+                headers["Range"] = f"bytes={existing}-"
+                log("info", f"Resuming {model_key} from byte {existing}")
+            elif existing > 0:
                 try:
                     os.remove(temp_path)
                 except Exception:
                     pass
+                existing = 0
 
-            req = urllib.request.Request(url, headers={"User-Agent": "AniSmooth/1.0"})
+            req = urllib.request.Request(url, headers=headers)
             resp = urllib.request.urlopen(req, timeout=120)
 
-            if resp.getcode() != 200:
-                raise urllib.error.HTTPError(url, resp.getcode(), "", None, None)
+            code = resp.getcode()
+            if code not in (200, 206):
+                raise urllib.error.HTTPError(url, code, "", None, None)
 
             total = int(resp.headers.get("Content-Length", 0))
-            downloaded = 0
+            file_mode = "ab" if code == 206 else "wb"
+            if code == 206:
+                downloaded = existing
+                total = existing + total
+            else:
+                downloaded = 0
             chunk_size = 65536
 
-            with open(temp_path, "wb") as f:
+            with open(temp_path, file_mode) as f:
                 while True:
                     chunk = resp.read(chunk_size)
                     if not chunk:
@@ -138,13 +151,12 @@ def download_weights(model_key, force=False, retries=3):
         except (urllib.error.URLError, urllib.error.HTTPError, IncompleteRead,
                 ConnectionError, TimeoutError) as e:
             log("warn", "Download attempt " + str(attempt + 1) + " failed: " + str(e))
-            if os.path.exists(temp_path):
+            if attempt == retries - 1:
+                log("error", "All " + str(retries) + " download attempts failed.")
                 try:
                     os.remove(temp_path)
                 except Exception:
                     pass
-            if attempt == retries - 1:
-                log("error", "All " + str(retries) + " download attempts failed.")
                 return False
 
     return False
