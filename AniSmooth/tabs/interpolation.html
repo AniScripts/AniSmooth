@@ -1,0 +1,79 @@
+      <div id="interpolationView" class="tab-content hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-forward-step panel-head-icon"></i>
+            <span class="panel-title">RIFE Interpolation</span>
+          </div>
+          <div class="form-group">
+            <div id="interpLayerInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Model</label>
+            <div class="custom-select" id="interpolationModel">
+              <div class="select-trigger">
+                <span class="select-value"><i class="fa-solid fa-microchip"></i> RIFE 4.25 HEAVY Cuda</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="rife4.25-heavy" data-label="RIFE 4.25 HEAVY Cuda"><i class="fa-solid fa-microchip"></i> RIFE 4.25 HEAVY Cuda</div>
+                <div class="select-option" data-value="rife4.25" data-label="RIFE 4.25 Cuda"><i class="fa-solid fa-microchip"></i> RIFE 4.25 Cuda</div>
+                <div class="select-sep"><span>TensorRT</span></div>
+                <div class="select-option" data-value="rife4.25-heavy-tensorrt" data-label="RIFE 4.25 HEAVY TensorRT"><i class="fa-solid fa-bolt"></i> RIFE 4.25 HEAVY TensorRT</div>
+                <div class="select-option" data-value="rife4.25-tensorrt" data-label="RIFE 4.25 TensorRT"><i class="fa-solid fa-bolt"></i> RIFE 4.25 TensorRT</div>
+              </div>
+            </div>
+            <div class="info-card" id="interpModelInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Factor</label>
+            <div class="factor-presets" id="interpolationFactor">
+              <button class="factor-btn active" data-value="2">2×</button>
+              <button class="factor-btn" data-value="4">4×</button>
+              <button class="factor-btn" data-value="6">6×</button>
+              <button class="factor-btn" data-value="8">8×</button>
+              <button class="factor-btn" data-value="10">10×</button>
+              <input type="number" class="factor-custom" id="interpFactorCustom" placeholder="custom" min="2" max="64" value="">
+            </div>
+            <div class="info-card" id="interpFactorInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Scene Change Threshold</label>
+            <div class="toggle-row" style="padding:0;align-items:center;gap:6px;">
+              <span style="font-size:9px;color:var(--text-3);">Lenient</span>
+              <input type="range" id="interpSceneThreshold" min="0.10" max="0.80" step="0.05" value="0.40" style="flex:1;accent-color:var(--accent);">
+              <span style="font-size:9px;color:var(--text-3);">Strict</span>
+            </div>
+            <span id="interpSceneVal" style="font-size:9px;color:var(--text-3);margin-top:2px;">0.40 — Default</span>
+            <span class="form-hint">Higher values detect fewer scene changes (more frames interpolated). Lower values detect more (safer, skips more).</span>
+          </div>
+          <div class="btn-row">
+            <button id="startInterpolateBtn" class="btn">
+              <i class="fa-solid fa-plus"></i> Add to Queue
+            </button>
+            <button id="previewInterpolateBtn" class="btn" style="flex:0.4;">
+              <i class="fa-solid fa-play"></i> Preview
+            </button>
+            <button id="cancelInterpolateBtn" class="btn btn-cancel" style="display:none;">
+              <i class="fa-solid fa-stop"></i> Cancel
+            </button>
+          </div>
+          <div id="interpPreviewBar" class="progress-wrap" style="display:none;">
+            <div class="progress-track">
+              <div id="interpPreviewFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="interpPreviewLabel">Preview</span>
+              <span id="interpPreviewPercent">0%</span>
+            </div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div id="interpolationProgressFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="interpolationProgressLabel">Ready</span>
+              <span id="interpolationProgressPercent">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>

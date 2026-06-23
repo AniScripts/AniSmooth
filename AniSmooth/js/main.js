@@ -47,6 +47,12 @@
     init: function () {
       dbg('info', 'App', 'Initializing AniSmooth...');
 
+      // Apply persisted theme (dark default) and swap logos before panels render
+      try {
+        var theme = window.StorageManager.getItem("anismooth_theme", "dark");
+        if (window.applyTheme) window.applyTheme(theme);
+      } catch (e) {}
+
       var path = (window.FileSystem && window.FileSystem.path) || null;
       var os = (window.FileSystem && window.FileSystem.os) || null;
 
@@ -248,7 +254,16 @@
       this._initPresets();
       this._buildGpuModeSelector();
 
-      
+      // Theme toggle (Interface category) — checked = light, unchecked = dark
+      var themeToggle = document.getElementById("themeToggle");
+      if (themeToggle) {
+        themeToggle.checked = window.StorageManager.getItem("anismooth_theme", "dark") === "light";
+        themeToggle.addEventListener("change", function () {
+          window.changeTheme(this.checked ? "light" : "dark");
+        });
+      }
+
+
       var self = this;
       var autoSaveInputs = [
         "interpolationModel", "upscaleModel", "upscaleScale",
@@ -557,7 +572,7 @@
             '<span class="form-hint" style="margin-top:3px;">Reinstalls PyTorch with GPU acceleration. Takes a few minutes.</span>';
         } else if (cuda) {
           actionsEl.style.display = "";
-          actionsEl.innerHTML = '<span class="form-hint" style="color:#6ee7b7;"><i class="fa-solid fa-check"></i> GPU acceleration active</span>';
+          actionsEl.innerHTML = '<span class="form-hint" style="color:var(--ok-text);"><i class="fa-solid fa-check"></i> GPU acceleration active</span>';
         } else {
           actionsEl.style.display = "none";
         }
@@ -684,8 +699,8 @@
       var statusEl = document.querySelector(".gpu-install-status");
       if (statusEl) {
         statusEl.innerHTML = ok
-          ? '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> <b style="color:#6ee7b7;">' + msg + '</b>'
-          : '<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> <b style="color:#fca5a5;">' + msg + '</b>';
+          ? '<i class="fa-solid fa-circle-check" style="color:var(--ok);"></i> <b style="color:var(--ok-text);">' + msg + '</b>'
+          : '<i class="fa-solid fa-circle-xmark" style="color:var(--error);"></i> <b style="color:var(--error-text);">' + msg + '</b>';
       }
     },
 
@@ -873,9 +888,9 @@
 
       if (statusEl) {
         if (currentMode === "gpu") {
-          statusEl.innerHTML = '<span class="form-hint" style="color:#6ee7b7;"><i class="fa-solid fa-check"></i> GPU mode active</span>';
+          statusEl.innerHTML = '<span class="form-hint" style="color:var(--ok-text);"><i class="fa-solid fa-check"></i> GPU mode active</span>';
         } else if (currentMode === "cpu") {
-          statusEl.innerHTML = '<span class="form-hint" style="color:#fcd34d;"><i class="fa-solid fa-computer"></i> CPU mode active</span>';
+          statusEl.innerHTML = '<span class="form-hint" style="color:var(--warn-text);"><i class="fa-solid fa-computer"></i> CPU mode active</span>';
         } else {
           statusEl.innerHTML = '<span class="form-hint">No mode selected. Run setup wizard to configure.</span>';
         }
@@ -1844,6 +1859,65 @@
     }
 
     toast._timer = setTimeout(function () { toast.style.display = "none"; }, 4000);
+  };
+
+  // ---- Theme Engine ----
+  window.AniSmoothTheme = {
+    getTheme: function () {
+      return window.StorageManager.getItem("anismooth_theme", "dark") === "light" ? "light" : "dark";
+    },
+    // kind: 'wordmark' (default) or 'iconOnly'
+    getLogo: function (kind) {
+      var theme = this.getTheme();
+      if (theme === "light") {
+        return kind === "iconOnly"
+          ? "./images/AniSmooth-Light-Logo-Only.png"
+          : "./images/AniSmooth-Light-Logo.png";
+      }
+      // dark (default) — note the SPACE in the icon-only filename
+      return kind === "iconOnly"
+        ? "./AniSmooth Logo-Only.png"
+        : "./AniSmooth-Logo.png";
+    }
+  };
+
+  window.applyTheme = function (mode) {
+    var theme = mode === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+
+    // Swap static logos
+    var brand = document.getElementById("brandLogo");
+    if (brand) brand.src = window.AniSmoothTheme.getLogo("wordmark");
+    var settingsLogo = document.getElementById("settingsLogo");
+    if (settingsLogo) settingsLogo.src = window.AniSmoothTheme.getLogo("iconOnly");
+
+    // Re-render JS-built logos (queue empty-state)
+    try {
+      if (window.QueuePanel && typeof window.QueuePanel.render === "function") {
+        window.QueuePanel.render();
+      }
+    } catch (e) {}
+
+    // Re-render the setup wizard if it is currently visible
+    try {
+      var gate = document.getElementById("tools-setup-gate");
+      if (gate && gate.style.display !== "none" && window.ToolsSetup &&
+          typeof window.ToolsSetup.renderSetupStep === "function") {
+        window.ToolsSetup.renderSetupStep();
+      }
+    } catch (e) {}
+  };
+
+  window.changeTheme = function (mode) {
+    var theme = mode === "light" ? "light" : "dark";
+    var current = window.StorageManager.getItem("anismooth_theme", "dark");
+    if (theme === current) return;
+    window.StorageManager.setItem("anismooth_theme", theme);
+    window.applyTheme(theme);
+    window.showToast("Switched to " + theme + " theme", "ok");
+    // Keep the toggle control in sync
+    var toggle = document.getElementById("themeToggle");
+    if (toggle) toggle.checked = (theme === "light");
   };
 
   window.changeGpuMode = function (mode) {

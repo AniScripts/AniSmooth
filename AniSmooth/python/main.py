@@ -534,8 +534,8 @@ def run_sys_metrics():
                     metrics["gpu_temp"] = float(parts[3].strip())
                     metrics["gpu_mem_used_mb"] = float(parts[4].strip())
                     metrics["gpu_mem_total_mb"] = float(parts[5].strip())
-            except Exception:
-                log("warn", "GPU metrics polling failed", trace=traceback.format_exc())
+    except Exception:
+        log("warn", "GPU metrics polling failed", trace=traceback.format_exc())
 
     log("sys_metrics", json.dumps(metrics))
 

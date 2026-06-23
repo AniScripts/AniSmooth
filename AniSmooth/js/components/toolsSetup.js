@@ -103,7 +103,7 @@
   
   function renderWelcomeStep() {
     return '<div class="setup-card">' +
-      '<div class="setup-logo" style="text-align: center; margin-bottom: 12px;"><img src="./AniSmooth Logo-Only.png" alt="AniSmooth Logo" style="height: 72px; width: auto; object-fit: contain; display: inline-block;"></div>' +
+      '<div class="setup-logo" style="text-align: center; margin-bottom: 12px;"><img src="' + ((window.AniSmoothTheme && window.AniSmoothTheme.getLogo("iconOnly")) || "./AniSmooth Logo-Only.png") + '" alt="AniSmooth Logo" style="height: 72px; width: auto; object-fit: contain; display: inline-block;"></div>' +
       '<h1>AniSmooth Setup</h1>' +
       '<p class="setup-desc">This wizard detects your hardware and installs everything needed to run local AI models for frame interpolation and upscaling.</p>' +
       '<div class="setup-info-box">' +
@@ -180,18 +180,49 @@
     if (_gpuChoice === 'gpu') {
       if (_gpuDownloadState && _gpuDownloadState.running) return;
       if (!_gpuDownloadState || !_gpuDownloadState.done) {
-        startGpuDownload();
+        // The --force-gpu install needs a real interpreter. We are still on the
+        // 'gpuchoice' step where Python has not been detected yet, so detect it
+        // first and only then kick off the download.
+        ensurePythonThen(startGpuDownload);
         return;
       }
     }
     goToSetupStep('check');
   }
 
+  // Make sure a Python command is resolved, then invoke cb(). If Python is
+  // already known (or a venv python exists) we proceed immediately; otherwise we
+  // run the async detection and surface a clear error if nothing is found.
+  function ensurePythonThen(cb) {
+    if (_resolvePythonCmd && _resolvePythonCmd() && (_pythonOk || _pythonCmd ||
+        (window.FileSystem.fs && window.FileSystem.fs.existsSync(
+          window.FileSystem.path.join(_toolsFolder, ".venv", "Scripts", "python.exe"))))) {
+      cb();
+      return;
+    }
+    _gpuDownloadState = { running: true, done: false, progress: 0, message: 'Detecting Python...', log: ['Detecting Python interpreter...'] };
+    renderSetupStep();
+    _onPythonChecked = function () {
+      _onPythonChecked = null;
+      if (_pythonOk && _pythonCmd) {
+        cb();
+      } else {
+        _gpuDownloadState = _gpuDownloadState || { log: [] };
+        _gpuDownloadState.running = false;
+        _gpuDownloadState.done = false;
+        _gpuDownloadState.message = 'Python not found. Install Python 3 (or use "Install Python First" on the Check screen) and try again.';
+        _gpuDownloadState.log.push('[ERR] No Python interpreter found on this system.');
+        renderSetupStep();
+      }
+    };
+    checkPythonAsync();
+  }
+
   function startGpuDownload() {
     _gpuDownloadState = { running: true, done: false, progress: 0, message: 'Preparing to download PyTorch CUDA...', log: [] };
     renderSetupStep();
 
-    var pythonCmd = _pythonCmd || 'python';
+    var pythonCmd = _resolvePythonCmd();
     var extPath = "";
     try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
     var sourceSetup = (window.FileSystem.path && extPath) ? window.FileSystem.path.join(extPath, 'python', 'setup.py') : 'setup.py';
@@ -252,8 +283,12 @@
           _gpuDownloadState.done = true;
           _gpuDownloadState.message = 'PyTorch CUDA installed successfully!';
           _gpuDownloadState.log.push('[OK] PyTorch CUDA installation complete');
-          _pytorchOk = true;
-          _pytorchChecked = true;
+          // Do NOT assume PyTorch is OK from the exit code alone. Leave it
+          // unchecked so the check step re-runs checkPytorchAsync(), which actually
+          // imports torch/cv2 in the venv and shows the real version (or "Not
+          // installed" if the import fails). Defense-in-depth against false success.
+          _pytorchChecked = false;
+          _pytorchOk = false;
         } else {
           _gpuDownloadState.message = 'Installation failed (code ' + code + '). You can try again or switch to CPU mode.';
           _gpuDownloadState.log.push('[ERR] Installation failed with code ' + code);
@@ -262,6 +297,17 @@
       });
       proc.on('error', function (e) {
         _installProc = null;
+        // If the bare 'python' command was not on PATH, fall back to detecting a
+        // real interpreter (launcher / per-user install / venv) and retry once,
+        // mirroring modelHandler.findLocalPython.
+        if (e && e.code === 'ENOENT' && !_gpuDownloadState._retriedPython) {
+          _gpuDownloadState._retriedPython = true;
+          _gpuDownloadState.log.push('[WARN] "' + pythonCmd + '" not found. Detecting Python...');
+          renderSetupStep();
+          _pythonOk = false; _pythonCmd = '';
+          ensurePythonThen(function () { startGpuDownload(); });
+          return;
+        }
         _gpuDownloadState.running = false;
         _gpuDownloadState.message = 'Error: ' + e.message;
         _gpuDownloadState.log.push('[ERR] ' + e.message);
@@ -333,7 +379,7 @@
     var gpuDiagHtml = '';
     if (_gpuChoice === 'gpu' && _gpuChecked && (!_gpuInfo || !_gpuInfo.nvidia_gpu_detected) && _gpuDiag.length > 0) {
       gpuDiagHtml = '<div class="ts-gpu-download-log" id="gpuDiagLog" style="margin-top:8px;">' +
-        _gpuDiag.map(function(l) { return '<div style="color:#fca5a5;">' + escapeHtml(l) + '</div>'; }).join('') +
+        _gpuDiag.map(function(l) { return '<div class="ts-log-err">' + escapeHtml(l) + '</div>'; }).join('') +
         '</div>' +
         '<button class="btn btn-sm" style="margin-top:4px;width:100%;" onclick="copyGpuDiag()"><i class="fa-solid fa-copy"></i> Copy Log</button>';
     }
@@ -369,6 +415,13 @@
   }
 
   
+  var _onPythonChecked = null;
+  function _firePythonChecked() {
+    if (typeof _onPythonChecked === 'function') {
+      var cb = _onPythonChecked;
+      try { cb(); } catch (e) {}
+    }
+  }
   function checkPythonAsync() {
     var commands = ['python', 'python3'];
     try {
@@ -407,11 +460,11 @@
     }
     commands = uniqueCommands;
     function tryCmd(idx) {
-      if (idx >= commands.length) { _pythonOk = false; _pythonCmd = ''; _pythonChecked = true; renderSetupStep(); return; }
+      if (idx >= commands.length) { _pythonOk = false; _pythonCmd = ''; _pythonChecked = true; renderSetupStep(); _firePythonChecked(); return; }
       try {
         var proc = window.FileSystem.childProcess.spawn(commands[idx], ['--version']);
         proc.on('close', function (code) {
-          if (code === 0) { _pythonOk = true; _pythonCmd = commands[idx]; _pythonChecked = true; renderSetupStep(); }
+          if (code === 0) { _pythonOk = true; _pythonCmd = commands[idx]; _pythonChecked = true; renderSetupStep(); _firePythonChecked(); }
           else { tryCmd(idx + 1); }
         });
         proc.on('error', function () { tryCmd(idx + 1); });
@@ -495,7 +548,7 @@
         needs.push('PyTorch CPU');
       }
     }
-    needs.push('OpenCV + NumPy + Pillow + Spandrel');
+    needs.push('OpenCV + NumPy + Spandrel');
     _totalSteps = needs.length;
     _installedCount = 0;
 
@@ -605,12 +658,31 @@
             var pthPath = path.join(pythonDestFolder, 'python310._pth');
             try {
               var pthContent = fs.readFileSync(pthPath, 'utf8');
+              // Enable the site module so Lib\site-packages is added to sys.path.
               pthContent = pthContent.replace('#import site', 'import site');
-              pthContent = pthContent.replace(/^#.*Lib\/site-packages/m, 'Lib/site-packages');
+              if (pthContent.indexOf('import site') === -1) {
+                pthContent = pthContent.replace(/[\r\n]+$/, '') + '\r\nimport site\r\n';
+              }
+              // The shipped _pth has no site-packages entry; guarantee one exists
+              // (match either slash style, commented or not) and add it otherwise.
+              if (!/^\s*(?:#\s*)?Lib[\\\/]site-packages\s*$/m.test(pthContent)) {
+                pthContent = pthContent.replace(/[\r\n]+$/, '') + '\r\nLib\\site-packages\r\n';
+              } else {
+                pthContent = pthContent.replace(/^\s*#\s*(Lib[\\\/]site-packages)\s*$/m, '$1');
+              }
               fs.writeFileSync(pthPath, pthContent, 'utf8');
-              addInstallLog('Patched python3._pth for pip support');
+              // The 'import site' mechanism only adds Lib\site-packages to sys.path
+              // if the directory actually exists on disk; create it up front.
+              try { window.FileSystem.createFolder(path.join(pythonDestFolder, 'Lib', 'site-packages')); }
+              catch (e2) { fs.mkdirSync(path.join(pythonDestFolder, 'Lib', 'site-packages'), { recursive: true }); }
+              addInstallLog('[OK] Patched python310._pth for pip + site-packages support');
             } catch (e) {
-              addInstallLog('[WARN] Could not patch _pth file: ' + e.message);
+              // A failed patch leaves site-packages unimportable, so torch would
+              // fail at runtime even though setup.py reports success. Treat as fatal.
+              addInstallLog('[ERR] Could not patch _pth file: ' + e.message);
+              try { fs.unlinkSync(zipPath); } catch (e3) {}
+              finishAutoInstall(false);
+              return;
             }
             var exePath = path.join(pythonDestFolder, 'python.exe');
             if (!fs.existsSync(exePath)) {
@@ -890,7 +962,7 @@
     return false;
   }
 
-  window.ToolsSetup = { showToolsSetup: showToolsSetup, showToolsSetupForGpuInstall: showToolsSetupForGpuInstall, checkAndShowIfNeeded: checkAndShowIfNeeded };
+  window.ToolsSetup = { showToolsSetup: showToolsSetup, showToolsSetupForGpuInstall: showToolsSetupForGpuInstall, checkAndShowIfNeeded: checkAndShowIfNeeded, renderSetupStep: renderSetupStep };
   window.goToSetupStep = goToSetupStep;
   window.scanToolsAndRefresh = scanToolsAndRefresh;
   window.skipToolsSetup = skipToolsSetup;

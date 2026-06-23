@@ -1,0 +1,348 @@
+      <div id="settingsView" class="tab-content hidden">
+        <div style="text-align: center; margin-bottom: 12px; margin-top: 4px;">
+          <img id="settingsLogo" src="./AniSmooth Logo-Only.png" alt="AniSmooth" style="height: 72px; width: auto; object-fit: contain; opacity: 0.85;">
+        </div>
+        <nav class="sub-nav" id="settingsSubNav">
+          <button class="sub-tab active" data-cat="system" title="System">
+            <i class="fa-solid fa-microchip"></i>
+          </button>
+          <button class="sub-tab" data-cat="output" title="Output">
+            <i class="fa-solid fa-folder-open"></i>
+          </button>
+          <button class="sub-tab" data-cat="python" title="Python">
+            <i class="fa-brands fa-python"></i>
+          </button>
+          <button class="sub-tab" data-cat="tools" title="Tools">
+            <i class="fa-solid fa-toolbox"></i>
+          </button>
+          <button class="sub-tab" data-cat="interface" title="Interface">
+            <i class="fa-solid fa-sliders"></i>
+          </button>
+          <button class="sub-tab" data-cat="presets" title="Presets">
+            <i class="fa-solid fa-bookmark"></i>
+          </button>
+        </nav>
+
+        <div class="settings-cat" id="settingsCatSystem">
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-microchip panel-head-icon"></i>
+              <span class="panel-title">Hardware Mode</span>
+            </div>
+            <div class="form-group">
+              <div class="ts-gpu-choice" id="settingsGpuChoice">
+                <div class="ts-gpu-option" id="settingsGpuOptionGpu" onclick="changeGpuMode('gpu')">
+                  <div class="ts-gpu-option-icon"><i class="fa-solid fa-microchip"></i></div>
+                  <div class="ts-gpu-option-info">
+                    <div class="ts-gpu-option-title">GPU Acceleration</div>
+                    <div class="ts-gpu-option-desc">NVIDIA GPU with CUDA. Faster processing.</div>
+                  </div>
+                  <div class="ts-gpu-option-check" id="settingsGpuCheckGpu"></div>
+                </div>
+                <div class="ts-gpu-option" id="settingsGpuOptionCpu" onclick="changeGpuMode('cpu')">
+                  <div class="ts-gpu-option-icon"><i class="fa-solid fa-computer"></i></div>
+                  <div class="ts-gpu-option-info">
+                    <div class="ts-gpu-option-title">CPU Only</div>
+                    <div class="ts-gpu-option-desc">Slower but works on any system.</div>
+                  </div>
+                  <div class="ts-gpu-option-check" id="settingsGpuCheckCpu"></div>
+                </div>
+              </div>
+              <div id="settingsGpuStatus" style="margin-top:8px;"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-microchip panel-head-icon"></i>
+              <span class="panel-title">GPU</span>
+            </div>
+            <div class="gpu-card" id="gpuCard">
+              <div class="gpu-status-row">
+                <div class="gpu-indicator" id="gpuIndicator">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i>
+                </div>
+                <div class="gpu-main-info">
+                  <div class="gpu-name" id="gpuName">Detecting GPU...</div>
+                  <div class="gpu-meta" id="gpuMeta"></div>
+                </div>
+                <button id="refreshGpuBtn" class="btn-sm" title="Refresh GPU info">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+              </div>
+              <div class="gpu-details" id="gpuDetails">
+                <div class="gpu-stat">
+                  <span class="gpu-stat-label">VRAM</span>
+                  <div class="gpu-vram-bar-wrap">
+                    <div class="gpu-vram-bar">
+                      <div class="gpu-vram-fill" id="gpuVramFill"></div>
+                    </div>
+                    <span class="gpu-vram-text" id="gpuVramText">--</span>
+                  </div>
+                </div>
+                <div class="gpu-badges" id="gpuBadges"></div>
+                <div class="gpu-actions" id="gpuActions" style="display:none;margin-top:8px;"></div>
+                <div id="gpuInstallLog" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-cubes panel-head-icon"></i>
+              <span class="panel-title">CUDA &amp; PyTorch</span>
+            </div>
+            <div id="cudaInfo" class="env-list">
+              <div class="env-row"><i class="fa-solid fa-spinner fa-spin"></i> <span>Waiting for GPU scan...</span></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-desktop panel-head-icon"></i>
+              <span class="panel-title">System</span>
+            </div>
+            <div id="sysInfo" class="env-list">
+              <div class="env-row">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatInterface">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-palette panel-head-icon"></i>
+            <span class="panel-title">Appearance</span>
+          </div>
+          <label class="toggle-row">
+            <i class="fa-solid fa-moon toggle-icon"></i>
+            <span class="toggle-label">Light Theme</span>
+            <input type="checkbox" class="toggle-input" id="themeToggle">
+            <span class="toggle-switch"></span>
+          </label>
+          <span class="form-hint" style="margin-top:6px;display:block;">Switch between dark and light appearance. Dark is default.</span>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-sliders panel-head-icon"></i>
+            <span class="panel-title">Navbar Tabs</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Show or hide tabs in the top navigation bar. Settings cannot be hidden.</span>
+          <div id="interfaceToggles"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-microchip panel-head-icon"></i>
+            <span class="panel-title">Interpolation Models</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:6px;display:block;">Choose which models appear in the interpolation dropdown.</span>
+          <div id="interpModelToggles"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-maximize panel-head-icon"></i>
+            <span class="panel-title">Upscale Models</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:6px;display:block;">Choose which models appear in the upscale dropdown.</span>
+          <div id="upscaleModelToggles"></div>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatPresets">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-bookmark panel-head-icon"></i>
+            <span class="panel-title">Presets</span>
+          </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Save, load, and share your settings configurations. Export to share with others.</span>
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button id="presetSaveBtn" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Current</button>
+            <button id="presetImportBtn" class="btn"><i class="fa-solid fa-file-import"></i> Import</button>
+          </div>
+          <div class="preset-legend" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;padding:4px 0 6px 0;font-size:8px;color:var(--text-3);border-bottom:1px solid var(--border);justify-content:space-between;align-items:center;">
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-i" style="width:4px;height:4px;margin:0;"></span> Interp</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-u" style="width:4px;height:4px;margin:0;"></span> Upscale</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-d" style="width:4px;height:4px;margin:0;"></span> Deadframes</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-o" style="width:4px;height:4px;margin:0;"></span> Output</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;"><span class="preset-dot preset-dot-p" style="width:4px;height:4px;margin:0;"></span> Python</span>
+          </div>
+          <div id="presetList" class="preset-list"></div>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatOutput">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-folder-open panel-head-icon"></i>
+            <span class="panel-title">Output Folder</span>
+          </div>
+          <div class="form-group">
+            <label>Save Location</label>
+            <div class="folder-row">
+              <div id="outputFolderText" class="folder-text">Select output...</div>
+              <button id="chooseOutputFolderBtn" class="btn-sm"><i class="fa-solid fa-folder"></i></button>
+            </div>
+            <span class="form-hint">All processed files and pre-renders are saved here.</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-file-signature panel-head-icon"></i>
+            <span class="panel-title">File Naming</span>
+          </div>
+          <div class="form-group">
+            <label for="outputPrefix">Prefix</label>
+            <input type="text" id="outputPrefix" value="AniSmooth" maxlength="24">
+            <span class="form-hint">Prepended to all output filenames.</span>
+          </div>
+            <div class="form-group">
+              <label for="outputTimestamp">Include Timestamp</label>
+              <label class="toggle-row" style="padding:0;">
+                <input type="checkbox" class="toggle-input" id="outputTimestamp" checked>
+                <span class="toggle-switch"></span>
+                <span style="font-size:9px;color:var(--text-3);margin-left:4px;">Prevents overwrites</span>
+              </label>
+            </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-sliders panel-head-icon"></i>
+            <span class="panel-title">Behavior</span>
+          </div>
+          <div class="form-group">
+            <label class="toggle-row" style="padding:0;margin-bottom:6px;">
+              <span class="toggle-label" style="flex:1;">Auto-import to AE</span>
+              <input type="checkbox" class="toggle-input" id="outputAutoImport" checked>
+              <span class="toggle-switch"></span>
+            </label>
+            <span class="form-hint">Automatically adds processed files to the active composition.</span>
+          </div>
+          <div class="form-group">
+            <label class="toggle-row" style="padding:0;margin-bottom:6px;">
+              <span class="toggle-label" style="flex:1;">Save pre-render copy</span>
+              <input type="checkbox" class="toggle-input" id="outputKeepPrerender" checked>
+              <span class="toggle-switch"></span>
+            </label>
+            <span class="form-hint">Keeps an extra copy of the timeline pre-render alongside the processed output.</span>
+          </div>
+          <div class="form-group">
+            <label class="toggle-row" style="padding:0;margin-bottom:6px;">
+              <span class="toggle-label" style="flex:1;">Delete failed output</span>
+              <input type="checkbox" class="toggle-input" id="outputCleanupFailed" checked>
+              <span class="toggle-switch"></span>
+            </label>
+            <span class="form-hint">Removes partially-written output files when processing fails.</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-compress panel-head-icon"></i>
+            <span class="panel-title">Encoding</span>
+          </div>
+          <div class="form-group">
+            <label>Interpolation Target File Size (MB)</label>
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Enable size limit</span>
+              <input type="checkbox" class="toggle-input" id="interpEnableTargetSize">
+              <span class="toggle-switch"></span>
+            </div>
+            <input type="number" id="interpTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
+          </div>
+          <div class="form-group">
+            <label for="interpPreset">Interpolation Preset</label>
+            <select id="interpPreset" style="width:100%;background:var(--inset);border:1px solid var(--border);border-radius:3px;color:var(--text-strong);padding:4px 6px;font-family:inherit;font-size:9px;">
+              <option value="archival">Archival — near lossless (CRF 14)</option>
+              <option value="high" selected>High Quality (CRF 17)</option>
+              <option value="balanced">Balanced (CRF 20)</option>
+              <option value="fast">Fast (CRF 22)</option>
+              <option value="draft">Draft / Preview (CRF 26)</option>
+            </select>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:8px 0;"></div>
+          <div class="form-group">
+            <label>Upscale Target File Size (MB)</label>
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Enable size limit</span>
+              <input type="checkbox" class="toggle-input" id="upscaleEnableTargetSize">
+              <span class="toggle-switch"></span>
+            </div>
+            <input type="number" id="upscaleTargetSize" value="500" min="1" step="1" placeholder="500" disabled style="margin-top:4px;">
+          </div>
+          <div class="form-group">
+            <label for="upscalePreset">Upscale Preset</label>
+            <select id="upscalePreset" style="width:100%;background:var(--inset);border:1px solid var(--border);border-radius:3px;color:var(--text-strong);padding:4px 6px;font-family:inherit;font-size:9px;">
+              <option value="archival">Archival — near lossless (CRF 14)</option>
+              <option value="high" selected>High Quality (CRF 17)</option>
+              <option value="balanced">Balanced (CRF 20)</option>
+              <option value="fast">Fast (CRF 22)</option>
+              <option value="draft">Draft / Preview (CRF 26)</option>
+            </select>
+          </div>
+          <span class="form-hint">Lower CRF = higher quality + larger file + slower encode. All presets use x264 with <code>-tune animation</code> for crisp anime line-art.</span>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatPython">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-brands fa-python panel-head-icon"></i>
+            <span class="panel-title">Python</span>
+          </div>
+          <div class="form-group">
+            <label for="pythonPathInput">Executable Path</label>
+            <input type="text" id="pythonPathInput" value="python">
+          </div>
+        </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatTools">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-toolbox panel-head-icon"></i>
+            <span class="panel-title">Environment</span>
+          </div>
+          <div id="envInfoList" class="env-list">
+            <div class="env-row"><i class="fa-solid fa-spinner fa-spin"></i> <span>Loading...</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-folder-tree panel-head-icon"></i>
+            <span class="panel-title">Folders</span>
+          </div>
+          <div class="env-actions" id="envFolderActions"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-database panel-head-icon"></i>
+            <span class="panel-title">Model Manager</span>
+          </div>
+          <div id="modelManagerList" class="model-list">
+            <div class="model-empty"><i class="fa-solid fa-spinner fa-spin"></i> Scanning...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-wrench panel-head-icon"></i>
+            <span class="panel-title">Maintenance</span>
+          </div>
+          <button id="rerunSetupBtn" class="btn">
+            <i class="fa-solid fa-arrows-rotate"></i> Rerun Setup Wizard
+          </button>
+          <button id="repairPackagesBtn" class="btn" style="margin-top:6px;">
+            <i class="fa-solid fa-cubes"></i> Repair / Install Python Packages
+          </button>
+          <div id="repairLog" style="display:none;margin-top:6px;"></div>
+        </div>
+        </div>
+      </div>
