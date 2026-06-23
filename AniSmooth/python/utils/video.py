@@ -130,6 +130,7 @@ def reencode_high_quality(video_path, x264_preset="slow", crf=17, tune="animatio
         ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video_path),
         "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
+        "-profile:v", "high", "-level:v", "5.1",
     ]
     if tune:
         cmd += ["-tune", tune]
@@ -290,6 +291,7 @@ def reencode_to_size(video_path, audio_source_path, target_mb, x264_preset="slow
         "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
         "-maxrate", f"{maxrate}k", "-bufsize", f"{bufsize}k",
         "-preset", x264_preset, "-tune", tune, "-pix_fmt", "yuv420p",
+        "-profile:v", "high", "-level:v", "5.1",
         "-pass", "2", "-passlogfile", passlog,
     ]
     cmd2 += (["-c:a", "aac", "-b:a", f"{audio_bitrate_kbps}k"] if has_audio else ["-an"])
@@ -366,6 +368,11 @@ class VideoProcessor:
                 "-s", f"{out_w}x{out_h}", "-pix_fmt", "bgr24",
                 "-r", str(output_fps), "-i", "-",
                 "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
+                # Cap profile/level so hardware decoders (Discord, browsers, AE
+                # Mercury) can play the file. Without this x264 auto-picks Level
+                # 6.0 at 4K, which HW decoders cap at 5.1/5.2 reject -> blocky
+                # garbage on playback while software decode stays clean.
+                "-profile:v", "high", "-level:v", "5.1",
             ]
             if tune:
                 cmd += ["-tune", tune]

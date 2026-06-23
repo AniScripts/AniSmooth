@@ -9,6 +9,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 from utils import VideoProcessor, get_device, check_tensorrt, print_gpu_info
 from utils.video import mux_audio, reencode_to_size, reencode_high_quality
 from models.rife import RIFEModel
@@ -272,8 +274,8 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                         video.write_frame(interp)
                 else:
                     # PyTorch path
-                    t0 = frame_to_tensor(prev_frame, device).to(memory_format=torch.channels_last)
-                    t1 = frame_to_tensor(frame, device).to(memory_format=torch.channels_last)
+                    t0 = frame_to_tensor(prev_frame, device)
+                    t1 = frame_to_tensor(frame, device)
                     t0_padded, pad_info = pad_to_mod(t0, 32)
                     t1_padded, _ = pad_to_mod(t1, 32)
                     model.cachePair(t0_padded, t1_padded)
@@ -284,6 +286,8 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                             mid = unpad(mid, pad_info)
                             interp_frame = tensor_to_frame(mid.float(), str(device))
                             video.write_frame(interp_frame)
+                            del mid, interp_frame
+                    del t0, t1, t0_padded, t1_padded
 
                 video.write_frame(frame)
             else:
@@ -291,6 +295,10 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
 
             prev_frame = frame
             frame_idx += 1
+            if frame_idx % 10 == 0:
+                gc.collect()
+            if device.type == "cuda" and frame_idx % 20 == 0:
+                torch.cuda.empty_cache()
             denom = max(total_frames, 1)
             pct = min(100, int((frame_idx / denom) * 100))
             log("progress", f"Interpolating frames... {frame_idx}/{denom}", pct=pct)
@@ -327,12 +335,11 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
         log("info", "Starting frame upscaling...")
         frame_idx = 0
         black_warned = False
-        use_autocast = device.type == "cuda"
 
         for frame in video.read_frames():
             tensor = frame_to_tensor(frame, device)
 
-            with torch.no_grad(), torch.amp.autocast("cuda", enabled=use_autocast):
+            with torch.no_grad():
                 upscaled = model(tensor)
 
             del tensor
