@@ -387,7 +387,10 @@
           self.settings.flowframesVersion = ffVer.value;
           window.StorageManager.setItem("anismooth_flowframes_version", ffVer.value);
           self._filterVersionLabels();
-          if (window.FlowframesPanel && window.FlowframesPanel.checkAvailability) window.FlowframesPanel.checkAvailability();
+          if (window.FlowframesPanel) {
+            if (window.FlowframesPanel.initVersionToggle) window.FlowframesPanel.initVersionToggle();
+            if (window.FlowframesPanel.checkAvailability) window.FlowframesPanel.checkAvailability();
+          }
           dbg('info', 'Settings', 'Flowframes version set to: ' + ffVer.value);
         });
         this._filterVersionLabels();
