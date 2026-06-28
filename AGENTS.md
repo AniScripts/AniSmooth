@@ -11,11 +11,23 @@ Free local After Effects extension for AI frame interpolation and video upscalin
 ## Build & Run
 
 ```bash
-cd tools && npm install
-cd .. && npm run build:all      # 2018 + 2020 + 2022 targets
+cd tools && npm install          # devDeps: javascript-obfuscator, jsxbin, zxp-sign-cmd
+cd .. && npm run build:all       # 2018 + 2020 + 2022 + docs (root forwards to tools via --prefix)
 ```
 
-No test framework. No lint/typecheck. Build pipeline: obfuscate JS → compile JSXBIN → sign ZXP → Inno EXE.
+Root `package.json` is a thin shim; real scripts live in `tools/package.json`:
+
+| Command | Action |
+|---|---|
+| `npm run build` | Single ZXP, default target 2020 |
+| `npm run build:2018\|2020\|2022` | Single target |
+| `npm run build:all` | All 3 targets + `generate-docs.js` |
+| `npm run docs` | Regenerate docs only |
+
+- No test framework. No lint/typecheck.
+- Build pipeline (`tools/build.js`): strip comments (`remove_comments.py`) → obfuscate JS → compile JSXBIN → patch manifest per target → sign ZXP. Installer EXE via Inno Setup (`tools/installer.iss`).
+- CI: `.github/workflows/build.yml`.
+- **`jsx/host.jsx` is compiled to JSXBIN at build** — source edits need a rebuild before they take effect in AE.
 
 ## Tech Stack
 
@@ -31,12 +43,24 @@ No test framework. No lint/typecheck. Build pipeline: obfuscate JS → compile J
 
 ## Directory Map
 
+Repo root holds build tooling; the CEP extension itself lives in `AniSmooth/`.
+
 ```
-AniSmooth/
+<repo root>/
+├── package.json               # Shim → tools scripts via --prefix
+├── .github/workflows/build.yml
+├── tools/
+│   ├── build.js               # Obfuscate → JSXBIN → patch manifest → sign ZXP
+│   ├── generate-docs.js
+│   ├── remove_comments.py
+│   └── installer.iss          # Inno Setup script
+└── AniSmooth/                 # ← the extension (everything below)
 ├── CSXS/manifest.xml          # CEP manifest (patched per AE target at build)
 ├── index.html                 # SPA shell: topbar nav + tab containers
 ├── css/style.css              # Dark/light theme, ~860 lines
-├── tabs/*.html                # Tab content fragments (loaded by tabLoader.js)
+├── css/toolsSetup.css         # First-run wizard styles
+├── tabs/*.html                # Tab fragments: interpolation, upscale, deadframes,
+│                              #   queue, sysmon, console, settings, stopwatch (tabLoader.js)
 ├── js/
 │   ├── CSInterface.js         # Adobe boilerplate (NOT obfuscated)
 │   ├── console.js             # dbg(level, source, msg) global logger
@@ -114,7 +138,7 @@ Python stdout format: `{"type":"info|warn|error|success|progress","msg":"...","p
 |---|---|
 | `queueManager.js` | `_processNext()` dispatches serial queue. `_running` flag guards re-entrancy. See `_render()` → `_runModel()` → `ModelHandler.*Clip()` chain |
 | `modelHandler.js` | Singleton `activeProcess` + `_cancelling` flag prevents concurrent Python spawns. `executeModel()` spawns, `cancelActiveProcess()` kills via `taskkill /F /T` |
-| `host.jsx` | `renderSelectedLayer()` sets work area to layer bounds, creates RenderQueueItem, renders to temp file. Bounds must clamp to comp display range |
+| `host.jsx` | `renderSelectedLayer()` renders one layer to a temp AVI. **Time-coord trap:** `layer.inPoint/outPoint` are DISPLAY-relative (offset by `displayStartTime`); `comp.workAreaStart` AND `RenderQueueItem.timeSpanStart` are ABSOLUTE 0-based (range `[0, duration]`). Convert via `toAbsRenderTime()` before assigning either, or AE throws "value out of range" / renders blank frames |
 | `main.py` | `argparse` → dispatch. Quality presets at top of file. Scene detection threshold: 0.40 |
 
 ## Python Path Resolution
