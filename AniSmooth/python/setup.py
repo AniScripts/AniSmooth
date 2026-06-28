@@ -161,11 +161,11 @@ def _download_and_verify_ffmpeg_zip(zip_path):
     """Download the FFmpeg zip and verify it against its .sha256 sidecar.
 
     Returns one of:
-      "ok"        - zip downloaded and checksum verified (or sidecar genuinely
+      "ok"       - zip downloaded and checksum verified (or sidecar genuinely
                     unavailable, in which case we proceed without verification).
-      "mismatch"  - zip downloaded but checksum did not match (caller may retry;
+      "mismatch" - zip downloaded but checksum did not match (caller may retry;
                     the rolling gyan build can rotate between the two GETs).
-      "fail"      - zip could not be downloaded at all.
+      "fail"     - zip could not be downloaded at all.
     Leaves zip_path in place on "ok"/"mismatch"; cleans up its own sidecar.
     """
     if not download_file(FFMPEG_URL, zip_path, "FFmpeg"):

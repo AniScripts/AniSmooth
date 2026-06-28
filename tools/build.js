@@ -93,11 +93,11 @@ async function runBuild() {
     for (const file of jsFiles) {
         const filename = path.basename(file);
         if (filename === 'CSInterface.js') {
-            console.log(`   - Skipping library: ${filename}`);
+            console.log(` - Skipping library: ${filename}`);
             continue;
         }
 
-        console.log(`   - Obfuscating: ${path.relative(DIST_DIR, file)}`);
+        console.log(` - Obfuscating: ${path.relative(DIST_DIR, file)}`);
         const originalCode = fs.readFileSync(file, 'utf8');
 
         try {
@@ -135,9 +135,9 @@ async function runBuild() {
         console.log('💎 Compiling host.jsx to host.jsxbin...');
         try {
             await jsxbin(jsxPath, jsxbinPath);
-            console.log('   - Compilation successful!');
+            console.log(' - Compilation successful!');
             fs.unlinkSync(jsxPath);
-            console.log('   - Removed original host.jsx');
+            console.log(' - Removed original host.jsx');
         } catch (err) {
             console.error('❌ ExtendScript binary compilation failed:', err.message);
         }
@@ -166,7 +166,7 @@ async function runBuild() {
         );
 
         fs.writeFileSync(manifestPath, manifestContent, 'utf8');
-        console.log(`   - Host: ${PROFILE.hostVersion}, CSXS: ${PROFILE.csxsVersion}`);
+        console.log(` - Host: ${PROFILE.hostVersion}, CSXS: ${PROFILE.csxsVersion}`);
     } else {
         console.error('❌ manifest.xml not found!');
     }
@@ -184,7 +184,7 @@ async function runBuild() {
 
     try {
         if (!fs.existsSync(certPath)) {
-            console.log('   - Certificate not found. Generating a self-signed certificate...');
+            console.log(' - Certificate not found. Generating a self-signed certificate...');
             await zxpSignCmd.selfSignedCert({
                 country: 'US',
                 province: 'NY',
@@ -193,10 +193,10 @@ async function runBuild() {
                 password: CERT_PASSWORD,
                 output: certPath
             });
-            console.log('   - Certificate successfully created!');
+            console.log(' - Certificate successfully created!');
         }
 
-        console.log('   - Packaging to ZXP...');
+        console.log(' - Packaging to ZXP...');
         await zxpSignCmd.sign({
             input: DIST_DIR,
             output: zxpOutputPath,
@@ -236,7 +236,7 @@ async function runBuild() {
 
     if (isccPath) {
         try {
-            console.log('   - Compiling installer script...');
+            console.log(' - Compiling installer script...');
             const issPath = path.join(__dirname, 'installer.iss');
             const outputName = `${EXTENSION_NAME}Setup_${PROFILE.label}`;
             const cmd = isccPath === 'iscc'
@@ -248,7 +248,7 @@ async function runBuild() {
             console.error('❌ Failed to compile installer EXE:', execErr.message);
         }
     } else {
-        console.log('   - Inno Setup compiler (ISCC.exe) not found. Skipping automatic EXE generation.');
+        console.log(' - Inno Setup compiler (ISCC.exe) not found. Skipping automatic EXE generation.');
         console.log('     Please compile tools/installer.iss manually using Inno Setup on Windows to create the EXE.');
     }
 
@@ -314,7 +314,7 @@ async function runBuild() {
         `echo.`,
         `pause`
     ].join('\r\n'), 'utf8');
-    console.log('   - Generated batch installer');
+    console.log(' - Generated batch installer');
 
     console.log(`\n✨ ${EXTENSION_NAME} ${PROFILE.label} build complete!`);
 }

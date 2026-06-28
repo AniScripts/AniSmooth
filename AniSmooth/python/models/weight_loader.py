@@ -137,7 +137,7 @@ def download_weights(model_key, force=False, retries=3):
             
             expected_hash = MODEL_HASHES.get(model_key)
             if expected_hash is None:
-                log("warn", f"No verified hash registered for {model_key}  -  integrity check skipped for download.")
+                log("warn", f"No verified hash registered for {model_key} - integrity check skipped for download.")
             elif expected_hash:
                 actual = _compute_sha256(dest)
                 if actual != expected_hash:
@@ -146,7 +146,7 @@ def download_weights(model_key, force=False, retries=3):
                     return False
                 log("info", f"Download hash verified for {model_key}")
             else:
-                log("info", f"No hash in registry for {model_key}  -  skipping integrity check")
+                log("info", f"No hash in registry for {model_key} - skipping integrity check")
 
             try:
                 os.rmdir(temp_folder)
@@ -234,7 +234,7 @@ def _compute_sha256(file_path):
 def verify_weight_hash(model_key, weight_path):
     expected_hash = MODEL_HASHES.get(model_key)
     if expected_hash is None:
-        log("error", f"No verified hash registered for {model_key}. Integrity check cannot be performed  -  rejecting.")
+        log("error", f"No verified hash registered for {model_key}. Integrity check cannot be performed - rejecting.")
         return False
     if not expected_hash:
         log("error", f"Model key not in hash registry: {model_key}")

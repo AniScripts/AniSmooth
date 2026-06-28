@@ -10,7 +10,7 @@ Design notes (why this replaces the previous multi-signal implementation):
 * The old detector blended six hand-weighted signals (regions, Farneback optical
   flow, edges, pHash, block-motion, center-similarity) plus camera-motion and
   "static-subject" compensation. That was slow (dense optical flow + nested
-  Python block-matching every frame pair) and over-aggressive  -  it would mark
+  Python block-matching every frame pair) and over-aggressive - it would mark
   genuinely different frames as ``camera_only`` duplicates.
 * It also had a correctness bug: ``self.prev_phash`` / ``self.prev_edges`` were
   cached on *every* call, including dropped duplicates, while the actual anchor
@@ -19,14 +19,14 @@ Design notes (why this replaces the previous multi-signal implementation):
 
 This version derives every signal from the exact frames passed in (no
 desynchronised cache), runs entirely on a small fixed-size thumbnail, and is
-fully vectorised  -  no per-frame Python loops, no optical flow.
+fully vectorised - no per-frame Python loops, no optical flow.
 
 Two cheap, complementary signals decide a duplicate:
 
-1. ``frac_changed``  -  fraction of thumbnail pixels whose absolute difference
+1. ``frac_changed`` - fraction of thumbnail pixels whose absolute difference
    exceeds ``pixel_threshold``. A per-pixel threshold ignores codec noise while
    still catching small *localised* motion (a blink, a mouth moving).
-2. ``phash_distance``  -  normalised Hamming distance of a DCT perceptual hash,
+2. ``phash_distance`` - normalised Hamming distance of a DCT perceptual hash,
    a robust *global/structural* backstop that survives compression artifacts.
 
 A frame is a duplicate when *both* stay at or below the user difference

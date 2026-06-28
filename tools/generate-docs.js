@@ -122,7 +122,7 @@ AniSmooth supports local hardware-accelerated models for both frame interpolatio
 
 ### Method 3: Manual Folder Installation
 1. Copy the \`AniSmooth\` folder from your desired version folder to:
-   - Windows: \`C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions\\\`
+  - Windows: \`C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions\\\`
 2. Enable PlayerDebugMode: double-click \`Add-Keys.reg\` or run \`Add-Keys.bat\` as admin.
 3. Restart After Effects.
 
@@ -148,14 +148,14 @@ ${EXTENSION_NAME.toUpperCase()} AFTER EFFECTS EXTENSION - COMPLETE INSTALLATION 
 ${GENERAL_INFO}
 
 Each version folder (AE2018 / AE2020 / AE2022) contains:
-  - AniSmooth/           Unpacked extension files
-  - AniSmooth_AEXXXX.zxp Signed ZXP package
-  - AniSmoothSetup_AEXXXX.exe Windows setup wizard
-  - Install-Windows.bat  One-click batch installer (copies files + enables debug mode)
+ - AniSmooth/           Unpacked extension files
+ - AniSmooth_AEXXXX.zxp Signed ZXP package
+ - AniSmoothSetup_AEXXXX.exe Windows setup wizard
+ - Install-Windows.bat  One-click batch installer (copies files + enables debug mode)
 
 Root-level helper files (version-agnostic):
-  - Add-Keys.reg         Double-click to enable PlayerDebugMode (CSXS.9-13)
-  - Add-Keys.bat         Run as admin to enable PlayerDebugMode (CSXS.9-13)
+ - Add-Keys.reg         Double-click to enable PlayerDebugMode (CSXS.9-13)
+ - Add-Keys.bat         Run as admin to enable PlayerDebugMode (CSXS.9-13)
 
 --------------------------------------------------------------------------------
 METHOD 1: ZXP INSTALLATION (Easiest & Most Recommended)
@@ -180,14 +180,14 @@ METHOD 2: WINDOWS SETUP WIZARD (.exe Installer)
 METHOD 3: MANUAL FOLDER INSTALLATION
 --------------------------------------------------------------------------------
 1. Copy the "AniSmooth" folder from your desired version folder to the Adobe CEP extensions dir:
-   - Windows: C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions\\${EXTENSION_NAME}\\
+  - Windows: C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions\\${EXTENSION_NAME}\\
 
 2. Enable PlayerDebugMode (so Adobe loads unsigned extensions):
    Choose one of the following:
-   - Double-click "Add-Keys.reg" (recommended, one-click)
-   - Run "Add-Keys.bat" as administrator
-   - Run "Install-Windows.bat" from your version folder (copies files + keys in one step)
-   - Or add the keys manually (Command Prompt as Admin):
+  - Double-click "Add-Keys.reg" (recommended, one-click)
+  - Run "Add-Keys.bat" as administrator
+  - Run "Install-Windows.bat" from your version folder (copies files + keys in one step)
+  - Or add the keys manually (Command Prompt as Admin):
       reg add "HKCU\\Software\\Adobe\\CSXS.9" /v PlayerDebugMode /t REG_SZ /d 1 /f
       reg add "HKCU\\Software\\Adobe\\CSXS.10" /v PlayerDebugMode /t REG_SZ /d 1 /f
       reg add "HKCU\\Software\\Adobe\\CSXS.11" /v PlayerDebugMode /t REG_SZ /d 1 /f
@@ -271,19 +271,19 @@ function generateDocs() {
     }
 
     fs.writeFileSync(path.join(rootDir, 'README.md'), ROOT_README.trim() + '\n', 'utf8');
-    console.log('   - Generated: README.md (Root)');
+    console.log(' - Generated: README.md (Root)');
 
     fs.writeFileSync(path.join(distDir, 'INSTALL_GUIDE.txt'), INSTALL_GUIDE_TXT.trim() + '\n', 'utf8');
-    console.log('   - Generated: dist/INSTALL_GUIDE.txt');
+    console.log(' - Generated: dist/INSTALL_GUIDE.txt');
 
     fs.writeFileSync(path.join(distDir, 'aescripts_submission_info.txt'), AESCRIPTS_SUBMISSION_INFO.trim() + '\n', 'utf8');
-    console.log('   - Generated: dist/aescripts_submission_info.txt');
+    console.log(' - Generated: dist/aescripts_submission_info.txt');
 
     fs.writeFileSync(path.join(distDir, 'Add-Keys.reg'), REG_KEYS.trim() + '\r\n', 'utf8');
-    console.log('   - Generated: dist/Add-Keys.reg');
+    console.log(' - Generated: dist/Add-Keys.reg');
 
     fs.writeFileSync(path.join(distDir, 'Add-Keys.bat'), REG_BAT.trim() + '\r\n', 'utf8');
-    console.log('   - Generated: dist/Add-Keys.bat');
+    console.log(' - Generated: dist/Add-Keys.bat');
 
     console.log('✨ Documentation generation complete!');
 }

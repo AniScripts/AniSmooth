@@ -317,7 +317,7 @@
       this._initPresets();
       this._buildGpuModeSelector();
 
-      // Theme toggle (Interface category)  -  checked = light, unchecked = dark
+      // Theme toggle (Interface category) - checked = light, unchecked = dark
       var themeToggle = document.getElementById("themeToggle");
       if (themeToggle) {
         themeToggle.checked = window.StorageManager.getItem("anismooth_theme", "dark") === "light";

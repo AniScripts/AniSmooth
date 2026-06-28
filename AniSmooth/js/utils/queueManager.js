@@ -70,7 +70,7 @@
       // later from this stored render when the item reaches the front of the queue.
       item.status = "rendering";
       this._queue.push(item);
-      dbg("info", "Queue", "Added: " + item.name + " (" + item.task + ", " + (item.factor || item.scale) + "x)  -  pre-rendering");
+      dbg("info", "Queue", "Added: " + item.name + " (" + item.task + ", " + (item.factor || item.scale) + "x) - pre-rendering");
       this._notify();
       this._pumpRender();
     },
@@ -220,7 +220,7 @@
       this._beginModel(pending);
     },
 
-    // Render pump  -  serialises AE renders so an enqueue-time pre-render never
+    // Render pump - serialises AE renders so an enqueue-time pre-render never
     // overlaps another (AE's render queue is single-threaded). Runs independently
     // of the model worker, so a clip can pre-render while a previous job's model
     // is still processing.
@@ -236,7 +236,7 @@
       this._renderBusy = true;
       this._doAERender(target, function (res) {
         self._renderBusy = false;
-        // Item may have been removed or cancelled while rendering  -  only apply
+        // Item may have been removed or cancelled while rendering - only apply
         // the result if it is still present and awaiting this render.
         var stillRendering = false;
         for (var j = 0; j < self._queue.length; j++) {
@@ -438,7 +438,7 @@
             return;
           }
           if (self._paused && item.status === "queued") {
-            dbg("info", "Queue", "Paused  -  item queued for retry");
+            dbg("info", "Queue", "Paused - item queued for retry");
             self._notify();
             return;
           }
