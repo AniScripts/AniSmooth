@@ -875,6 +875,9 @@ html[data-theme="light"] {
 .settings-cat .panel.collapsed > .panel-head .panel-collapse-arrow {
   transform: rotate(-90deg);
 }
-.settings-cat .panel.collapsed > *:not(.panel-head) {
+.settings-cat .panel.collapsed > *:not(.panel-head):not(.form-hint) {
   display: none !important;
+}
+.settings-cat .panel.collapsed > .form-hint {
+  margin-top: 6px;
 }
