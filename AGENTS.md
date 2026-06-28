@@ -7,6 +7,8 @@ Free local After Effects extension for AI frame interpolation and video upscalin
 - **Update this file** when adding/removing files, changing architecture, adding new build steps, or introducing conventions.
 - **Commit style:** prefix tag in parentheses — `(add)` new features, `(fix)` bug fixes, `(update)` refactors/formatting/chores. Title case after colon. Example: `(fix) Clamp work area bounds to prevent AE out-of-range error`.
 - **Commit author:** always commit under the user's account. Do NOT add a `Co-Authored-By: Claude` trailer or any self-attribution — keep Claude out of the commit entirely.
+- **Commit per task:** make a separate commit after each task / logical change. Do not batch unrelated changes into one commit.
+- **No code comments:** do NOT add comments when writing or modifying code. Put any needed explanation in the commit message or this file, not inline.
 
 ## Build & Run
 
@@ -136,9 +138,9 @@ Python stdout format: `{"type":"info|warn|error|success|progress","msg":"...","p
 
 | File | Role |
 |---|---|
-| `queueManager.js` | `_processNext()` dispatches serial queue. `_running` flag guards re-entrancy. See `_render()` → `_runModel()` → `ModelHandler.*Clip()` chain |
+| `queueManager.js` | **Two decoupled pipelines.** Render: `add()` sets status `rendering` and calls `_pumpRender()` (serialised by `_renderBusy`, `_doAERender()` runs the AE render) so the clip is captured at ENQUEUE time — correct even if added while another job runs or the AE selection later changes. Model: `_processNext()` (guarded by `_running`) picks a `queued` item → `_beginModel()` uses the stored `inputPath` (falls back to on-demand render if missing) → `_runModel()` → `ModelHandler.*Clip()`. Status flow: `rendering → queued → processing → done/error`. Pre-rendered temp inputs are dropped on restore (`init`) since the temp file may be gone |
 | `modelHandler.js` | Singleton `activeProcess` + `_cancelling` flag prevents concurrent Python spawns. `executeModel()` spawns, `cancelActiveProcess()` kills via `taskkill /F /T` |
-| `host.jsx` | `renderSelectedLayer()` renders one layer to a temp AVI. **Time-coord trap — three different spaces:** `layer.inPoint/outPoint` are DISPLAY-relative (offset by `displayStartTime`); `comp.workAreaStart` is ABSOLUTE 0-based (range `[0, duration]`); `RenderQueueItem.timeSpanStart` is DISPLAY-relative (range `[displayStartTime, displayStartTime+duration]`). Compute `absStart = toAbsRenderTime(inPoint)`, then `workAreaStart = absStart` but `timeSpanStart = absStart + displayStartTime`. Mixing them throws "value out of range" or the "timeSpanStart of 0 ... blank frames" warning (one-frame render). `importFileToAE()`: capture `selectedLayers` BEFORE `layers.add()` — add reselects to the new layer, so `moveAfter` would target itself |
+| `host.jsx` | `renderSelectedLayer()` renders one layer to a temp AVI. **Time-coord trap — three different spaces:** `layer.inPoint/outPoint` are DISPLAY-relative (offset by `displayStartTime`); `comp.workAreaStart` is ABSOLUTE 0-based (range `[0, duration]`); `RenderQueueItem.timeSpanStart` is DISPLAY-relative (range `[displayStartTime, displayStartTime+duration]`). Compute `absStart = toAbsRenderTime(inPoint)`, then `workAreaStart = absStart` but `timeSpanStart = absStart + displayStartTime`. Mixing them throws "value out of range" or the "timeSpanStart of 0 ... blank frames" warning (one-frame render). **Precomp:** if `layer.source instanceof CompItem`, queue that source comp at its full duration (no solo) instead of soloing the precomp in the parent — soloing renders the parent's slot, which is often offset/empty → black frames. `importFileToAE()`: capture `selectedLayers` BEFORE `layers.add()` — add reselects to the new layer, so `moveAfter` would target itself |
 | `main.py` | `argparse` → dispatch. Quality presets at top of file. Scene detection threshold: 0.40 |
 
 ## Python Path Resolution
