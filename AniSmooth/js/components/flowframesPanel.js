@@ -13,6 +13,7 @@
       this.startBtn = document.getElementById('startFlowframesBtn');
       this._sourceInfo = null;
       this.bindEvents();
+      this.initVersionToggle();
       this.applyVersion();
       this.applyAiFilter();
       this.checkAvailability();
@@ -59,6 +60,55 @@
       if (this.aiSelect) {
         this.aiSelect.addEventListener('change', function () { s.applyAiFilter(); });
       }
+    },
+
+    initVersionToggle: function () {
+      var toggle = document.getElementById('ffVersionToggle');
+      if (!toggle) return;
+      if (!window.FlowframesHandler || !window.FlowframesHandler.availableVersions) {
+        toggle.style.display = 'none';
+        return;
+      }
+      var list = window.FlowframesHandler.availableVersions();
+      var available = [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].available) available.push(list[i].version);
+      }
+      if (available.length < 2) {
+        toggle.style.display = 'none';
+        return;
+      }
+      toggle.style.display = '';
+      var currentVer = (window.App && window.App.settings && window.App.settings.flowframesVersion) || "1.36.0";
+      var buttons = toggle.querySelectorAll('.pill-btn');
+      for (var j = 0; j < buttons.length; j++) {
+        if (buttons[j].getAttribute('data-ff-ver') === currentVer) buttons[j].classList.add('active');
+        else buttons[j].classList.remove('active');
+      }
+      var s = this;
+      toggle.addEventListener('click', function (e) {
+        var btn = e.target;
+        while (btn && btn !== toggle) {
+          if (btn.classList && btn.classList.contains('pill-btn')) break;
+          btn = btn.parentElement;
+        }
+        if (!btn || btn === toggle) return;
+        var ver = btn.getAttribute('data-ff-ver');
+        if (!ver || ver === currentVer) return;
+        currentVer = ver;
+        var btns = toggle.querySelectorAll('.pill-btn');
+        for (var k = 0; k < btns.length; k++) btns[k].classList.remove('active');
+        btn.classList.add('active');
+        if (window.App && window.App.settings) {
+          window.App.settings.flowframesVersion = ver;
+          window.StorageManager.setItem("anismooth_flowframes_version", ver);
+          if (window.App._filterVersionLabels) window.App._filterVersionLabels();
+        }
+        s.applyVersion();
+        s.applyAiFilter();
+        s.checkAvailability();
+        dbg('info', 'Flowframes', 'Version switched to: ' + ver);
+      });
     },
 
     applyAiFilter: function () {

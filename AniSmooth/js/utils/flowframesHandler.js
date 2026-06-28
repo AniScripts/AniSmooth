@@ -27,6 +27,32 @@
       return !!this.findExe();
     },
 
+    availableVersions: function () {
+      var settings = window.App && window.App.settings;
+      var ver = (settings && settings.flowframesVersion) || "1.36.0";
+      var fs = window.FileSystem.fs;
+      var path = window.FileSystem.path;
+      var localappdata = (process.env && process.env.LOCALAPPDATA) || "";
+      var results = [];
+      var versions = ["1.36.0", "1.42.0"];
+      for (var i = 0; i < versions.length; i++) {
+        var v = versions[i];
+        var exe = null;
+        if (v === "1.36.0" && settings && settings.flowframesPath136 && fs.existsSync(settings.flowframesPath136))
+          exe = settings.flowframesPath136;
+        else if (v === "1.42.0" && settings && settings.flowframesPath142 && fs.existsSync(settings.flowframesPath142))
+          exe = settings.flowframesPath142;
+        else if (settings && settings.flowframesPath && fs.existsSync(settings.flowframesPath))
+          exe = settings.flowframesPath;
+        else if (localappdata) {
+          var guess = path.join(localappdata, "Flowframes", "Flowframes.exe");
+          if (fs.existsSync(guess)) exe = guess;
+        }
+        results.push({ version: v, available: !!exe, path: exe });
+      }
+      return results;
+    },
+
     isBusy: function () {
       return !!this.activeProcess;
     },
