@@ -86,7 +86,10 @@
       toggle.style.display = '';
       var verSelect = document.getElementById('flowframesVersionSelect');
       var currentVer = (window.App && window.App.settings && window.App.settings.flowframesVersionActive) || "1.36.0";
-      if (verSelect) verSelect.value = currentVer;
+      if (verSelect) {
+        window.CustomSelect.bindElement(verSelect);
+        verSelect.value = currentVer;
+      }
       var s = this;
       if (verSelect) {
         verSelect.addEventListener('change', function () {

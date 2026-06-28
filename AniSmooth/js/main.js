@@ -2141,7 +2141,7 @@
     document.addEventListener("keydown", onKey);
   };
 
-  window.showToast = function (msg, type) {
+  window.showToast = function (msg, type, duration) {
     var toast = document.getElementById("toast");
     var icon = document.getElementById("toastIcon");
     var text = document.getElementById("toastMsg");
@@ -2160,7 +2160,7 @@
       close.onclick = function () { toast.style.display = "none"; };
     }
 
-    toast._timer = setTimeout(function () { toast.style.display = "none"; }, 4000);
+    toast._timer = setTimeout(function () { toast.style.display = "none"; }, duration || 4000);
   };
 
   // ---- Theme Engine ----

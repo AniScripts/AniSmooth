@@ -146,6 +146,11 @@
         }
         self.activeProcess = proc;
         if (callbacks.onStart) callbacks.onStart();
+        if (isLegacy) {
+          self._autoClickLegacy(function () {
+            if (window.showToast) window.showToast('Click "Interpolate!" in Flowframes to begin.', 'info', 8000);
+          });
+        }
 
         var sessionLog = null;
         var lastLineCount = 0;
@@ -272,6 +277,28 @@
         ensureKilledThenSpawn(0);
       } catch (e) {
         spawnAndWatch();
+      }
+    },
+
+    _autoClickLegacy: function (onFail) {
+      var cp = window.FileSystem && window.FileSystem.childProcess;
+      var path = window.FileSystem && window.FileSystem.path;
+      var settings = window.App && window.App.settings;
+      var pythonPath = (settings && settings.pythonPath) || 'python';
+      if (!cp || !path) { if (onFail) onFail(); return; }
+      var extPath = '';
+      try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
+      var scriptPath = extPath ? path.join(extPath, 'python', 'ff_autoclick.py') : null;
+      if (!scriptPath) { if (onFail) onFail(); return; }
+      try {
+        var ps = cp.spawn(pythonPath, [scriptPath], {
+          windowsHide: true, detached: true, stdio: 'ignore'
+        });
+        ps.unref();
+        dbg('info', 'Flowframes', 'Python auto-click started for 1.36.0');
+      } catch (e) {
+        dbg('warn', 'Flowframes', 'Python auto-click failed: ' + e.message);
+        if (onFail) onFail();
       }
     },
 
