@@ -385,12 +385,18 @@
             <span class="form-hint">Specific path for Flowframes 1.42.0. Overrides the default path when this version is selected.</span>
           </div>
           <div class="form-group">
-            <label for="flowframesVersion">Version</label>
-            <select id="flowframesVersion">
-              <option value="1.36.0">1.36.0 Free</option>
-              <option value="1.42.0">1.42.0 Patreon</option>
-              <option value="both">Both</option>
-            </select>
+            <label>Version</label>
+            <div class="custom-select" id="flowframesVersion">
+              <div class="select-trigger">
+                <span class="select-value">1.36.0 Free</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="1.36.0" data-label="1.36.0 Free">1.36.0 Free</div>
+                <div class="select-option" data-value="1.42.0" data-label="1.42.0 Patreon">1.42.0 Patreon</div>
+                <div class="select-option" data-value="both" data-label="Both">Both</div>
+              </div>
+            </div>
             <span class="form-hint" data-ff-version-label="1.36.0 1.42.0">Select the installed Flowframes version. CLI arguments differ between versions.</span>
             <span class="form-hint" data-ff-version-label="both">Both versions available. Use the toggle in the Flowframes tab to switch.</span>
           </div>

@@ -70,19 +70,6 @@
         toggle.style.display = 'none';
         return;
       }
-      if (!window.FlowframesHandler || !window.FlowframesHandler.availableVersions) {
-        toggle.style.display = 'none';
-        return;
-      }
-      var list = window.FlowframesHandler.availableVersions();
-      var available = [];
-      for (var i = 0; i < list.length; i++) {
-        if (list[i].available) available.push(list[i].version);
-      }
-      if (available.length < 2) {
-        toggle.style.display = 'none';
-        return;
-      }
       toggle.style.display = '';
       var verSelect = document.getElementById('flowframesVersionSelect');
       var currentVer = (window.App && window.App.settings && window.App.settings.flowframesVersionActive) || "1.36.0";

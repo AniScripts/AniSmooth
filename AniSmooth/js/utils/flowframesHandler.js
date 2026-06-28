@@ -86,6 +86,8 @@
 
       var version = this.getEffectiveVersion();
       var isLegacy = version === "1.36.0";
+      var os = window.FileSystem && window.FileSystem.os;
+      var progressFilePath = (isLegacy && os) ? path.join(os.tmpdir(), 'anismooth_ff_progress.json') : null;
 
       var args = isLegacy
         ? [
@@ -147,7 +149,7 @@
         self.activeProcess = proc;
         if (callbacks.onStart) callbacks.onStart();
         if (isLegacy) {
-          self._autoClickLegacy(function () {
+          self._autoClickLegacy(progressFilePath, function () {
             if (window.showToast) window.showToast('Click "Interpolate!" in Flowframes to begin.', 'info', 8000);
           });
         }
@@ -165,6 +167,7 @@
           if (self._poll) { clearInterval(self._poll); self._poll = null; }
           self.activeProcess = null;
           try { cp.exec('taskkill /F /T /IM Flowframes.exe', function () {}); } catch (e) {}
+          if (progressFilePath) { try { fs.unlinkSync(progressFilePath); } catch (e) {} }
           if (self._cancelled) { self._cancelled = false; return; }
           if (ok) {
             dbg("success", "Flowframes", "Completed: " + producedPath);
@@ -232,6 +235,18 @@
             } catch (e) {}
           }
 
+          if (isLegacy && progressFilePath) {
+            try {
+              var pfRaw = fs.readFileSync(progressFilePath, 'utf8');
+              var pfData = JSON.parse(pfRaw);
+              if (typeof pfData.progress === 'number' && callbacks.onProgress) callbacks.onProgress(pfData.progress);
+              if (pfData.done) aiComplete = true;
+              if (pfData.error && !pfData.done) {
+                dbg('warn', 'Flowframes', 'Python monitor: ' + pfData.error);
+              }
+            } catch (e) {}
+          }
+
           if (aiComplete) {
             var out = findNewestOutput();
             if (out) {
@@ -280,7 +295,7 @@
       }
     },
 
-    _autoClickLegacy: function (onFail) {
+    _autoClickLegacy: function (progressFilePath, onFail) {
       var cp = window.FileSystem && window.FileSystem.childProcess;
       var path = window.FileSystem && window.FileSystem.path;
       var settings = window.App && window.App.settings;
@@ -290,8 +305,10 @@
       try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
       var scriptPath = extPath ? path.join(extPath, 'python', 'ff_autoclick.py') : null;
       if (!scriptPath) { if (onFail) onFail(); return; }
+      var args = [scriptPath];
+      if (progressFilePath) args.push(progressFilePath);
       try {
-        var ps = cp.spawn(pythonPath, [scriptPath], {
+        var ps = cp.spawn(pythonPath, args, {
           windowsHide: true, detached: true, stdio: 'ignore'
         });
         ps.unref();
