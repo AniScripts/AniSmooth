@@ -13,6 +13,7 @@
       this.startBtn = document.getElementById('startFlowframesBtn');
       this._sourceInfo = null;
       this.bindEvents();
+      this.updateVerBadge();
       this.initVersionToggle();
       this.applyVersion();
       this.applyAiFilter();
@@ -30,6 +31,13 @@
         if (a) return parseInt(a.getAttribute('data-value'), 10);
       }
       return 2;
+    },
+
+    updateVerBadge: function () {
+      var badge = document.getElementById('ffVerBadge');
+      if (!badge) return;
+      var ver = window.FlowframesHandler && window.FlowframesHandler.getEffectiveVersion ? window.FlowframesHandler.getEffectiveVersion() : "1.36.0";
+      badge.textContent = ver === "1.36.0" ? "1.36.0 Free" : "1.42.0 Patreon";
     },
 
     bindEvents: function () {
@@ -89,6 +97,7 @@
           s.applyVersion();
           s.applyAiFilter();
           s.checkAvailability();
+          s.updateVerBadge();
           dbg('info', 'Flowframes', 'Version switched to: ' + ver);
         });
       }
@@ -154,6 +163,7 @@
         }
       }
       this.applyAiFilter();
+      this.updateVerBadge();
       dbg('debug', 'Flowframes', 'Version filter applied: ' + version);
     },
 
