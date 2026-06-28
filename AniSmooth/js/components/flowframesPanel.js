@@ -73,14 +73,15 @@
     initVersionToggle: function () {
       var toggle = document.getElementById('ffVersionToggle');
       if (!toggle) return;
-      var settingsVer = (window.App && window.App.settings && window.App.settings.flowframesVersion) || "1.36.0";
+      var appRef = window.App || this.app;
+      var settingsVer = (appRef && appRef.settings && appRef.settings.flowframesVersion) || "1.36.0";
       if (settingsVer !== "both") {
         toggle.style.display = 'none';
         return;
       }
       toggle.style.display = '';
       var verSelect = document.getElementById('flowframesVersionSelect');
-      var currentVer = (window.App && window.App.settings && window.App.settings.flowframesVersionActive) || "1.36.0";
+      var currentVer = (appRef && appRef.settings && appRef.settings.flowframesVersionActive) || "1.36.0";
       if (verSelect) {
         window.CustomSelect.bindElement(verSelect);
         verSelect.value = currentVer;
