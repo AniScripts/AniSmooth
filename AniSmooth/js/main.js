@@ -1014,29 +1014,55 @@
       var ffEncEl = document.getElementById("ffEncToggles");
 
       var ffAi = [
-        { value: "RifeNcnn", label: "RIFE (NCNN)", icon: "fa-microchip" },
-        { value: "RifeNcnnVs", label: "RIFE (NCNN/VS)", icon: "fa-microchip" },
-        { value: "DainNcnn", label: "DAIN (NCNN)", icon: "fa-microchip" }
+        { value: "RifeNcnn", label: "RIFE (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0" },
+        { value: "RifeCuda", label: "RIFE (CUDA)", icon: "fa-microchip", ver: "1.36.0" },
+        { value: "FlavrCuda", label: "FLAVR", icon: "fa-microchip", ver: "1.36.0" },
+        { value: "DainNcnn", label: "DAIN (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0" },
+        { value: "XvfiCuda", label: "XVFI", icon: "fa-microchip", ver: "1.36.0" },
+        { value: "RifeNcnnVs", label: "RIFE (NCNN/VS)", icon: "fa-microchip", ver: "1.42.0" }
       ];
       var ffModels = [
-        { value: "RIFE 4.26", label: "RIFE 4.26", icon: "fa-cube" },
-        { value: "RIFE 4.25", label: "RIFE 4.25", icon: "fa-cube" },
-        { value: "RIFE 4.24", label: "RIFE 4.24", icon: "fa-cube" },
-        { value: "RIFE 4.22", label: "RIFE 4.22", icon: "fa-cube" },
-        { value: "RIFE 4.18", label: "RIFE 4.18", icon: "fa-cube" },
-        { value: "RIFE 4.13", label: "RIFE 4.13", icon: "fa-cube" },
-        { value: "RIFE 4.9", label: "RIFE 4.9", icon: "fa-cube" },
-        { value: "RIFE 2.3", label: "RIFE 2.3", icon: "fa-cube" }
+        { value: "RIFE 4.0", label: "RIFE 4.0", icon: "fa-cube", ver: "1.36.0" },
+        { value: "RIFE 3.9", label: "RIFE 3.9", icon: "fa-cube", ver: "1.36.0" },
+        { value: "RIFE 3.8", label: "RIFE 3.8", icon: "fa-cube", ver: "1.36.0" },
+        { value: "RIFE 3.1", label: "RIFE 3.1", icon: "fa-cube", ver: "1.36.0" },
+        { value: "RIFE 3.0", label: "RIFE 3.0", icon: "fa-cube", ver: "1.36.0" },
+        { value: "RIFE 2.4", label: "RIFE 2.4", icon: "fa-cube", ver: "1.36.0" },
+        { value: "RIFE 2.3", label: "RIFE 2.3", icon: "fa-cube", ver: "1.36.0 1.42.0" },
+        { value: "RIFE 1.8", label: "RIFE 1.8", icon: "fa-cube", ver: "1.36.0" },
+        { value: "RIFE 4.26", label: "RIFE 4.26", icon: "fa-cube", ver: "1.42.0" },
+        { value: "RIFE 4.25", label: "RIFE 4.25", icon: "fa-cube", ver: "1.42.0" },
+        { value: "RIFE 4.24", label: "RIFE 4.24", icon: "fa-cube", ver: "1.42.0" },
+        { value: "RIFE 4.22", label: "RIFE 4.22", icon: "fa-cube", ver: "1.42.0" },
+        { value: "RIFE 4.18", label: "RIFE 4.18", icon: "fa-cube", ver: "1.42.0" },
+        { value: "RIFE 4.13", label: "RIFE 4.13", icon: "fa-cube", ver: "1.42.0" },
+        { value: "RIFE 4.9", label: "RIFE 4.9", icon: "fa-cube", ver: "1.42.0" }
       ];
       var ffEnc = [
-        { value: "X264", label: "h264", icon: "fa-film" },
-        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt" },
-        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt" },
-        { value: "X265", label: "h265", icon: "fa-film" },
-        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt" },
-        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt" },
-        { value: "SvtAv1", label: "AV1", icon: "fa-film" },
-        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt" }
+        { value: "Mp4H264", label: "MP4 (h264)", icon: "fa-film", ver: "1.36.0" },
+        { value: "Mp4H265", label: "MP4 (h265)", icon: "fa-film", ver: "1.36.0" },
+        { value: "Mp4Av1", label: "MP4 (AV1)", icon: "fa-film", ver: "1.36.0" },
+        { value: "MkvH264", label: "MKV (h264)", icon: "fa-film", ver: "1.36.0" },
+        { value: "MkvH265", label: "MKV (h265)", icon: "fa-film", ver: "1.36.0" },
+        { value: "MkvAv1", label: "MKV (AV1)", icon: "fa-film", ver: "1.36.0" },
+        { value: "WebmVp9", label: "WEBM (VP9)", icon: "fa-film", ver: "1.36.0" },
+        { value: "MovProRes", label: "MOV (ProRes)", icon: "fa-film", ver: "1.36.0" },
+        { value: "AviFfv1", label: "AVI (ffv1)", icon: "fa-film", ver: "1.36.0" },
+        { value: "AviHuffyuv", label: "AVI (huffyuv)", icon: "fa-film", ver: "1.36.0" },
+        { value: "AviMagicYuv", label: "AVI (magicyuv)", icon: "fa-film", ver: "1.36.0" },
+        { value: "AviRaw", label: "AVI (rawvideo)", icon: "fa-film", ver: "1.36.0" },
+        { value: "Gif", label: "GIF", icon: "fa-film", ver: "1.36.0" },
+        { value: "PngSeq", label: "PNG Sequence", icon: "fa-film", ver: "1.36.0" },
+        { value: "JpgSeq", label: "JPG Sequence", icon: "fa-film", ver: "1.36.0" },
+        { value: "WebpSeq", label: "WEBP Sequence", icon: "fa-film", ver: "1.36.0" },
+        { value: "X264", label: "h264", icon: "fa-film", ver: "1.42.0" },
+        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt", ver: "1.42.0" },
+        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt", ver: "1.42.0" },
+        { value: "X265", label: "h265", icon: "fa-film", ver: "1.42.0" },
+        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt", ver: "1.42.0" },
+        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt", ver: "1.42.0" },
+        { value: "SvtAv1", label: "AV1", icon: "fa-film", ver: "1.42.0" },
+        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt", ver: "1.42.0" }
       ];
 
       if (ffAiEl) ffAiEl.innerHTML = this._buildToggleGroup(ffAi, "anismooth_ff_ai_");
@@ -1060,8 +1086,9 @@
         var m = models[i];
         var key = prefix + m.value;
         var visible = window.StorageManager.getItem(key, "1") !== "0";
+        var verAttr = m.ver ? ' data-ff-version-label="' + escTxt(m.ver) + '"' : '';
         html +=
-          '<label class="toggle-row" style="padding:0;margin-bottom:3px;">' +
+          '<label class="toggle-row" style="padding:0;margin-bottom:3px;"' + verAttr + '>' +
             '<i class="fa-solid ' + m.icon + ' toggle-icon"></i>' +
             '<span class="toggle-label">' + escTxt(m.label) + '</span>' +
             '<input type="checkbox" class="toggle-input model-vis-toggle" data-value="' + escTxt(m.value) + '" data-prefix="' + escTxt(prefix) + '"' + (visible ? " checked" : "") + '>' +
@@ -1074,6 +1101,7 @@
     _applyModelVisibility: function () {
       var interpSelect = document.getElementById("interpolationModel");
       var upscaleSelect = document.getElementById("upscaleModel");
+      var version = this.settings.flowframesVersion || "1.36.0";
       if (interpSelect) filterSelect(interpSelect, "anismooth_model_interp_");
       if (upscaleSelect) filterSelect(upscaleSelect, "anismooth_model_upscale_");
       var ffAiSelect = document.getElementById("flowframesAi");
@@ -1095,7 +1123,10 @@
           if (child.classList.contains("select-sep")) continue;
           var val = child.getAttribute("data-value");
           if (!val) continue;
-          var visible = window.StorageManager.getItem(prefix + val, "1") !== "0";
+          var optVer = child.getAttribute('data-ff-version') || '';
+          var versionMatch = !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
+          var toggled = window.StorageManager.getItem(prefix + val, "1") !== "0";
+          var visible = versionMatch && toggled;
           child._visible = visible;
           if (visible) {
             if (!firstVisible) firstVisible = child;
@@ -1629,6 +1660,7 @@
       if (window.FlowframesPanel && window.FlowframesPanel.applyVersion) {
         window.FlowframesPanel.applyVersion();
       }
+      this._applyModelVisibility();
     },
 
     _showSectionPicker: function (name, description) {
