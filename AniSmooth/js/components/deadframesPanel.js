@@ -56,6 +56,7 @@
         width: s.width || 0,
         height: s.height || 0
       });
+      this.app.switchTab("queue");
     }
   };
 
