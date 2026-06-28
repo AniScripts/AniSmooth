@@ -11,6 +11,7 @@
       this.startBtn = document.getElementById('startFlowframesBtn');
       this._sourceInfo = null;
       this.bindEvents();
+      this.applyVersion();
       this.checkAvailability();
       this.renderFactorInfo();
     },
@@ -63,6 +64,28 @@
         hint.style.display = '';
         hint.innerHTML = '<span class="meta-strip meta-strip-dim"><i class="fa-solid fa-triangle-exclamation"></i> Flowframes.exe not found — set its path in Settings → Python → Flowframes.</span>';
       }
+      this.applyVersion();
+    },
+
+    applyVersion: function () {
+      var version = (window.App && window.App.settings && window.App.settings.flowframesVersion) || "1.36.0";
+      var selects = this.view ? this.view.querySelectorAll('.custom-select') : null;
+      if (!selects) return;
+      for (var i = 0; i < selects.length; i++) {
+        var options = selects[i].querySelectorAll('.select-option');
+        var firstVisible = null;
+        var currentVal = selects[i].value;
+        var currentVisible = false;
+        for (var j = 0; j < options.length; j++) {
+          var optVer = options[j].getAttribute('data-ff-version') || '';
+          var show = !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
+          options[j].style.display = show ? '' : 'none';
+          if (show && !firstVisible) firstVisible = options[j];
+          if (show && options[j].getAttribute('data-value') === currentVal) currentVisible = true;
+        }
+        if (!currentVisible && firstVisible) selects[i].value = firstVisible.getAttribute('data-value');
+      }
+      dbg('debug', 'Flowframes', 'Version filter applied: ' + version);
     },
 
     refreshLayerInfo: function () {
