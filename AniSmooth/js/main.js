@@ -340,8 +340,10 @@
         ffVer.addEventListener("change", function () {
           self.settings.flowframesVersion = ffVer.value;
           window.StorageManager.setItem("anismooth_flowframes_version", ffVer.value);
+          self._filterVersionLabels();
           dbg('info', 'Settings', 'Flowframes version set to: ' + ffVer.value);
         });
+        this._filterVersionLabels();
       }
 
 
@@ -1615,6 +1617,18 @@
         return true;
       }
       return false;
+    },
+
+    _filterVersionLabels: function () {
+      var version = this.settings.flowframesVersion || "1.36.0";
+      var labels = document.querySelectorAll('[data-ff-version-label]');
+      for (var i = 0; i < labels.length; i++) {
+        var verAttr = labels[i].getAttribute('data-ff-version-label') || '';
+        labels[i].style.display = (verAttr.split(/\s+/).indexOf(version) !== -1) ? '' : 'none';
+      }
+      if (window.FlowframesPanel && window.FlowframesPanel.applyVersion) {
+        window.FlowframesPanel.applyVersion();
+      }
     },
 
     _showSectionPicker: function (name, description) {
