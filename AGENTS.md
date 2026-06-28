@@ -1,14 +1,15 @@
-# AGENTS.md — AniSmooth
+# AGENTS.md - AniSmooth
 
 Free local After Effects extension for AI frame interpolation and video upscaling. Windows-only. NVIDIA GPU required.
 
 ## AI Agent Instructions
 
 - **Update this file** when adding/removing files, changing architecture, adding new build steps, or introducing conventions.
-- **Commit style:** prefix tag in parentheses — `(add)` new features, `(fix)` bug fixes, `(update)` refactors/formatting/chores. Title case after colon. Example: `(fix) Clamp work area bounds to prevent AE out-of-range error`.
-- **Commit author:** always commit under the user's account. Do NOT add a `Co-Authored-By: Claude` trailer or any self-attribution — keep Claude out of the commit entirely.
+- **Commit style:** prefix tag in parentheses: `(add)` new features, `(fix)` bug fixes, `(update)` refactors/formatting/chores. Title case after colon. Example: `(fix) Clamp work area bounds to prevent AE out-of-range error`.
+- **Commit author:** always commit under the user's account. Do NOT add a `Co-Authored-By: Claude` trailer or any self-attribution; keep Claude out of the commit entirely.
 - **Commit per task:** make a separate commit after each task / logical change. Do not batch unrelated changes into one commit.
 - **No code comments:** do NOT add comments when writing or modifying code. Put any needed explanation in the commit message or this file, not inline.
+- **No em dashes:** never use the `—` character in any prose, docs, README, or commit messages (it reads as AI-written). Use a comma, colon, parentheses, or a plain hyphen `-` instead.
 
 ## Build & Run
 
@@ -29,7 +30,7 @@ Root `package.json` is a thin shim; real scripts live in `tools/package.json`:
 - No test framework. No lint/typecheck.
 - Build pipeline (`tools/build.js`): strip comments (`remove_comments.py`) → obfuscate JS → compile JSXBIN → patch manifest per target → sign ZXP. Installer EXE via Inno Setup (`tools/installer.iss`).
 - CI: `.github/workflows/build.yml`.
-- **`jsx/host.jsx` is compiled to JSXBIN at build** — source edits need a rebuild before they take effect in AE.
+- **`jsx/host.jsx` is compiled to JSXBIN at build** (source edits need a rebuild before they take effect in AE).
 
 ## Tech Stack
 
@@ -126,13 +127,13 @@ Python stdout format: `{"type":"info|warn|error|success|progress","msg":"...","p
 
 ## Code Conventions
 
-- **All JS modules:** IIFE-wrapped globals on `window` — no ES modules, no bundler
+- **All JS modules:** IIFE-wrapped globals on `window`, no ES modules, no bundler
 - **Indentation:** 2-space, K&R braces
 - **Naming:** camelCase vars/fns, PascalCase modules, snake_case localStorage keys
-- **Async:** callbacks only — no Promises, no async/await
+- **Async:** callbacks only, no Promises, no async/await
 - **DOM:** vanilla `document.getElementById`, `addEventListener`, `classList`
-- **Logging:** `dbg(level, source, message)` — levels: debug, info, warn, error, success
-- **`var` only** (no let/const — CEP Chromium is old)
+- **Logging:** `dbg(level, source, message)`; levels: debug, info, warn, error, success
+- **`var` only** (no let/const, CEP Chromium is old)
 - **Python:** snake_case, `argparse` subcommands, lazy/cached model loading
 - **ExtendScript:** ES3 with AE DOM, JSON by string concat
 
@@ -140,22 +141,22 @@ Python stdout format: `{"type":"info|warn|error|success|progress","msg":"...","p
 
 | File | Role |
 |---|---|
-| `queueManager.js` | **Two decoupled pipelines.** Render: `add()` sets status `rendering` and calls `_pumpRender()` (serialised by `_renderBusy`, `_doAERender()` runs the AE render) so the clip is captured at ENQUEUE time — correct even if added while another job runs or the AE selection later changes. Model: `_processNext()` (guarded by `_running`) picks a `queued` item → `_beginModel()` uses the stored `inputPath` (falls back to on-demand render if missing) → `_runModel()` → `ModelHandler.*Clip()`. Status flow: `rendering → queued → processing → done/error`. Pre-rendered temp inputs are dropped on restore (`init`) since the temp file may be gone |
+| `queueManager.js` | **Two decoupled pipelines.** Render: `add()` sets status `rendering` and calls `_pumpRender()` (serialised by `_renderBusy`, `_doAERender()` runs the AE render) so the clip is captured at ENQUEUE time, correct even if added while another job runs or the AE selection later changes. Model: `_processNext()` (guarded by `_running`) picks a `queued` item → `_beginModel()` uses the stored `inputPath` (falls back to on-demand render if missing) → `_runModel()` → `ModelHandler.*Clip()`. Status flow: `rendering → queued → processing → done/error`. Pre-rendered temp inputs are dropped on restore (`init`) since the temp file may be gone |
 | `modelHandler.js` | Singleton `activeProcess` + `_cancelling` flag prevents concurrent Python spawns. `executeModel()` spawns, `cancelActiveProcess()` kills via `taskkill /F /T` |
-| `host.jsx` | `renderSelectedLayer()` renders one layer to a temp AVI. **Time-coord trap — three different spaces:** `layer.inPoint/outPoint` are DISPLAY-relative (offset by `displayStartTime`); `comp.workAreaStart` is ABSOLUTE 0-based (range `[0, duration]`); `RenderQueueItem.timeSpanStart` is DISPLAY-relative (range `[displayStartTime, displayStartTime+duration]`). Compute `absStart = toAbsRenderTime(inPoint)`, then `workAreaStart = absStart` but `timeSpanStart = absStart + displayStartTime`. Mixing them throws "value out of range" or the "timeSpanStart of 0 ... blank frames" warning (one-frame render). **Precomp:** if `layer.source instanceof CompItem`, queue that source comp at its full duration (no solo) instead of soloing the precomp in the parent — soloing renders the parent's slot, which is often offset/empty → black frames. `importFileToAE()`: capture `selectedLayers` BEFORE `layers.add()` — add reselects to the new layer, so `moveAfter` would target itself |
+| `host.jsx` | `renderSelectedLayer()` renders one layer to a temp AVI. **Time-coord trap, three different spaces:** `layer.inPoint/outPoint` are DISPLAY-relative (offset by `displayStartTime`); `comp.workAreaStart` is ABSOLUTE 0-based (range `[0, duration]`); `RenderQueueItem.timeSpanStart` is DISPLAY-relative (range `[displayStartTime, displayStartTime+duration]`). Compute `absStart = toAbsRenderTime(inPoint)`, then `workAreaStart = absStart` but `timeSpanStart = absStart + displayStartTime`. Mixing them throws "value out of range" or the "timeSpanStart of 0 ... blank frames" warning (one-frame render). **Precomp:** if `layer.source instanceof CompItem`, queue that source comp at its full duration (no solo) instead of soloing the precomp in the parent; soloing renders the parent's slot, which is often offset/empty → black frames. `importFileToAE()`: capture `selectedLayers` BEFORE `layers.add()` (add reselects to the new layer, so `moveAfter` would target itself) |
 | `main.py` | `argparse` → dispatch. Quality presets at top of file. Scene detection threshold: 0.40 |
 
 ## Flowframes Integration
 
-The Flowframes tab runs through the **shared queue** (`mode: "flowframes"`), but with its **own engine** — it does NOT use `modelHandler.js` or the Python backend. `flowframesPanel.js` only collects params and calls `QueueManager.add()`. The queue pre-renders the AE layer at enqueue time (same as other modes), then `_runModel`'s flowframes branch calls `FlowframesHandler.run(input, jobOutDir, opts, cb)` instead of a `ModelHandler.*Clip`. Cancellation is routed by `_cancelActive()` (which checks `_currentMode`) to `FlowframesHandler.cancel()`. Since Flowframes names its own output, `onComplete(producedPath)` moves it to the AniSmooth output name.
+The Flowframes tab runs through the **shared queue** (`mode: "flowframes"`), but with its **own engine**: it does NOT use `modelHandler.js` or the Python backend. `flowframesPanel.js` only collects params and calls `QueueManager.add()`. The queue pre-renders the AE layer at enqueue time (same as other modes), then `_runModel`'s flowframes branch calls `FlowframesHandler.run(input, jobOutDir, opts, cb)` instead of a `ModelHandler.*Clip`. Cancellation is routed by `_cancelActive()` (which checks `_currentMode`) to `FlowframesHandler.cancel()`. Since Flowframes names its own output, `onComplete(producedPath)` moves it to the AniSmooth output name.
 
-`FlowframesHandler.run()` spawns the external **`Flowframes.exe`** (auto-detected at `%LOCALAPPDATA%/Flowframes/Flowframes.exe`, override via `settings.flowframesPath` / `anismooth_flowframes_path`). Hard-won quirks — change with care:
+`FlowframesHandler.run()` spawns the external **`Flowframes.exe`** (auto-detected at `%LOCALAPPDATA%/Flowframes/Flowframes.exe`, override via `settings.flowframesPath` / `anismooth_flowframes_path`). Hard-won quirks, change with care:
 
 - **Use `Flowframes.exe`, not `FlowframesCmd.exe`.** The latter is an IPC shim that only forwards args to an already-running instance.
 - **Single-instance.** A running instance silently swallows new launches (args forwarded/ignored). Always `taskkill /IM Flowframes.exe` before spawning.
-- **`-a` autorun** runs and exits after; window still appears (not truly headless). Args: `-a -nc -mdc -f <factor> -ai <impl> -m "<model>" -vf Mp4 -ve <enc> -pf Yuv420P -o <dir> <input>`. Pass via `spawn(exe, [array])` — args with spaces (model names, paths) only survive as separate array elements.
+- **`-a` autorun** runs and exits after; window still appears (not truly headless). Args: `-a -nc -mdc -f <factor> -ai <impl> -m "<model>" -vf Mp4 -ve <enc> -pf Yuv420P -o <dir> <input>`. Pass via `spawn(exe, [array])`; args with spaces (model names, paths) only survive as separate array elements.
 - **Must strip `NoDefaultCurrentDirectoryInExePath` from the child env.** If set, Flowframes' bare-name `ffprobe` (run after `cd` into its pkg dir) fails → empty packet list → `Failed to initialize MediaFile: Sequence contains no elements` → import hangs. AE's own env is clean; only matters if a parent shell injected it.
-- **No stdout.** Progress/errors are logged to `FlowframesData/logs/<session>/sessionlog.txt` — tail the newest session dir created after launch. Output filename is chosen by Flowframes → locate the newest media file in the `-o` dir.
+- **No stdout.** Progress/errors are logged to `FlowframesData/logs/<session>/sessionlog.txt`; tail the newest session dir created after launch. Output filename is chosen by Flowframes → locate the newest media file in the `-o` dir.
 - Model names come from `pkgs/<ai>/models.json` (`name` field, e.g. `RIFE 4.26`); model list depends on the `-ai` implementation.
 
 ## Python Path Resolution
@@ -173,6 +174,6 @@ The Flowframes tab runs through the **shared queue** (`mode: "flowframes"`), but
 ## CEP Quirks
 
 - Must have `PlayerDebugMode = 1` in registry for unsigned extensions
-- Three AE targets need different manifest version ranges — patched at build
+- Three AE targets need different manifest version ranges, patched at build
 - CSP restricts to `'self'` except Font Awesome CDN
-- No macOS support — Windows-only (PowerShell, taskkill, Inno Setup)
+- No macOS support, Windows-only (PowerShell, taskkill, Inno Setup)

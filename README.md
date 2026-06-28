@@ -3,7 +3,7 @@
 </h1>
 <p align="center">
   <b>Frame Interpolation & Video Upscaling directly in After Effects.</b><br>
-  <i>Remove duplicates, smooth motion, and enlarge clips — locally, on your GPU.</i>
+  <i>Remove duplicates, smooth motion, and enlarge clips, locally on your GPU.</i>
 </p>
 
 <p align="center">
@@ -28,15 +28,15 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 
 | Tab | What it does |
 | :-- | :-- |
-| **Deadframes** | Remove duplicate frames — threshold slider, motion tracking, frozen-character detection. |
+| **Deadframes** | Remove duplicate frames: threshold slider, motion tracking, frozen-character detection. |
 | **Interpolation** | RIFE 4.25 (CUDA / TensorRT). Multipliers 2×–10× or custom up to 64×. |
 | **Upscale** | 2× / 4× with ShuffleCUGAN models tuned for anime. |
-| **Flowframes** | Drives your local Flowframes app — RIFE NCNN / NCNN-VS / DAIN, up to 16×, h264/h265/AV1. |
+| **Flowframes** | Drives your local Flowframes app: RIFE NCNN / NCNN-VS / DAIN, up to 16×, h264/h265/AV1. |
 | **Queue** | One serial queue for all jobs; pre-renders on add; pause/cancel/retry; persists across restarts. |
 | **System & Settings** | GPU/VRAM diagnostics, setup wizard, output prefs, interface toggles, collapsible panels, presets. |
 
 > [!NOTE]
-> **Flowframes:** only **1.42.0 (Patreon)** is supported now — **1.36.0 (free)** support coming soon. Set the `Flowframes.exe` path in Settings (auto-detected in the default location).
+> **Flowframes:** only **1.42.0 (Patreon)** is supported now; **1.36.0 (free)** support coming soon. Set the `Flowframes.exe` path in Settings (auto-detected in the default location).
 
 <details>
 <summary>📸 Screenshots</summary>
@@ -89,14 +89,14 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 
 </details>
 
-> Flowframes uses its own model set (RIFE NCNN up to 4.26, DAIN) from your Flowframes install — not the table above.
+> Flowframes uses its own model set (RIFE NCNN up to 4.26, DAIN) from your Flowframes install, not the table above.
 
 ---
 
 ## 📦 Installation
 
 <details>
-<summary>Method 1 — ZXP Installer (easiest)</summary>
+<summary>Method 1: ZXP Installer (easiest)</summary>
 
 1. Pick your AE version folder (AE2018 / AE2020 / AE2022).
 2. Get [ZXP Installer](https://aescripts.com/learn/post/zxp-installer).
@@ -106,7 +106,7 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 </details>
 
 <details>
-<summary>Method 2 — Windows Setup Wizard (.exe)</summary>
+<summary>Method 2: Windows Setup Wizard (.exe)</summary>
 
 1. Run `AniSmoothSetup_AE2020.exe` from your version folder.
 2. The wizard handles file placement and registry keys.
@@ -114,7 +114,7 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 </details>
 
 <details>
-<summary>Method 3 — Manual folder install</summary>
+<summary>Method 3: Manual folder install</summary>
 
 1. Copy the `AniSmooth` folder to `C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\`.
 2. Enable PlayerDebugMode: run `Add-Keys.reg` / `Add-Keys.bat` (as admin).
