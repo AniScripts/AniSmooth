@@ -70,20 +70,28 @@
     applyVersion: function () {
       var version = (window.App && window.App.settings && window.App.settings.flowframesVersion) || "1.36.0";
       var selects = this.view ? this.view.querySelectorAll('.custom-select') : null;
-      if (!selects) return;
-      for (var i = 0; i < selects.length; i++) {
-        var options = selects[i].querySelectorAll('.select-option');
-        var firstVisible = null;
-        var currentVal = selects[i].value;
-        var currentVisible = false;
-        for (var j = 0; j < options.length; j++) {
-          var optVer = options[j].getAttribute('data-ff-version') || '';
-          var show = !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
-          options[j].style.display = show ? '' : 'none';
-          if (show && !firstVisible) firstVisible = options[j];
-          if (show && options[j].getAttribute('data-value') === currentVal) currentVisible = true;
+      if (selects) {
+        for (var i = 0; i < selects.length; i++) {
+          var options = selects[i].querySelectorAll('.select-option');
+          var firstVisible = null;
+          var currentVal = selects[i].value;
+          var currentVisible = false;
+          for (var j = 0; j < options.length; j++) {
+            var optVer = options[j].getAttribute('data-ff-version') || '';
+            var show = !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
+            options[j].style.display = show ? '' : 'none';
+            if (show && !firstVisible) firstVisible = options[j];
+            if (show && options[j].getAttribute('data-value') === currentVal) currentVisible = true;
+          }
+          if (!currentVisible && firstVisible) selects[i].value = firstVisible.getAttribute('data-value');
         }
-        if (!currentVisible && firstVisible) selects[i].value = firstVisible.getAttribute('data-value');
+      }
+      var labels = this.view ? this.view.querySelectorAll('[data-ff-version-label]') : null;
+      if (labels) {
+        for (var k = 0; k < labels.length; k++) {
+          var lv = labels[k].getAttribute('data-ff-version-label') || '';
+          labels[k].style.display = (lv.split(/\s+/).indexOf(version) !== -1) ? '' : 'none';
+        }
       }
       dbg('debug', 'Flowframes', 'Version filter applied: ' + version);
     },
