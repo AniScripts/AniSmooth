@@ -272,6 +272,7 @@
         outputText.textContent = this.settings.outputPath;
       }
 
+      this._makeSettingsCollapsible();
       this._buildInterfaceToggles();
       this._applyTabVisibility();
       this._buildModelToggles();
@@ -852,6 +853,36 @@
       { id: "stopwatch", icon: "fa-stopwatch", label: "Stopwatch" },
       { id: "sysmon", icon: "fa-chart-line", label: "System Monitor" }
     ],
+
+    _makeSettingsCollapsible: function () {
+      var panels = document.querySelectorAll(".settings-cat .panel");
+      for (var i = 0; i < panels.length; i++) {
+        var panel = panels[i];
+        var head = panel.querySelector(".panel-head");
+        if (!head || head._collapseBound) continue;
+        head._collapseBound = true;
+
+        var titleEl = panel.querySelector(".panel-title");
+        var title = titleEl ? titleEl.textContent : ("panel_" + i);
+        var key = "anismooth_settings_collapsed_" + title.replace(/\s+/g, "_");
+
+        var arrow = document.createElement("i");
+        arrow.className = "fa-solid fa-chevron-down panel-collapse-arrow";
+        head.appendChild(arrow);
+
+        if (window.StorageManager.getItem(key, "1") === "1") {
+          panel.classList.add("collapsed");
+        }
+
+        head.addEventListener("click", function () {
+          var p = this.parentElement;
+          var collapsed = p.classList.toggle("collapsed");
+          var t = p.querySelector(".panel-title");
+          var k = "anismooth_settings_collapsed_" + (t ? t.textContent : "").replace(/\s+/g, "_");
+          window.StorageManager.setItem(k, collapsed ? "1" : "0");
+        });
+      }
+    },
 
     _buildInterfaceToggles: function () {
       var container = document.getElementById("interfaceToggles");
