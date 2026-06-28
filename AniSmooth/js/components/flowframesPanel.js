@@ -146,6 +146,23 @@
         if (show && options[j].getAttribute('data-value') === currentVal) currentVisible = true;
       }
       if (!currentVisible && firstVisible) this.modelSelect.value = firstVisible.getAttribute('data-value');
+      this._fixSeparators(this.modelSelect);
+    },
+
+    _fixSeparators: function (select) {
+      if (!select) return;
+      var children = select.querySelectorAll('.select-options')[0];
+      if (!children) return;
+      children = children.children;
+      var afterSep = false;
+      for (var i = children.length - 1; i >= 0; i--) {
+        if (children[i].classList.contains('select-sep')) {
+          children[i].style.display = afterSep ? '' : 'none';
+          afterSep = false;
+        } else if (children[i].getAttribute('data-value') && children[i].style.display !== 'none') {
+          afterSep = true;
+        }
+      }
     },
 
     checkAvailability: function () {
@@ -177,6 +194,7 @@
             if (show && options[j].getAttribute('data-value') === currentVal) currentVisible = true;
           }
           if (!currentVisible && firstVisible) selects[i].value = firstVisible.getAttribute('data-value');
+          this._fixSeparators(selects[i]);
         }
       }
       var labels = this.view ? this.view.querySelectorAll('[data-ff-version-label]') : null;

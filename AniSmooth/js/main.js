@@ -1212,15 +1212,15 @@
         }
 
         
-        var sectionHasVisible = false;
-        for (var i = 0; i < children.length; i++) {
+        var sectionAfterSep = false;
+        for (var i = children.length - 1; i >= 0; i--) {
           var child = children[i];
           if (child.classList.contains("select-sep")) {
-            child.style.display = sectionHasVisible ? "" : "none";
-            sectionHasVisible = false;
+            child.style.display = sectionAfterSep ? "" : "none";
+            sectionAfterSep = false;
           } else if (child.getAttribute("data-value")) {
             child.style.display = child._visible ? "" : "none";
-            if (child._visible) sectionHasVisible = true;
+            if (child._visible) sectionAfterSep = true;
           }
         }
 
