@@ -167,6 +167,10 @@ body {
 .panel-head-right { margin-left: auto; display: flex; gap: 0; align-items: center; }
 .version-badge { font-size: 9px; padding: 1px 7px; border-radius: 3px; background: var(--bg-2); color: var(--text-2); font-weight: 500; }
 .panel-head-right .custom-select { min-width: 70px; }
+.collapse-label { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 5px; }
+.collapse-label .collapse-arrow { font-size: 8px; transition: transform 0.15s; }
+.collapsed > .collapse-label .collapse-arrow { transform: rotate(-90deg); }
+.collapsed > .collapse-body { display: none; }
 .panel-head-right .select-trigger { padding: 1px 6px; font-size: 10px; }
 .panel-head-right .select-value { font-size: 10px; }
 .panel-head-right .select-arrow { font-size: 8px; margin-left: 4px; }

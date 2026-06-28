@@ -68,6 +68,29 @@
       if (this.aiSelect) {
         this.aiSelect.addEventListener('change', function () { s.applyAiFilter(); });
       }
+      var labels = this.view.querySelectorAll('.collapse-label');
+      for (var li = 0; li < labels.length; li++) {
+        labels[li].addEventListener('click', function () {
+          var group = this.parentElement;
+          var keyName = this.getAttribute('data-ff-group');
+          if (!keyName) return;
+          var collapsed = !group.classList.contains('collapsed');
+          if (collapsed) group.classList.add('collapsed');
+          else group.classList.remove('collapsed');
+          window.StorageManager.setItem('anismooth_ff_collapse_' + keyName, collapsed ? '1' : '0');
+        });
+      }
+      this._restoreCollapseState();
+    },
+
+    _restoreCollapseState: function () {
+      var groups = this.view.querySelectorAll('[data-ff-group]');
+      for (var i = 0; i < groups.length; i++) {
+        var key = groups[i].getAttribute('data-ff-group');
+        if (window.StorageManager.getItem('anismooth_ff_collapse_' + key) === '1') {
+          groups[i].parentElement.classList.add('collapsed');
+        }
+      }
     },
 
     initVersionToggle: function () {

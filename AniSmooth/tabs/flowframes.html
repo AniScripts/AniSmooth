@@ -20,8 +20,9 @@
           <div class="form-group">
             <div id="ffLayerInfo"></div>
           </div>
-          <div class="form-group">
-            <label>Interpolation AI</label>
+          <div class="form-group" id="ffGroupAi">
+            <label class="collapse-label" data-ff-group="ai"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Interpolation AI</label>
+            <div class="collapse-body">
             <div class="custom-select" id="flowframesAi">
               <div class="select-trigger">
                 <span class="select-value"><i class="fa-solid fa-microchip"></i> RIFE (NCNN)</span>
@@ -29,16 +30,18 @@
               </div>
               <div class="select-options">
                 <div class="select-option active" data-value="RifeNcnn" data-label="RIFE (NCNN)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-microchip"></i> <b>RIFE (NCNN)</b><br><small>Vulkan/NCNN Implementation of RIFE</small></div>
-                <div class="select-option" data-value="RifeCuda" data-label="RIFE (CUDA)" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>RIFE (CUDA)</b><br><small>CUDA/PyTorch Implementation of RIFE  -  NVIDIA Only</small></div>
-                <div class="select-option" data-value="FlavrCuda" data-label="FLAVR" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>FLAVR</b><br><small>Experimental PyTorch Implementation of FLAVR  -  NVIDIA Only</small></div>
+                <div class="select-option" data-value="RifeCuda" data-label="RIFE (CUDA)" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>RIFE (CUDA)</b><br><small>CUDA/PyTorch Implementation of RIFE - NVIDIA Only</small></div>
+                <div class="select-option" data-value="FlavrCuda" data-label="FLAVR" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>FLAVR</b><br><small>Experimental PyTorch Implementation of FLAVR - NVIDIA Only</small></div>
                 <div class="select-option" data-value="DainNcnn" data-label="DAIN (NCNN)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-microchip"></i> <b>DAIN (NCNN)</b><br><small>Vulkan/NCNN Implementation of DAIN</small></div>
-                <div class="select-option" data-value="XvfiCuda" data-label="XVFI" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>XVFI</b><br><small>CUDA/PyTorch Implementation of XVFI  -  NVIDIA Only</small></div>
+                <div class="select-option" data-value="XvfiCuda" data-label="XVFI" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>XVFI</b><br><small>CUDA/PyTorch Implementation of XVFI - NVIDIA Only</small></div>
                 <div class="select-option" data-value="RifeNcnnVs" data-label="RIFE (NCNN/VS)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-microchip"></i> <b>RIFE (NCNN/VS)</b><br><small>Vulkan/NCNN/VapourSynth Implementation of RIFE</small></div>
               </div>
             </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>AI Model</label>
+          <div class="form-group" id="ffGroupModel">
+            <label class="collapse-label" data-ff-group="model"><i class="fa-solid fa-chevron-down collapse-arrow"></i> AI Model</label>
+            <div class="collapse-body">
             <div class="custom-select" id="flowframesModel">
               <div class="select-trigger">
                 <span class="select-value"><i class="fa-solid fa-cube"></i> RIFE 4.26</span>
@@ -46,18 +49,18 @@
               </div>
               <div class="select-options">
                 <div class="select-option" data-value="RIFE 4.0" data-label="RIFE 4.0" data-ff-version="1.36.0" data-ff-ai="RifeCuda"><i class="fa-solid fa-cube"></i> <b>RIFE 4.0</b><br><small>Latest General Model (Recommended)</small></div>
-                <div class="select-option" data-value="RIFE 3.9" data-label="RIFE 3.9" data-ff-version="1.36.0" data-ff-ai="RifeCuda"><i class="fa-solid fa-cube"></i> <b>RIFE 3.9</b><br><small>Updated v3 Model  -  Supports Transparency</small></div>
-                <div class="select-option" data-value="RIFE 3.8" data-label="RIFE 3.8" data-ff-version="1.36.0" data-ff-ai="RifeCuda"><i class="fa-solid fa-cube"></i> <b>RIFE 3.8</b><br><small>Updated v3 Model  -  Supports Transparency</small></div>
+                <div class="select-option" data-value="RIFE 3.9" data-label="RIFE 3.9" data-ff-version="1.36.0" data-ff-ai="RifeCuda"><i class="fa-solid fa-cube"></i> <b>RIFE 3.9</b><br><small>Updated v3 Model - Supports Transparency</small></div>
+                <div class="select-option" data-value="RIFE 3.8" data-label="RIFE 3.8" data-ff-version="1.36.0" data-ff-ai="RifeCuda"><i class="fa-solid fa-cube"></i> <b>RIFE 3.8</b><br><small>Updated v3 Model - Supports Transparency</small></div>
                 <div class="select-option" data-value="RIFE 3.1" data-label="RIFE 3.1" data-ff-version="1.36.0" data-ff-ai="RifeCuda RifeNcnn"><i class="fa-solid fa-cube"></i> <b>RIFE 3.1</b><br><small>Updated v3 General Model</small></div>
                 <div class="select-option" data-value="RIFE 3.0" data-label="RIFE 3.0" data-ff-version="1.36.0" data-ff-ai="RifeCuda RifeNcnn"><i class="fa-solid fa-cube"></i> <b>RIFE 3.0</b><br><small>v3 General Model</small></div>
                 <div class="select-option" data-value="RIFE 2.4" data-label="RIFE 2.4" data-ff-version="1.36.0" data-ff-ai="RifeCuda RifeNcnn"><i class="fa-solid fa-cube"></i> <b>RIFE 2.4</b><br><small>Latest v2 General Model</small></div>
                 <div class="select-option" data-value="RIFE 2.3" data-label="RIFE 2.3" data-ff-version="1.36.0 1.42.0" data-ff-ai="RifeCuda RifeNcnn RifeNcnnVs"><i class="fa-solid fa-cube"></i> <b>RIFE 2.3</b><br><small>General Model</small></div>
                 <div class="select-option" data-value="RIFE 1.8" data-label="RIFE 1.8" data-ff-version="1.36.0" data-ff-ai="RifeCuda RifeNcnn"><i class="fa-solid fa-cube"></i> <b>RIFE 1.8</b><br><small>Old 2D Animation Model</small></div>
-                <div class="select-option" data-value="FLAVR 2x" data-label="FLAVR 2x" data-ff-version="1.36.0" data-ff-ai="FlavrCuda"><i class="fa-solid fa-cube"></i> <b>FLAVR 2x</b><br><small>Official Model  -  2x only</small></div>
-                <div class="select-option" data-value="FLAVR 4x" data-label="FLAVR 4x" data-ff-version="1.36.0" data-ff-ai="FlavrCuda"><i class="fa-solid fa-cube"></i> <b>FLAVR 4x</b><br><small>Official Model  -  4x only</small></div>
-                <div class="select-option" data-value="FLAVR 8x" data-label="FLAVR 8x" data-ff-version="1.36.0" data-ff-ai="FlavrCuda"><i class="fa-solid fa-cube"></i> <b>FLAVR 8x</b><br><small>Official Model  -  8x only</small></div>
+                <div class="select-option" data-value="FLAVR 2x" data-label="FLAVR 2x" data-ff-version="1.36.0" data-ff-ai="FlavrCuda"><i class="fa-solid fa-cube"></i> <b>FLAVR 2x</b><br><small>Official Model - 2x only</small></div>
+                <div class="select-option" data-value="FLAVR 4x" data-label="FLAVR 4x" data-ff-version="1.36.0" data-ff-ai="FlavrCuda"><i class="fa-solid fa-cube"></i> <b>FLAVR 4x</b><br><small>Official Model - 4x only</small></div>
+                <div class="select-option" data-value="FLAVR 8x" data-label="FLAVR 8x" data-ff-version="1.36.0" data-ff-ai="FlavrCuda"><i class="fa-solid fa-cube"></i> <b>FLAVR 8x</b><br><small>Official Model - 8x only</small></div>
                 <div class="select-option" data-value="Default" data-label="Default" data-ff-version="1.36.0" data-ff-ai="DainNcnn"><i class="fa-solid fa-cube"></i> <b>Default</b><br><small>Official Pretrained Model</small></div>
-                <div class="select-option" data-value="X4K1000FPS" data-label="X4K1000FPS" data-ff-version="1.36.0" data-ff-ai="XvfiCuda"><i class="fa-solid fa-cube"></i> <b>X4K1000FPS</b><br><small>X4K1000FPS Dataset  -  Default</small></div>
+                <div class="select-option" data-value="X4K1000FPS" data-label="X4K1000FPS" data-ff-version="1.36.0" data-ff-ai="XvfiCuda"><i class="fa-solid fa-cube"></i> <b>X4K1000FPS</b><br><small>X4K1000FPS Dataset - Default</small></div>
                 <div class="select-option" data-value="Vimeo" data-label="Vimeo" data-ff-version="1.36.0" data-ff-ai="XvfiCuda"><i class="fa-solid fa-cube"></i> <b>Vimeo</b><br><small>Vimeo90K Dataset</small></div>
                 <div class="select-option active" data-value="RIFE 4.26" data-label="RIFE 4.26" data-ff-version="1.42.0" data-ff-ai="RifeNcnn RifeNcnnVs"><i class="fa-solid fa-cube"></i> <b>RIFE 4.26</b><br><small>General Model</small></div>
                 <div class="select-option" data-value="RIFE 4.25" data-label="RIFE 4.25" data-ff-version="1.42.0" data-ff-ai="RifeNcnn RifeNcnnVs"><i class="fa-solid fa-cube"></i> <b>RIFE 4.25</b><br><small>General Model</small></div>
@@ -69,22 +72,26 @@
               </div>
             </div>
             <span class="form-hint">Model list depends on the selected AI. NCNN uses RIFE NCNN models; CUDA uses RIFE CUDA models.</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Factor</label>
+          <div class="form-group" id="ffGroupFactor">
+            <label class="collapse-label" data-ff-group="factor"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Factor</label>
+            <div class="collapse-body">
             <div class="factor-presets" id="flowframesFactor">
-              <button class="factor-btn" data-value="2">2×</button>
-              <button class="factor-btn" data-value="3">3×</button>
-              <button class="factor-btn" data-value="4">4×</button>
-              <button class="factor-btn active" data-value="6">6×</button>
-              <button class="factor-btn" data-value="8">8×</button>
-              <button class="factor-btn" data-value="10">10×</button>
+              <button class="factor-btn" data-value="2">2x</button>
+              <button class="factor-btn" data-value="3">3x</button>
+              <button class="factor-btn" data-value="4">4x</button>
+              <button class="factor-btn active" data-value="6">6x</button>
+              <button class="factor-btn" data-value="8">8x</button>
+              <button class="factor-btn" data-value="10">10x</button>
               <input type="number" class="factor-custom" id="ffFactorCustom" placeholder="Custom (e.g. 12)" min="2" max="16" value="">
             </div>
             <div class="info-card" id="ffFactorInfo"></div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Output Format</label>
+          <div class="form-group" id="ffGroupFormat">
+            <label class="collapse-label" data-ff-group="format"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Output Format</label>
+            <div class="collapse-body">
             <div class="custom-select" id="flowframesFormat">
               <div class="select-trigger">
                 <span class="select-value"><i class="fa-solid fa-film"></i> MP4</span>
@@ -96,26 +103,25 @@
                 <div class="select-option" data-value="Webm" data-label="WEBM" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>WEBM</b><br><small>Google VP9 codec</small></div>
                 <div class="select-option" data-value="Mov" data-label="MOV" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>MOV</b><br><small>Apple ProRes</small></div>
                 <div class="select-option" data-value="Avi" data-label="AVI" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>AVI</b><br><small>ffv1, huffyuv, magicyuv, rawvideo</small></div>
-                <div class="select-option" data-value="Gif" data-label="GIF" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>GIF</b><br><small>Animated GIF  -  up to 50 FPS</small></div>
+                <div class="select-option" data-value="Gif" data-label="GIF" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>GIF</b><br><small>Animated GIF - up to 50 FPS</small></div>
                 <div class="select-option" data-value="Images" data-label="Image Sequence" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>Image Sequence</b><br><small>PNG, JPG, WEBP output</small></div>
               </div>
             </div>
             <span class="form-hint">Output container format. Encoder options depend on the selected format.</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label>
-              <span data-ff-version-label="1.36.0">Output Encoder</span>
-              <span data-ff-version-label="1.42.0">Output Encoder</span>
-            </label>
+          <div class="form-group" id="ffGroupEncoder">
+            <label class="collapse-label" data-ff-group="encoder"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Output Encoder</label>
+            <div class="collapse-body">
             <div class="custom-select" id="flowframesEncoder">
               <div class="select-trigger">
                 <span class="select-value"><i class="fa-solid fa-film"></i> h264 (x264)</span>
                 <i class="fa-solid fa-chevron-down select-arrow"></i>
               </div>
               <div class="select-options">
-                <div class="select-option active" data-value="X264" data-label="h264 (x264)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>h264</b><br><small>x264  -  software encoder</small></div>
-                <div class="select-option" data-value="X265" data-label="h265 (x265)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>h265</b><br><small>x265  -  software encoder</small></div>
-                <div class="select-option" data-value="SvtAv1" data-label="AV1 (SVT)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>AV1</b><br><small>SVT-AV1  -  software encoder</small></div>
+                <div class="select-option active" data-value="X264" data-label="h264 (x264)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>h264</b><br><small>x264 - software encoder</small></div>
+                <div class="select-option" data-value="X265" data-label="h265 (x265)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>h265</b><br><small>x265 - software encoder</small></div>
+                <div class="select-option" data-value="SvtAv1" data-label="AV1 (SVT)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>AV1</b><br><small>SVT-AV1 - software encoder</small></div>
                 <div class="select-option" data-value="Nvenc264" data-label="h264 NVENC" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>h264 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
                 <div class="select-option" data-value="Nvenc265" data-label="h265 NVENC" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>h265 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
                 <div class="select-option" data-value="NvencAv1" data-label="AV1 NVENC" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>AV1 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
@@ -124,7 +130,7 @@
                 <div class="select-option" data-value="VpxVp9" data-label="VP9" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>VP9</b><br><small>Google VP9 codec</small></div>
                 <div class="select-option" data-value="Qsv264" data-label="h264 QSV" data-ff-version="1.36.0"><i class="fa-solid fa-bolt"></i> <b>h264 QSV</b><br><small>Intel Quick Sync</small></div>
                 <div class="select-option" data-value="Qsv265" data-label="h265 QSV" data-ff-version="1.36.0"><i class="fa-solid fa-bolt"></i> <b>h265 QSV</b><br><small>Intel Quick Sync</small></div>
-                <div class="select-option" data-value="ProResKs" data-label="ProRes" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>ProRes</b><br><small>Apple ProRes  -  editing codec</small></div>
+                <div class="select-option" data-value="ProResKs" data-label="ProRes" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>ProRes</b><br><small>Apple ProRes - editing codec</small></div>
                 <div class="select-option" data-value="Ffv1" data-label="ffv1" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>ffv1</b><br><small>Lossless archival codec</small></div>
                 <div class="select-option" data-value="Huffyuv" data-label="huffyuv" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>huffyuv</b><br><small>Lossless codec</small></div>
                 <div class="select-option" data-value="Magicyuv" data-label="magicyuv" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>magicyuv</b><br><small>Fast lossless codec</small></div>
@@ -132,27 +138,30 @@
               </div>
             </div>
             <span class="form-hint" data-ff-version-label="1.42.0">Quality/CRF uses your saved Flowframes config (set it once in the Flowframes app).</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Pixel Format</label>
+          <div class="form-group" id="ffGroupPixFmt">
+            <label class="collapse-label" data-ff-group="pixfmt"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Pixel Format</label>
+            <div class="collapse-body">
             <div class="custom-select" id="flowframesPixFmt">
               <div class="select-trigger">
                 <span class="select-value"><i class="fa-solid fa-palette"></i> yuv420p</span>
                 <i class="fa-solid fa-chevron-down select-arrow"></i>
               </div>
               <div class="select-options">
-                <div class="select-option active" data-value="Yuv420P" data-label="yuv420p" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-palette"></i> <b>yuv420p</b><br><small>Standard 8-bit  -  best compatibility</small></div>
-                <div class="select-option" data-value="Yuv422P" data-label="yuv422p" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-palette"></i> <b>yuv422p</b><br><small>8-bit  -  higher color resolution</small></div>
-                <div class="select-option" data-value="Yuv444P" data-label="yuv444p" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-palette"></i> <b>yuv444p</b><br><small>8-bit  -  full color resolution</small></div>
-                <div class="select-option" data-value="Yuv420P10Le" data-label="yuv420p10le" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuv420p10le</b><br><small>10-bit  -  HDR support</small></div>
-                <div class="select-option" data-value="Yuv422P10Le" data-label="yuv422p10le" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuv422p10le</b><br><small>10-bit  -  higher color resolution</small></div>
-                <div class="select-option" data-value="Yuv444P10Le" data-label="yuv444p10le" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuv444p10le</b><br><small>10-bit  -  full color resolution</small></div>
-                <div class="select-option" data-value="Yuva420P" data-label="yuva420p" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuva420p</b><br><small>8-bit  -  with alpha channel</small></div>
-                <div class="select-option" data-value="Rgb24" data-label="rgb24" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>rgb24</b><br><small>8-bit RGB  -  no subsampling</small></div>
-                <div class="select-option" data-value="Rgba" data-label="rgba" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>rgba</b><br><small>8-bit RGB  -  with alpha channel</small></div>
+                <div class="select-option active" data-value="Yuv420P" data-label="yuv420p" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-palette"></i> <b>yuv420p</b><br><small>Standard 8-bit - best compatibility</small></div>
+                <div class="select-option" data-value="Yuv422P" data-label="yuv422p" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-palette"></i> <b>yuv422p</b><br><small>8-bit - higher color resolution</small></div>
+                <div class="select-option" data-value="Yuv444P" data-label="yuv444p" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-palette"></i> <b>yuv444p</b><br><small>8-bit - full color resolution</small></div>
+                <div class="select-option" data-value="Yuv420P10Le" data-label="yuv420p10le" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuv420p10le</b><br><small>10-bit - HDR support</small></div>
+                <div class="select-option" data-value="Yuv422P10Le" data-label="yuv422p10le" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuv422p10le</b><br><small>10-bit - higher color resolution</small></div>
+                <div class="select-option" data-value="Yuv444P10Le" data-label="yuv444p10le" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuv444p10le</b><br><small>10-bit - full color resolution</small></div>
+                <div class="select-option" data-value="Yuva420P" data-label="yuva420p" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>yuva420p</b><br><small>8-bit - with alpha channel</small></div>
+                <div class="select-option" data-value="Rgb24" data-label="rgb24" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>rgb24</b><br><small>8-bit RGB - no subsampling</small></div>
+                <div class="select-option" data-value="Rgba" data-label="rgba" data-ff-version="1.36.0"><i class="fa-solid fa-palette"></i> <b>rgba</b><br><small>8-bit RGB - with alpha channel</small></div>
               </div>
             </div>
             <span class="form-hint">Pixel format for the output video. Most common: yuv420p for compatibility.</span>
+            </div>
           </div>
           <div class="btn-row">
             <button id="startFlowframesBtn" class="btn">
