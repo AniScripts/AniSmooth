@@ -259,9 +259,6 @@
       if (options.preset) {
         args.push("--preset", options.preset);
       }
-      if (options.sceneThreshold !== undefined && options.sceneThreshold !== null) {
-        args.push("--scene-threshold", String(options.sceneThreshold));
-      }
 
       this.executeModel(pythonCmd, args, callbacks);
     },

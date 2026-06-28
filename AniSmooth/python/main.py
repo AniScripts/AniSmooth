@@ -76,18 +76,6 @@ def unpad(tensor, pad_hw):
     w = tensor.shape[3] - pad_w
     return tensor[:, :, :h, :w]
 
-def detect_scene_change(frame_a, frame_b, threshold=0.40):
-    """Detect if two frames are from different scenes by comparing
-    mean absolute difference of downscaled grayscale versions.
-    Returns True if a scene change is detected."""
-    small_size = (64, 64)
-    gray_a = cv2.cvtColor(frame_a, cv2.COLOR_BGR2GRAY)
-    gray_b = cv2.cvtColor(frame_b, cv2.COLOR_BGR2GRAY)
-    gray_a = cv2.resize(gray_a, small_size).astype(np.float32) / 255.0
-    gray_b = cv2.resize(gray_b, small_size).astype(np.float32) / 255.0
-    diff = np.mean(np.abs(gray_a - gray_b))
-    return diff > threshold
-
 def load_interpolation_model(model_name, device):
     log("info", f"Loading RIFE model: {model_name}")
     model = RIFEModel(model_name).to(device)
@@ -177,7 +165,7 @@ def finalize_output(output_path, input_path, target_size_mb=None, quality=None):
             log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
             reencode_high_quality(output_path, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
 
-def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high", scene_threshold=0.40):
+def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high"):
     q = resolve_quality(preset)
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
 
@@ -240,19 +228,10 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
         log("info", "Starting frame interpolation...")
         frame_idx = 0
         prev_frame = None
-        scene_changes = 0
 
         for frame in video.read_frames():
             if prev_frame is not None:
-                
-                is_scene_change = detect_scene_change(prev_frame, frame, scene_threshold)
-                if is_scene_change:
-                    scene_changes += 1
-                    
-                    
-                    for _ in range(1, factor):
-                        video.write_frame(prev_frame)
-                elif use_tensorrt and trt_engine is not None:
+                if use_tensorrt and trt_engine is not None:
                     
                     t0 = frame_to_tensor(prev_frame, device).half()
                     t1 = frame_to_tensor(frame, device).half()
@@ -313,9 +292,6 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
             denom = max(total_frames, 1)
             pct = min(100, int((frame_idx / denom) * 100))
             log("progress", f"Interpolating frames... {frame_idx}/{denom}", pct=pct)
-
-    if scene_changes > 0:
-        log("info", f"Scene changes detected and skipped: {scene_changes}")
 
     if model is not None:
         del model
@@ -644,8 +620,6 @@ def main():
                         help="Quality preset key: archival | high | balanced | fast | draft "
                              "(maps to CRF + x264 speed + -tune animation; legacy x264 "
                              "speed names fall back to 'high')")
-    parser.add_argument("--scene-threshold", type=float, default=0.40,
-                        help="Scene change detection threshold (0.0-1.0, higher = less sensitive)")
     parser.add_argument("--fit-w", type=int, default=0,
                         help="Target width to fit output within (0 = disabled)")
     parser.add_argument("--fit-h", type=int, default=0,
@@ -691,7 +665,7 @@ def main():
 
     try:
         if args.mode == "interpolate":
-            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.scene_threshold)
+            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset)
         elif args.mode == "upscale":
             run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.fit_w, args.fit_h)
     except Exception as e:
