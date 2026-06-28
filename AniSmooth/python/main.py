@@ -326,7 +326,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
     finalize_output(output_path, input_path, target_size_mb, q)
     log("success", "Interpolation process completed successfully.")
 
-def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="high"):
+def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="high", fit_w=0, fit_h=0):
     q = resolve_quality(preset)
     log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
 
@@ -340,7 +340,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
 
     with VideoProcessor(input_path, output_path) as video:
         w, h, fps, total_frames = video.get_info()
-        video.setup_writer(fps, scale=scale, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
+        video.setup_writer(fps, scale=scale, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"], max_w=fit_w, max_h=fit_h)
         log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
         log("info", "Starting frame upscaling...")
@@ -646,6 +646,10 @@ def main():
                              "speed names fall back to 'high')")
     parser.add_argument("--scene-threshold", type=float, default=0.40,
                         help="Scene change detection threshold (0.0-1.0, higher = less sensitive)")
+    parser.add_argument("--fit-w", type=int, default=0,
+                        help="Target width to fit output within (0 = disabled)")
+    parser.add_argument("--fit-h", type=int, default=0,
+                        help="Target height to fit output within (0 = disabled)")
 
     args = parser.parse_args()
 
@@ -689,7 +693,7 @@ def main():
         if args.mode == "interpolate":
             run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.scene_threshold)
         elif args.mode == "upscale":
-            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset)
+            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.fit_w, args.fit_h)
     except Exception as e:
         log("error", f"Processing failed: {e}")
         import traceback

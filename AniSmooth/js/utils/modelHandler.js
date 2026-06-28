@@ -281,6 +281,12 @@
       if (options.preset) {
         args.push("--preset", options.preset);
       }
+      if (options.fitW && parseInt(options.fitW) > 0) {
+        args.push("--fit-w", String(parseInt(options.fitW)));
+      }
+      if (options.fitH && parseInt(options.fitH) > 0) {
+        args.push("--fit-h", String(parseInt(options.fitH)));
+      }
 
       this.executeModel(pythonCmd, args, callbacks);
     },

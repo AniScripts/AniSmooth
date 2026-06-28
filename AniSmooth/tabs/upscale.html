@@ -36,6 +36,20 @@
             </div>
             <div class="info-card" id="upscaleScaleInfo"></div>
           </div>
+          <div class="form-group">
+            <label>Fit to Resolution</label>
+            <div class="toggle-row" style="padding:0;margin-bottom:4px;">
+              <span class="toggle-label" style="flex:1;">Scale down to fit target resolution</span>
+              <input type="checkbox" class="toggle-input" id="upscaleEnableFit">
+              <span class="toggle-switch"></span>
+            </div>
+            <div id="upscaleFitInputs" style="display:none;align-items:center;gap:4px;margin-top:4px;">
+              <input type="number" id="upscaleFitW" value="1920" min="1" max="7680" step="2" style="flex:1;background:var(--inset);border:1px solid var(--border);border-radius:3px;color:var(--text-strong);padding:4px 6px;font-family:inherit;font-size:9px;" disabled>
+              <span style="font-size:8px;color:var(--text-3);">×</span>
+              <input type="number" id="upscaleFitH" value="1080" min="1" max="4320" step="2" style="flex:1;background:var(--inset);border:1px solid var(--border);border-radius:3px;color:var(--text-strong);padding:4px 6px;font-family:inherit;font-size:9px;" disabled>
+            </div>
+            <span class="form-hint">Downscales output with high-quality lanczos filter. Only active when output exceeds target dimensions. No extra re-encode needed.</span>
+          </div>
           <div class="btn-row">
             <button id="startUpscaleBtn" class="btn">
               <i class="fa-solid fa-plus"></i> Add to Queue

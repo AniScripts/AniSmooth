@@ -356,7 +356,7 @@ class VideoProcessor:
     def get_info(self):
         return self.width, self.height, self.fps, self.total_frames
 
-    def setup_writer(self, output_fps, scale=1, x264_preset="slow", crf=17, tune="animation"):
+    def setup_writer(self, output_fps, scale=1, x264_preset="slow", crf=17, tune="animation", max_w=0, max_h=0):
         out_w = self.width * scale
         out_h = self.height * scale
 
@@ -368,14 +368,12 @@ class VideoProcessor:
                 "-s", f"{out_w}x{out_h}", "-pix_fmt", "bgr24",
                 "-r", str(output_fps), "-i", "-",
                 "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
-                # Cap profile/level so hardware decoders (Discord, browsers, AE
-                # Mercury) can play the file. Without this x264 auto-picks Level
-                # 6.0 at 4K, which HW decoders cap at 5.1/5.2 reject -> blocky
-                # garbage on playback while software decode stays clean.
                 "-profile:v", "high", "-level:v", "5.1",
             ]
             if tune:
                 cmd += ["-tune", tune]
+            if max_w > 0 and max_h > 0 and (out_w > max_w or out_h > max_h):
+                cmd += ["-vf", f"scale={max_w}:{max_h}:force_original_aspect_ratio=decrease:flags=lanczos"]
             cpu_cores = os.cpu_count() or 4
             enc_threads = max(2, min(cpu_cores, 4 if out_w * out_h >= 3840 * 2160 else 8))
             cmd += [

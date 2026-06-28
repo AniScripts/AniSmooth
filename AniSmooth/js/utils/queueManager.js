@@ -357,7 +357,7 @@
       };
 
       if (item.mode === "upscale") {
-        window.ModelHandler.upscaleClip(inputPath, outputPath, item.model, { scale: String(item.scale), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high" }, callbacks);
+        window.ModelHandler.upscaleClip(inputPath, outputPath, item.model, { scale: String(item.scale), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high", fitW: item.fitW || 0, fitH: item.fitH || 0 }, callbacks);
       } else if (item.mode === "dedupe") {
         window.ModelHandler.dedupeClip(inputPath, outputPath, item.threshold || 0.05, item.options || {}, callbacks);
       } else if (item.mode === "interpolate") {
