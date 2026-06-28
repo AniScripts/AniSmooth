@@ -138,12 +138,14 @@
       for (var j = 0; j < options.length; j++) {
         var optAi = options[j].getAttribute('data-ff-ai') || '';
         var optVer = options[j].getAttribute('data-ff-version') || '';
+        var optVal = options[j].getAttribute('data-value') || '';
         var aiMatch = !optAi || optAi.split(/\s+/).indexOf(ai) !== -1;
         var versionMatch = !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
-        var show = aiMatch && versionMatch;
+        var toggled = !optVal || (window.StorageManager && window.StorageManager.getItem('anismooth_ff_model_' + optVal, '1') !== '0');
+        var show = aiMatch && versionMatch && toggled;
         options[j].style.display = show ? '' : 'none';
         if (show && !firstVisible) firstVisible = options[j];
-        if (show && options[j].getAttribute('data-value') === currentVal) currentVisible = true;
+        if (show && optVal === currentVal) currentVisible = true;
       }
       if (!currentVisible && firstVisible) this.modelSelect.value = firstVisible.getAttribute('data-value');
       this._fixSeparators(this.modelSelect);

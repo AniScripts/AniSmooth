@@ -1148,6 +1148,9 @@
           var prefix = this.getAttribute("data-prefix");
           window.StorageManager.setItem(prefix + val, this.checked ? "1" : "0");
           self._applyModelVisibility();
+          if (window.FlowframesPanel && window.FlowframesPanel.applyAiFilter) {
+            window.FlowframesPanel.applyAiFilter();
+          }
         });
       }
     },
@@ -1738,6 +1741,9 @@
         window.FlowframesPanel.applyVersion();
       }
       this._applyModelVisibility();
+      if (window.FlowframesPanel && window.FlowframesPanel.applyAiFilter) {
+        window.FlowframesPanel.applyAiFilter();
+      }
     },
 
     _showSectionPicker: function (name, description) {
