@@ -100,6 +100,7 @@
         var lastOutSize = -1;
         var stableCount = 0;
         var finished = false;
+        var aiComplete = false;
 
         var finalize = function (ok, message, producedPath) {
           if (finished) return;
@@ -157,29 +158,35 @@
                   finalize(false, "Flowframes error: " + ln.replace(/^\[[^\]]*\]\s*\[[^\]]*\]:\s*/, ""));
                   return;
                 }
-                var pm = ln.match(/(\d+(?:\.\d+)?)\s*%/);
-                if (pm && callbacks.onProgress) callbacks.onProgress(parseFloat(pm[1]));
-                else {
-                  var fm = ln.match(/(\d+)\s*\/\s*(\d+)\s*Frames?/i);
-                  if (fm && callbacks.onProgress && parseInt(fm[2], 10) > 0) {
-                    callbacks.onProgress(Math.round((parseInt(fm[1], 10) / parseInt(fm[2], 10)) * 100));
-                  }
+                var fm = ln.match(/Interpolated\s+(\d+)\s*\/\s*(\d+)\s*Frames?/i);
+                if (fm && parseInt(fm[2], 10) > 0) {
+                  var done = parseInt(fm[1], 10), total = parseInt(fm[2], 10);
+                  if (callbacks.onProgress) callbacks.onProgress(Math.round((done / total) * 100));
+                  if (done >= total) aiComplete = true;
+                } else {
+                  var pm = ln.match(/(\d+(?:\.\d+)?)\s*%/);
+                  if (pm && callbacks.onProgress) callbacks.onProgress(parseFloat(pm[1]));
+                }
+                if (/Done interpolating|Interpolation done|Frame interpolation (?:took|done)|Output video|Encoding finished|\[Done\]/i.test(ln)) {
+                  aiComplete = true;
                 }
               }
               lastLineCount = lines.length;
             } catch (e) {}
           }
 
-          var out = findNewestOutput();
-          if (out) {
-            try {
-              var sz = fs.statSync(out).size;
-              if (sz > 0 && sz === lastOutSize) {
-                stableCount++;
-                if (stableCount >= 2) { finalize(true, null, out); return; }
-              } else { stableCount = 0; }
-              lastOutSize = sz;
-            } catch (e) {}
+          if (aiComplete) {
+            var out = findNewestOutput();
+            if (out) {
+              try {
+                var sz = fs.statSync(out).size;
+                if (sz > 0 && sz === lastOutSize) {
+                  stableCount++;
+                  if (stableCount >= 2) { finalize(true, null, out); return; }
+                } else { stableCount = 0; }
+                lastOutSize = sz;
+              } catch (e) {}
+            }
           }
         }, 1500);
 
