@@ -1,0 +1,131 @@
+# AGENTS.md — AniSmooth
+
+Free local After Effects extension for AI frame interpolation and video upscaling. Windows-only. NVIDIA GPU required.
+
+## Build & Run
+
+```bash
+cd tools && npm install
+cd .. && npm run build:all      # 2018 + 2020 + 2022 targets
+```
+
+No test framework. No lint/typecheck. Build pipeline: obfuscate JS → compile JSXBIN → sign ZXP → Inno EXE.
+
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Extension | Adobe CEP 6.0–10.0, CSXS |
+| UI | Vanilla JS (no framework), HTML, CSS custom properties |
+| AE bridge | CEP CSInterface.js + ExtendScript (`jsx/host.jsx`) |
+| Node.js | CEF `--enable-nodejs --mixed-context` → `require('fs')`, `child_process` |
+| Backend | Python 3.10–3.13 CLI (`python/main.py`) via `child_process.spawn` |
+| ML | PyTorch CUDA, spandrel 0.3.4, TensorRT (optional) |
+| Video | OpenCV, FFmpeg/FFprobe |
+
+## Directory Map
+
+```
+AniSmooth/
+├── CSXS/manifest.xml          # CEP manifest (patched per AE target at build)
+├── index.html                 # SPA shell: topbar nav + tab containers
+├── css/style.css              # Dark/light theme, ~860 lines
+├── tabs/*.html                # Tab content fragments (loaded by tabLoader.js)
+├── js/
+│   ├── CSInterface.js         # Adobe boilerplate (NOT obfuscated)
+│   ├── console.js             # dbg(level, source, msg) global logger
+│   ├── main.js                # App singleton: init, tabs, GPU, settings, presets
+│   ├── components/            # One panel controller per tab
+│   │   ├── interpolationPanel.js
+│   │   ├── upscalePanel.js
+│   │   ├── deadframesPanel.js
+│   │   ├── queuePanel.js
+│   │   ├── consolePanel.js
+│   │   ├── sysmonPanel.js
+│   │   └── toolsSetup.js      # First-run wizard
+│   └── utils/
+│       ├── fileSystem.js      # Node fs/path/os/child_process wrappers + PS dialogs
+│       ├── storage.js         # localStorage wrapper (keys: anismooth_*)
+│       ├── modelHandler.js    # Singleton: spawns Python for all 3 modes
+│       ├── queueManager.js    # Batch queue: pause/cancel/retry/persist
+│       ├── customSelect.js
+│       └── tabLoader.js
+├── jsx/host.jsx               # ExtendScript: AE render, layer info, file import
+└── python/
+    ├── main.py                # CLI entry: --mode interpolate|upscale|dedupe|gpu-info
+    ├── setup.py               # Bootstrap: venv, pip, FFmpeg download
+    ├── models/
+    │   ├── rife/              # RIFEModel: CUDA + TensorRT
+    │   ├── upscale/           # ShuffleCUGAN (spandrel fallback)
+    │   ├── weight_loader.py   # Download/cache/verify model weights
+    │   └── tensorrt_engine.py
+    ├── duplicate_frame_remover/  # Perceptual hash + pixel diff
+    └── utils/
+        ├── device.py          # GPU detection, nvidia-smi
+        └── video.py           # OpenCV I/O + FFmpeg pipe/mux/re-encode
+```
+
+## Key Architecture
+
+### Frontend JS → After Effects
+
+CEP `evalScript()` calls ExtendScript functions in `host.jsx`, returns JSON string via callback. No `JSON.stringify` in ExtendScript → custom `jsonEscape()` builds JSON by hand.
+
+```
+Panel JS → evalScript('renderSelectedLayer(dir, name, idx)') → host.jsxbin → AE render → JSON callback
+```
+
+### Frontend JS → Python Backend
+
+```
+Panel JS → ModelHandler.*Clip() → spawn(python, [main.py, --mode, ...]) → stdout JSON lines → callbacks
+```
+
+Python stdout format: `{"type":"info|warn|error|success|progress","msg":"...","pct":...}`. JS reads line-by-line from `proc.stdout.on('data')`.
+
+### Pipeline Flow
+
+1. AE renders selected layer to temp AVI (ExtendScript)
+2. Python processes frame-by-frame (OpenCV → model → FFmpeg pipe)
+3. Python muxes original audio (FFmpeg)
+4. JS imports output back into AE (`importFileToAE`)
+
+## Code Conventions
+
+- **All JS modules:** IIFE-wrapped globals on `window` — no ES modules, no bundler
+- **Indentation:** 2-space, K&R braces
+- **Naming:** camelCase vars/fns, PascalCase modules, snake_case localStorage keys
+- **Async:** callbacks only — no Promises, no async/await
+- **DOM:** vanilla `document.getElementById`, `addEventListener`, `classList`
+- **Logging:** `dbg(level, source, message)` — levels: debug, info, warn, error, success
+- **`var` only** (no let/const — CEP Chromium is old)
+- **Python:** snake_case, `argparse` subcommands, lazy/cached model loading
+- **ExtendScript:** ES3 with AE DOM, JSON by string concat
+
+## Critical Paths
+
+| File | Role |
+|---|---|
+| `queueManager.js` | `_processNext()` dispatches serial queue. `_running` flag guards re-entrancy. See `_render()` → `_runModel()` → `ModelHandler.*Clip()` chain |
+| `modelHandler.js` | Singleton `activeProcess` + `_cancelling` flag prevents concurrent Python spawns. `executeModel()` spawns, `cancelActiveProcess()` kills via `taskkill /F /T` |
+| `host.jsx` | `renderSelectedLayer()` sets work area to layer bounds, creates RenderQueueItem, renders to temp file. Bounds must clamp to comp display range |
+| `main.py` | `argparse` → dispatch. Quality presets at top of file. Scene detection threshold: 0.40 |
+
+## Python Path Resolution
+
+1. `%APPDATA%/com.moongetsu.extensions/AniSmooth/backend/.venv/Scripts/python.exe`
+2. User-configured `settings.pythonPath` (default `"python"`)
+3. `findLocalPython()` scans `%LOCALAPPDATA%/Programs/Python/`
+
+## Storage
+
+- `localStorage` keys: `anismooth_*` (settings, processing queue, python path, GPU cache)
+- Filesystem: `%APPDATA%/com.moongetsu.extensions/AniSmooth/backend/` (venv, FFmpeg, weights, presets)
+- Output: user-configurable, defaults to `~/Downloads/AniSmooth/`
+
+## CEP Quirks
+
+- Must have `PlayerDebugMode = 1` in registry for unsigned extensions
+- Three AE targets need different manifest version ranges — patched at build
+- CSP restricts to `'self'` except Font Awesome CDN
+- No macOS support — Windows-only (PowerShell, taskkill, Inno Setup)
