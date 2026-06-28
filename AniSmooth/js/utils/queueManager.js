@@ -165,6 +165,7 @@
 
     _processNext: function () {
       var self = this;
+      if (this._running) return;
       if (this._paused) {
         this._running = false;
         this._notify();
@@ -215,6 +216,7 @@
               item.status = "error";
               item.error = "Render failed: " + renderError;
               self._notify();
+              self._running = false;
               self._processNext();
               return;
             }
@@ -231,6 +233,7 @@
         item.status = "error";
         item.error = "File not found";
         self._notify();
+        self._running = false;
         self._processNext();
         return;
       }
@@ -332,10 +335,15 @@
           item.outputPath = outputPath;
           item.preRenderPath = preRenderPath;
           self._notify();
+          self._running = false;
           self._processNext();
         },
         onError: function (err) {
           self._currentProc = null;
+          if (item.status === "cancelled" || item.status === "done") {
+            self._notify();
+            return;
+          }
           if (self._paused && item.status === "queued") {
             dbg("info", "Queue", "Paused — item queued for retry");
             self._notify();
@@ -352,6 +360,7 @@
             try { window.FileSystem.fs.unlinkSync(outputPath); } catch (e) {}
           }
           self._notify();
+          self._running = false;
           self._processNext();
         }
       };
@@ -366,6 +375,7 @@
         item.status = "error";
         item.error = "Unknown queue mode: " + (item.mode || "undefined");
         self._notify();
+        self._running = false;
         self._processNext();
       }
     }

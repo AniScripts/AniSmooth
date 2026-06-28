@@ -2,11 +2,12 @@
   var ModelHandler = {
     
     activeProcess: null,
+    _cancelling: false,
 
     
     executeModel: function (command, args, callbacks) {
       var self = this;
-      if (this.activeProcess) {
+      if (this.activeProcess || this._cancelling) {
         if (callbacks.onError) {
           callbacks.onError("A model execution process is already running.");
         }
@@ -90,6 +91,7 @@
 
         proc.on('close', function (code) {
           self.activeProcess = null;
+          self._cancelling = false;
           if (code === 0) {
             dbg('success', 'ModelHandler', 'Process completed successfully.');
             if (callbacks.onComplete) callbacks.onComplete();
@@ -112,11 +114,13 @@
                 if (pythonInput) pythonInput.value = localPython;
               }
               self.activeProcess = null;
+              self._cancelling = false;
               self.executeModel(localPython, args, callbacks);
               return;
             }
           }
           self.activeProcess = null;
+          self._cancelling = false;
           dbg('error', 'ModelHandler', 'Process error: ' + err.message);
           if (callbacks.onError) callbacks.onError(err.message);
         });
@@ -131,11 +135,13 @@
               window.StorageManager.setItem("anismooth_python_path", localPython);
             }
             this.activeProcess = null;
+            this._cancelling = false;
             this.executeModel(localPython, args, callbacks);
             return;
           }
         }
         this.activeProcess = null;
+        this._cancelling = false;
         dbg('error', 'ModelHandler', 'Failed to start process: ' + err.message);
         if (callbacks.onError) callbacks.onError(err.message);
       }
@@ -205,19 +211,24 @@
 
     
     cancelActiveProcess: function () {
-      if (!this.activeProcess) return false;
+      if (!this.activeProcess || this._cancelling) return false;
       dbg('info', 'ModelHandler', 'Killing active process...');
       var proc = this.activeProcess;
-      this.activeProcess = null;
+      this._cancelling = true;
 
       try {
         if (process.platform === 'win32' && proc.pid) {
-          window.FileSystem.childProcess.exec('taskkill /F /T /PID ' + proc.pid, function () {});
+          var self = this;
+          window.FileSystem.childProcess.exec('taskkill /F /T /PID ' + proc.pid, function () {
+            self._cancelling = false;
+          });
         } else {
           proc.kill('SIGTERM');
+          this._cancelling = false;
         }
       } catch (e) {
         try { proc.kill('SIGKILL'); } catch (e2) {}
+        this._cancelling = false;
       }
       return true;
     },
