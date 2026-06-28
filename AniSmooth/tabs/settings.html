@@ -30,6 +30,7 @@
               <i class="fa-solid fa-microchip panel-head-icon"></i>
               <span class="panel-title">Hardware Mode</span>
             </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Choose GPU or CPU processing for AI tasks.</span>
             <div class="form-group">
               <div class="ts-gpu-choice" id="settingsGpuChoice">
                 <div class="ts-gpu-option" id="settingsGpuOptionGpu" onclick="changeGpuMode('gpu')">
@@ -58,6 +59,7 @@
               <i class="fa-solid fa-microchip panel-head-icon"></i>
               <span class="panel-title">GPU</span>
             </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Live GPU detection, VRAM usage, and acceleration status.</span>
             <div class="gpu-card" id="gpuCard">
               <div class="gpu-status-row">
                 <div class="gpu-indicator" id="gpuIndicator">
@@ -93,6 +95,7 @@
               <i class="fa-solid fa-cubes panel-head-icon"></i>
               <span class="panel-title">CUDA &amp; PyTorch</span>
             </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">CUDA, driver, and PyTorch install details.</span>
             <div id="cudaInfo" class="env-list">
               <div class="env-row"><i class="fa-solid fa-spinner fa-spin"></i> <span>Waiting for GPU scan...</span></div>
             </div>
@@ -103,6 +106,7 @@
               <i class="fa-solid fa-desktop panel-head-icon"></i>
               <span class="panel-title">System</span>
             </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Operating system, CPU, and RAM information.</span>
             <div id="sysInfo" class="env-list">
               <div class="env-row">Loading...</div>
             </div>
@@ -207,6 +211,7 @@
             <i class="fa-solid fa-folder-open panel-head-icon"></i>
             <span class="panel-title">Output Folder</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Where processed files and pre-renders are saved.</span>
           <div class="form-group">
             <label>Save Location</label>
             <div class="folder-row">
@@ -222,6 +227,7 @@
             <i class="fa-solid fa-file-signature panel-head-icon"></i>
             <span class="panel-title">File Naming</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Filename prefix and timestamp options for outputs.</span>
           <div class="form-group">
             <label for="outputPrefix">Prefix</label>
             <input type="text" id="outputPrefix" value="AniSmooth" maxlength="24">
@@ -242,6 +248,7 @@
             <i class="fa-solid fa-sliders panel-head-icon"></i>
             <span class="panel-title">Behavior</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Auto-import, pre-render copies, and failed-output cleanup.</span>
           <div class="form-group">
             <label class="toggle-row" style="padding:0;margin-bottom:6px;">
               <span class="toggle-label" style="flex:1;">Auto-import to AE</span>
@@ -322,6 +329,7 @@
             <i class="fa-brands fa-python panel-head-icon"></i>
             <span class="panel-title">Python</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Path to the Python executable used for processing.</span>
           <div class="form-group">
             <label for="pythonPathInput">Executable Path</label>
             <input type="text" id="pythonPathInput" value="python">
@@ -332,6 +340,7 @@
             <i class="fa-solid fa-wand-magic-sparkles panel-head-icon"></i>
             <span class="panel-title">Flowframes</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Path to Flowframes.exe used by the Flowframes tab.</span>
           <div class="form-group">
             <label for="flowframesPathInput">Flowframes.exe Path</label>
             <div class="folder-row">
@@ -349,6 +358,7 @@
             <i class="fa-solid fa-toolbox panel-head-icon"></i>
             <span class="panel-title">Environment</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Detected Python, FFmpeg, and dependency status.</span>
           <div id="envInfoList" class="env-list">
             <div class="env-row"><i class="fa-solid fa-spinner fa-spin"></i> <span>Loading...</span></div>
           </div>
@@ -359,6 +369,7 @@
             <i class="fa-solid fa-folder-tree panel-head-icon"></i>
             <span class="panel-title">Folders</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Quick access to tool, output, and weights folders.</span>
           <div class="env-actions" id="envFolderActions"></div>
         </div>
 
@@ -367,6 +378,7 @@
             <i class="fa-solid fa-database panel-head-icon"></i>
             <span class="panel-title">Model Manager</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">View and delete downloaded model weight files.</span>
           <div id="modelManagerList" class="model-list">
             <div class="model-empty"><i class="fa-solid fa-spinner fa-spin"></i> Scanning...</div>
           </div>
@@ -377,6 +389,7 @@
             <i class="fa-solid fa-wrench panel-head-icon"></i>
             <span class="panel-title">Maintenance</span>
           </div>
+          <span class="form-hint" style="margin-bottom:8px;display:block;">Rerun the setup wizard or repair Python packages.</span>
           <button id="rerunSetupBtn" class="btn">
             <i class="fa-solid fa-arrows-rotate"></i> Rerun Setup Wizard
           </button>
