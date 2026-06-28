@@ -8,7 +8,6 @@
       this.encoderSelect = document.getElementById('flowframesEncoder');
       this.factorContainer = document.getElementById('flowframesFactor');
       this.factorCustom = document.getElementById('ffFactorCustom');
-      this.sceneToggle = document.getElementById('ffSceneChange');
       this.startBtn = document.getElementById('startFlowframesBtn');
       this.cancelBtn = document.getElementById('cancelFlowframesBtn');
       this._sourceInfo = null;
@@ -183,8 +182,7 @@
           factor: factor,
           ai: self.aiSelect ? self.aiSelect.value : 'RifeNcnn',
           model: self.modelSelect ? self.modelSelect.value : 'RIFE 4.26',
-          encoder: self.encoderSelect ? self.encoderSelect.value : 'X264',
-          sceneChange: self.sceneToggle ? self.sceneToggle.checked : true
+          encoder: self.encoderSelect ? self.encoderSelect.value : 'X264'
         }, {
           onProgress: function (p) { self._setProgress('Running Flowframes...', Math.max(0, Math.min(100, Math.round(p)))); },
           onLog: function (l) { dbg('debug', 'Flowframes', l); },

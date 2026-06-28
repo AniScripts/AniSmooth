@@ -61,22 +61,17 @@
                 <i class="fa-solid fa-chevron-down select-arrow"></i>
               </div>
               <div class="select-options">
-                <div class="select-option active" data-value="X264" data-label="h264 (x264)"><i class="fa-solid fa-film"></i> h264 (x264)</div>
-                <div class="select-option" data-value="X265" data-label="h265 (x265)"><i class="fa-solid fa-film"></i> h265 (x265)</div>
+                <div class="select-option active" data-value="X264" data-label="h264"><i class="fa-solid fa-film"></i> h264</div>
                 <div class="select-option" data-value="Nvenc264" data-label="h264 NVENC"><i class="fa-solid fa-bolt"></i> h264 NVENC</div>
+                <div class="select-option" data-value="Amf264" data-label="h264 AMF"><i class="fa-solid fa-bolt"></i> h264 AMF</div>
+                <div class="select-option" data-value="X265" data-label="h265"><i class="fa-solid fa-film"></i> h265</div>
                 <div class="select-option" data-value="Nvenc265" data-label="h265 NVENC"><i class="fa-solid fa-bolt"></i> h265 NVENC</div>
+                <div class="select-option" data-value="Amf265" data-label="h265 AMF"><i class="fa-solid fa-bolt"></i> h265 AMF</div>
+                <div class="select-option" data-value="SvtAv1" data-label="AV1"><i class="fa-solid fa-film"></i> AV1</div>
+                <div class="select-option" data-value="NvencAv1" data-label="AV1 NVENC"><i class="fa-solid fa-bolt"></i> AV1 NVENC</div>
               </div>
             </div>
             <span class="form-hint">Quality/CRF uses your saved Flowframes config (set it once in the Flowframes app).</span>
-          </div>
-          <div class="form-group">
-            <label>Scene Change Handling</label>
-            <label class="toggle-row" style="padding:0;">
-              <i class="fa-solid fa-scissors toggle-icon"></i>
-              <span class="toggle-label">Don't interpolate scene cuts</span>
-              <input type="checkbox" class="toggle-input" id="ffSceneChange" checked>
-              <span class="toggle-switch"></span>
-            </label>
           </div>
           <div class="btn-row">
             <button id="startFlowframesBtn" class="btn">
