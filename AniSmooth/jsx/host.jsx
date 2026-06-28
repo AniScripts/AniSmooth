@@ -285,8 +285,17 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
     var waStart = snapToFrame(layer.inPoint, fd);
     var waEnd = snapToFrame(layer.outPoint, fd);
     if (waStart < dispStart) waStart = dispStart;
+    if (waStart > dispEnd) waStart = dispEnd;
+    if (waEnd < dispStart) waEnd = dispStart;
     if (waEnd > dispEnd) waEnd = dispEnd;
     if (waEnd - waStart < fd) waEnd = Math.min(waStart + fd, dispEnd);
+    if (waEnd <= waStart) {
+      for (var i = 0; i < originalSolos.length; i++) {
+        try { var oLyr2 = originalSolos[i].layer; if (oLyr2.enabled) oLyr2.solo = originalSolos[i].solo; } catch (e) {}
+      }
+      item.remove();
+      return "{\"ok\":false,\"message\":\"Layer is outside the composition time bounds.\"}";
+    }
     comp.workAreaStart = waStart;
     comp.workAreaDuration = waEnd - waStart;
 
