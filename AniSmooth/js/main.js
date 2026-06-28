@@ -3,6 +3,7 @@
     settings: {
       outputPath: "",
       pythonPath: "python",
+      flowframesPath: "",
       outputPrefix: "AniSmooth",
       outputTimestamp: true,
       outputAutoImport: true,
@@ -59,6 +60,7 @@
       this.defaultDownloadFolder = (path && os) ? path.join(os.homedir(), "Downloads", "AniSmooth") : "";
       this.settings.outputPath = window.StorageManager.getItem("anismooth_output_path") || this.defaultDownloadFolder;
       this.settings.pythonPath = window.StorageManager.getItem("anismooth_python_path") || "python";
+      this.settings.flowframesPath = window.StorageManager.getItem("anismooth_flowframes_path") || "";
       this.settings.outputPrefix = window.StorageManager.getItem("anismooth_output_prefix") || "AniSmooth";
       this.settings.outputTimestamp = window.StorageManager.getItem("anismooth_output_timestamp", "1") === "1";
       this.settings.outputAutoImport = window.StorageManager.getItem("anismooth_output_autoimport", "1") === "1";
@@ -74,6 +76,7 @@
       window.DeadframesPanel.init(this);
       window.InterpolationPanel.init(this);
       window.UpscalePanel.init(this);
+      window.FlowframesPanel.init(this);
       window.ConsolePanel.init(this);
       window.QueuePanel.init(this);
       window.SysmonPanel.init(this);
@@ -117,6 +120,9 @@
       document.getElementById("upscaleTabBtn").addEventListener("click", function () {
         self.switchTab("upscale");
       });
+      document.getElementById("flowframesTabBtn").addEventListener("click", function () {
+        self.switchTab("flowframes");
+      });
       document.getElementById("consoleTabBtn").addEventListener("click", function () {
         self.switchTab("console");
       });
@@ -142,6 +148,28 @@
             window.StorageManager.setItem("anismooth_output_path", selected);
             document.getElementById("outputFolderText").textContent = selected;
             dbg('info', 'Settings', 'Output path updated: ' + selected);
+          }
+        });
+      }
+
+      var chooseFlowframesBtn = document.getElementById("chooseFlowframesBtn");
+      if (chooseFlowframesBtn) {
+        chooseFlowframesBtn.addEventListener("click", function () {
+          var ffStart = "";
+          try {
+            var la = process.env.LOCALAPPDATA || "";
+            if (la) ffStart = window.FileSystem.path.join(la, "Flowframes");
+          } catch (e) {}
+          var picked = window.FileSystem.chooseFileWithSystemExplorer
+            ? window.FileSystem.chooseFileWithSystemExplorer("Select Flowframes.exe", ffStart, "Executable (*.exe)|*.exe")
+            : null;
+          if (picked) {
+            self.settings.flowframesPath = picked;
+            window.StorageManager.setItem("anismooth_flowframes_path", picked);
+            var ffInput = document.getElementById("flowframesPathInput");
+            if (ffInput) ffInput.value = picked;
+            if (window.FlowframesPanel && window.FlowframesPanel.checkAvailability) window.FlowframesPanel.checkAvailability();
+            dbg('info', 'Settings', 'Flowframes path updated: ' + picked);
           }
         });
       }
@@ -175,7 +203,7 @@
     },
 
     switchTab: function (tab) {
-      var tabs = ["deadframes", "interpolation", "upscale", "console", "queue", "stopwatch", "sysmon", "settings"];
+      var tabs = ["deadframes", "interpolation", "upscale", "flowframes", "console", "queue", "stopwatch", "sysmon", "settings"];
       dbg('info', 'Nav', 'Switched to tab: ' + tab);
 
       for (var i = 0; i < tabs.length; i++) {
@@ -218,9 +246,9 @@
       }
 
       
-      if (tab === "interpolation" || tab === "upscale" || tab === "deadframes") {
+      if (tab === "interpolation" || tab === "upscale" || tab === "deadframes" || tab === "flowframes") {
         var self = this;
-        var panelMap = { interpolation: window.InterpolationPanel, upscale: window.UpscalePanel, deadframes: window.DeadframesPanel };
+        var panelMap = { interpolation: window.InterpolationPanel, upscale: window.UpscalePanel, deadframes: window.DeadframesPanel, flowframes: window.FlowframesPanel };
         var panel = panelMap[tab];
         if (panel && panel.refreshLayerInfo) {
           panel.refreshLayerInfo();
@@ -292,7 +320,17 @@
         });
       }
 
-      
+      var ffInput = document.getElementById("flowframesPathInput");
+      if (ffInput) {
+        ffInput.value = this.settings.flowframesPath || "";
+        ffInput.addEventListener("change", function () {
+          self.settings.flowframesPath = ffInput.value.trim();
+          window.StorageManager.setItem("anismooth_flowframes_path", self.settings.flowframesPath);
+          if (window.FlowframesPanel && window.FlowframesPanel.checkAvailability) window.FlowframesPanel.checkAvailability();
+        });
+      }
+
+
       var prefixInput = document.getElementById("outputPrefix");
       if (prefixInput) {
         prefixInput.value = this.settings.outputPrefix;
@@ -808,6 +846,7 @@
       { id: "deadframes", icon: "fa-scissors", label: "Deadframes" },
       { id: "interpolation", icon: "fa-forward", label: "Interpolation" },
       { id: "upscale", icon: "fa-expand", label: "Upscale" },
+      { id: "flowframes", icon: "fa-wand-magic-sparkles", label: "Flowframes" },
       { id: "console", icon: "fa-terminal", label: "Console" },
       { id: "queue", icon: "fa-list-check", label: "Queue" },
       { id: "stopwatch", icon: "fa-stopwatch", label: "Stopwatch" },

@@ -1,0 +1,104 @@
+      <div id="flowframesView" class="tab-content hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <i class="fa-solid fa-wand-magic-sparkles panel-head-icon"></i>
+            <span class="panel-title">Flowframes Interpolation</span>
+          </div>
+          <div class="form-group">
+            <div id="ffLayerInfo"></div>
+          </div>
+          <div class="form-group">
+            <label>Interpolation AI</label>
+            <div class="custom-select" id="flowframesAi">
+              <div class="select-trigger">
+                <span class="select-value"><i class="fa-solid fa-microchip"></i> RIFE (NCNN)</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="RifeNcnn" data-label="RIFE (NCNN)"><i class="fa-solid fa-microchip"></i> RIFE (NCNN) — Vulkan</div>
+                <div class="select-option" data-value="RifeCuda" data-label="RIFE (CUDA)"><i class="fa-solid fa-bolt"></i> RIFE (CUDA)</div>
+                <div class="select-option" data-value="RifeNcnnVs" data-label="RIFE (NCNN VS)"><i class="fa-solid fa-microchip"></i> RIFE (NCNN VapourSynth)</div>
+                <div class="select-option" data-value="DainNcnn" data-label="DAIN (NCNN)"><i class="fa-solid fa-microchip"></i> DAIN (NCNN)</div>
+                <div class="select-option" data-value="FlavrCuda" data-label="FLAVR (CUDA)"><i class="fa-solid fa-bolt"></i> FLAVR (CUDA)</div>
+                <div class="select-option" data-value="IfrnetNcnn" data-label="IFRNet (NCNN)"><i class="fa-solid fa-microchip"></i> IFRNet (NCNN)</div>
+                <div class="select-option" data-value="XvfiCuda" data-label="XVFI (CUDA)"><i class="fa-solid fa-bolt"></i> XVFI (CUDA)</div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>AI Model</label>
+            <div class="custom-select" id="flowframesModel">
+              <div class="select-trigger">
+                <span class="select-value"><i class="fa-solid fa-cube"></i> RIFE 4.26 — General Model</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="RIFE 4.26" data-label="RIFE 4.26 — General Model"><i class="fa-solid fa-cube"></i> RIFE 4.26 — General Model</div>
+                <div class="select-option" data-value="RIFE 4.25" data-label="RIFE 4.25 — General Model"><i class="fa-solid fa-cube"></i> RIFE 4.25 — General Model</div>
+                <div class="select-option" data-value="RIFE 4.24" data-label="RIFE 4.24 — General Model"><i class="fa-solid fa-cube"></i> RIFE 4.24 — General Model</div>
+                <div class="select-option" data-value="RIFE 4.22" data-label="RIFE 4.22 — General Model"><i class="fa-solid fa-cube"></i> RIFE 4.22 — General Model</div>
+                <div class="select-option" data-value="RIFE 4.18" data-label="RIFE 4.18 — General Model"><i class="fa-solid fa-cube"></i> RIFE 4.18 — General Model</div>
+                <div class="select-option" data-value="RIFE 4.13" data-label="RIFE 4.13 — General Model"><i class="fa-solid fa-cube"></i> RIFE 4.13 — General Model</div>
+                <div class="select-option" data-value="RIFE 4.9" data-label="RIFE 4.9 — General Model"><i class="fa-solid fa-cube"></i> RIFE 4.9 — General Model</div>
+                <div class="select-option" data-value="RIFE 2.3" data-label="RIFE 2.3 — Old V2 Model"><i class="fa-solid fa-cube"></i> RIFE 2.3 — Old V2 Model</div>
+              </div>
+            </div>
+            <span class="form-hint">Model list depends on the selected AI. NCNN uses RIFE NCNN models; CUDA uses RIFE CUDA models.</span>
+          </div>
+          <div class="form-group">
+            <label>Factor</label>
+            <div class="factor-presets" id="flowframesFactor">
+              <button class="factor-btn" data-value="2">2×</button>
+              <button class="factor-btn" data-value="3">3×</button>
+              <button class="factor-btn" data-value="4">4×</button>
+              <button class="factor-btn active" data-value="6">6×</button>
+              <button class="factor-btn" data-value="8">8×</button>
+              <button class="factor-btn" data-value="10">10×</button>
+              <input type="number" class="factor-custom" id="ffFactorCustom" placeholder="custom" min="2" max="16" value="">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Output Encoder</label>
+            <div class="custom-select" id="flowframesEncoder">
+              <div class="select-trigger">
+                <span class="select-value"><i class="fa-solid fa-film"></i> h264 (x264)</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+              <div class="select-options">
+                <div class="select-option active" data-value="X264" data-label="h264 (x264)"><i class="fa-solid fa-film"></i> h264 (x264)</div>
+                <div class="select-option" data-value="X265" data-label="h265 (x265)"><i class="fa-solid fa-film"></i> h265 (x265)</div>
+                <div class="select-option" data-value="Nvenc264" data-label="h264 NVENC"><i class="fa-solid fa-bolt"></i> h264 NVENC</div>
+                <div class="select-option" data-value="Nvenc265" data-label="h265 NVENC"><i class="fa-solid fa-bolt"></i> h265 NVENC</div>
+              </div>
+            </div>
+            <span class="form-hint">Quality/CRF uses your saved Flowframes config (set it once in the Flowframes app).</span>
+          </div>
+          <div class="form-group">
+            <label>Scene Change Handling</label>
+            <label class="toggle-row" style="padding:0;">
+              <i class="fa-solid fa-scissors toggle-icon"></i>
+              <span class="toggle-label">Don't interpolate scene cuts</span>
+              <input type="checkbox" class="toggle-input" id="ffSceneChange" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+          <div class="btn-row">
+            <button id="startFlowframesBtn" class="btn">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Interpolate
+            </button>
+            <button id="cancelFlowframesBtn" class="btn btn-cancel" style="display:none;">
+              <i class="fa-solid fa-stop"></i> Cancel
+            </button>
+          </div>
+          <div id="ffStatusHint" class="info-card" style="display:none;"></div>
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div id="flowframesProgressFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="flowframesProgressLabel">Ready</span>
+              <span id="flowframesProgressPercent">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
