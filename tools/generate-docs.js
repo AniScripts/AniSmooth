@@ -88,7 +88,7 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 AniSmooth supports local hardware-accelerated models for both frame interpolation and video upscaling.
 
 > [!NOTE]
-> **Beta Stage:** We plan to add more models in the future. Right now, because the extension is in beta, we are keeping only these selected models—which are currently considered the best ones available—until we make sure the extension is 100% stable.
+> **Beta Stage:** We plan to add more models in the future. Right now, because the extension is in beta, we are keeping only these selected models - which are currently considered the best ones available - until we make sure the extension is 100% stable.
 
 ### 1. Frame Interpolation Models (RIFE 4.25)
 

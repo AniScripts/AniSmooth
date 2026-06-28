@@ -336,7 +336,7 @@
           var vram = _gpuInfo.nvidia_vram_mb ? ' (' + formatVram(_gpuInfo.nvidia_vram_mb) + ')' : '';
           var label = _gpuInfo.nvidia_name + vram;
           rows += renderToolRow({ found: _gpuInfo.cuda_available, extra: _gpuInfo.pytorch_variant },
-            'GPU & CUDA', _gpuInfo.cuda_available ? label + ' — CUDA OK' : label + ' — CPU PyTorch', 'fa-solid fa-microchip');
+            'GPU & CUDA', _gpuInfo.cuda_available ? label + '  -  CUDA OK' : label + '  -  CPU PyTorch', 'fa-solid fa-microchip');
         } else {
           rows += renderToolRow({ found: false }, 'GPU', 'No NVIDIA GPU detected', 'fa-solid fa-microchip');
         }
@@ -881,7 +881,7 @@
         '</div>' +
         '<div class="ts-summary-row ' + (gpuOk ? 'ts-ok' : (_gpuChoice === 'gpu' ? (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? 'ts-warn' : 'ts-err') : 'ts-ok')) + '">' +
           '<i class="fa-solid fa-' + (gpuOk ? 'check' : (_gpuChoice === 'gpu' ? (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? 'exclamation' : 'xmark') : 'check')) + '"></i>' +
-          ' ' + modeLabel + ' Mode' + (gpuOk ? ' — ' + gpuName + ' (CUDA)' : (_gpuChoice === 'cpu' ? '' : (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? ' — ' + gpuName + ' (CPU PyTorch)' : ' (CPU)'))) +
+          ' ' + modeLabel + ' Mode' + (gpuOk ? '  -  ' + gpuName + ' (CUDA)' : (_gpuChoice === 'cpu' ? '' : (_gpuInfo && _gpuInfo.nvidia_gpu_detected ? '  -  ' + gpuName + ' (CPU PyTorch)' : ' (CPU)'))) +
         '</div>' +
         '<div class="ts-summary-row ' + (_pytorchOk ? 'ts-ok' : 'ts-warn') + '">' +
           '<i class="fa-solid fa-' + (_pytorchOk ? 'check' : 'exclamation') + '"></i>' +

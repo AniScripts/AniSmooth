@@ -132,7 +132,7 @@
         hint.style.display = 'none';
       } else {
         hint.style.display = '';
-        hint.innerHTML = '<span class="meta-strip meta-strip-dim"><i class="fa-solid fa-triangle-exclamation"></i> Flowframes.exe not found — set its path in Settings → Python → Flowframes.</span>';
+        hint.innerHTML = '<span class="meta-strip meta-strip-dim"><i class="fa-solid fa-triangle-exclamation"></i> Flowframes.exe not found  -  set its path in Settings → Python → Flowframes.</span>';
       }
       this.applyVersion();
     },

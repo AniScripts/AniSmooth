@@ -1,4 +1,4 @@
-/* AniSmooth — Compact Dark Theme */
+/* AniSmooth  -  Compact Dark Theme */
 @font-face {
   font-family: 'Archivo';
   src: url('../fonts/Archivo-Regular.ttf') format('truetype');
@@ -821,7 +821,7 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accen
 }
 
 /* ============================================================
-   LIGHT THEME — overrides every token for full legibility.
+   LIGHT THEME  -  overrides every token for full legibility.
    Activated via <html data-theme="light">. Dark remains default.
    ============================================================ */
 html[data-theme="light"] {
@@ -845,7 +845,7 @@ html[data-theme="light"] {
   --text-dim: #6b7280;
   --text-faint: #6b7280;
   --hint: #5b616b;
-  /* accent (branded blue, NOT white — critical for visibility on white) */
+  /* accent (branded blue, NOT white  -  critical for visibility on white) */
   --accent: #2563eb;
   --accent-on: #ffffff;
   /* overlays */
@@ -856,9 +856,9 @@ html[data-theme="light"] {
   /* scrollbar */
   --scroll-thumb: #c4c8d0;
   --scroll-thumb-hover: #aeb3bd;
-  /* toggle ON track — tinted accent so the ON state reads clearly on white */
+  /* toggle ON track  -  tinted accent so the ON state reads clearly on white */
   --toggle-on-track: rgba(37,99,235,.18);
-  /* status — base hues read on both; text variants darkened for white bg */
+  /* status  -  base hues read on both; text variants darkened for white bg */
   --error: #ef4444;
   --error-text: #b91c1c;
   --warn: #f59e0b;

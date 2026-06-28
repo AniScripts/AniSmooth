@@ -273,7 +273,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                         interp = tensor_to_frame(mid, str(device))
                         video.write_frame(interp)
                 else:
-                    # PyTorch path — channels_last keeps CuDNN on the same
+                    # PyTorch path  -  channels_last keeps CuDNN on the same
                     # kernel path as when the model was tuned; without it
                     # non-deterministic CuDNN kernel selection can shift
                     # intermediate activations enough to produce wrong flow.
@@ -285,7 +285,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                         model.cachePair(t0_padded, t1_padded)
                         # Save encoded features: IFNet.forward mutates f0←f1
                         # after each call, so multi-step (factor≥3) would use
-                        # f1 for both on 2nd+ iterations — wrong flow.
+                        # f1 for both on 2nd+ iterations  -  wrong flow.
                         saved_f0 = model.flownet.f0
                         saved_f1 = model.flownet.f1
                         for f in range(1, factor):
@@ -359,7 +359,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
                 out_min = upscaled.min().item()
                 out_max = upscaled.max().item()
                 out_mean = upscaled.mean().item()
-                log("info", f"Upscale output stats — min: {out_min:.4f}, max: {out_max:.4f}, mean: {out_mean:.4f}")
+                log("info", f"Upscale output stats  -  min: {out_min:.4f}, max: {out_max:.4f}, mean: {out_mean:.4f}")
                 if out_max < 0.01:
                     log("error", "Model output is nearly all-black! Model weights may not be loaded correctly.")
                     log("error", "Try removing the weight file and letting it re-download, or check console for weight-loading warnings.")
@@ -610,7 +610,7 @@ def run_dedupe(
         # drift out of sync if muxed back on. Only re-attach audio when nothing was
         # removed; otherwise the user lays the soundtrack over the cut clip in AE.
         if stats.get('duplicate_frames', 0) > 0:
-            log("warn", "Frames removed — skipping audio mux to avoid A/V desync "
+            log("warn", "Frames removed  -  skipping audio mux to avoid A/V desync "
                         "(add your soundtrack in After Effects).")
         else:
             mux_audio(str(output_path), str(input_path))

@@ -36,7 +36,7 @@ function importFileToAE(filePath) {
     
     var comp = app.project.activeItem;
     if (comp && comp instanceof CompItem) {
-      // Capture selection BEFORE add() — adding a layer makes the new layer the
+      // Capture selection BEFORE add()  -  adding a layer makes the new layer the
       // only selected one, so reading selectedLayers afterwards returns itself
       // and moveAfter() throws "Can not move a layer before or after itself".
       var selectedLayer = null;
@@ -233,7 +233,7 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
 
     var layer = null;
     
-    // Use layer index if provided — durable across selection changes
+    // Use layer index if provided  -  durable across selection changes
     if (layerIndex && layerIndex > 0 && layerIndex <= comp.numLayers) {
       layer = comp.layer(layerIndex);
     }
@@ -317,7 +317,7 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
     renderComp.workAreaDuration = absEnd - absStart;
 
     // Coordinate-space trap: workAreaStart is ABSOLUTE (set above), but
-    // RenderQueueItem.timeSpanStart is DISPLAY-relative — its valid range is
+    // RenderQueueItem.timeSpanStart is DISPLAY-relative  -  its valid range is
     // [displayStartTime, displayStartTime + duration]. Assigning the absolute
     // start (0 when displayStartTime != 0) triggers AE's "timeSpanStart of 0
     // seconds ... frames outside range" warning and renders blank/one frame.
