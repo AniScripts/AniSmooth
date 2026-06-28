@@ -197,8 +197,20 @@
         });
       };
 
+      var ensureKilledThenSpawn = function (attempt) {
+        cp.exec('taskkill /F /T /IM Flowframes.exe', function () {
+          cp.exec('tasklist /FI "IMAGENAME eq Flowframes.exe" /NH', function (err, stdout) {
+            var stillAlive = stdout && /Flowframes\.exe/i.test(stdout);
+            if (stillAlive && attempt < 12) {
+              setTimeout(function () { ensureKilledThenSpawn(attempt + 1); }, 400);
+            } else {
+              setTimeout(spawnAndWatch, 500);
+            }
+          });
+        });
+      };
       try {
-        cp.exec('taskkill /F /T /IM Flowframes.exe', function () { setTimeout(spawnAndWatch, 800); });
+        ensureKilledThenSpawn(0);
       } catch (e) {
         spawnAndWatch();
       }
