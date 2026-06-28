@@ -52,7 +52,7 @@
     },
 
     add: function (item) {
-      var validModes = { upscale: true, interpolate: true, dedupe: true, flowframes: true };
+      var validModes = { upscale: true, interpolate: true, dedupe: true };
       if (!item.mode || !validModes[item.mode]) {
         dbg("error", "Queue", "Rejected: unknown mode '" + (item.mode || "undefined") + "'");
         if (window.showToast) window.showToast("Invalid queue mode: " + (item.mode || "undefined"), "error");
@@ -310,16 +310,15 @@
       }
 
       var ext = window.FileSystem.getExtension(inputPath);
-      if (item.mode === "flowframes") ext = "mp4";
       var nameWithoutExt = window.FileSystem.getFileNameWithoutExtension(inputPath);
       var outputName = res.isTemp ? nameWithoutExt.replace(/^AniSmooth_Render_\d+_?/, "") : nameWithoutExt;
       var outDir = (window.App && window.App.settings.outputPath) || window.FileSystem.os.homedir();
-      var modeFolder = item.mode === "upscale" ? "Upscaled" : (item.mode === "dedupe" ? "Deduped" : (item.mode === "flowframes" ? "Flowframes" : "Interpolated"));
+      var modeFolder = item.mode === "upscale" ? "Upscaled" : (item.mode === "dedupe" ? "Deduped" : "Interpolated");
       var modeDir = window.FileSystem.path.join(outDir, modeFolder);
       var prerenderDir = window.FileSystem.path.join(outDir, "PreRenders");
       window.FileSystem.createFolder(modeDir);
       window.FileSystem.createFolder(prerenderDir);
-      var suffix = item.mode === "upscale" ? "_upscaled_" : (item.mode === "dedupe" ? "_deduped" : (item.mode === "flowframes" ? "_flowframes_" : "_interpolated_"));
+      var suffix = item.mode === "upscale" ? "_upscaled_" : (item.mode === "dedupe" ? "_deduped" : "_interpolated_");
       var scaleKey = item.mode === "upscale" ? item.scale : item.factor;
       var settings = (window.App && window.App.settings) || {};
       var prefix = (settings.outputPrefix || "AniSmooth") + "_";
@@ -388,20 +387,8 @@
             dbg("debug", "Queue-Engine", l, item.mode);
           }
         },
-        onComplete: function (producedPath) {
+        onComplete: function () {
           self._currentProc = null;
-          if (producedPath && producedPath !== outputPath && window.FileSystem && window.FileSystem.fs) {
-            try {
-              window.FileSystem.fs.renameSync(producedPath, outputPath);
-            } catch (e) {
-              try {
-                window.FileSystem.fs.copyFileSync(producedPath, outputPath);
-                window.FileSystem.fs.unlinkSync(producedPath);
-              } catch (e2) {
-                outputPath = producedPath;
-              }
-            }
-          }
           item.status = "done";
           item.progress = 100;
           if (item.startedAt) item.elapsed = Date.now() - item.startedAt;
@@ -455,21 +442,6 @@
         window.ModelHandler.dedupeClip(inputPath, outputPath, item.threshold || 0.05, item.options || {}, callbacks);
       } else if (item.mode === "interpolate") {
         window.ModelHandler.interpolateClip(inputPath, outputPath, item.model, { fpsFactor: String(item.factor), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high", sceneThreshold: item.sceneThreshold }, callbacks);
-      } else if (item.mode === "flowframes") {
-        var jobOutDir = window.FileSystem.path.join(modeDir, ".ff_" + item.id);
-        window.FileSystem.createFolder(jobOutDir);
-        window.ModelHandler.flowframesClip(inputPath, jobOutDir, {
-          factor: item.factor,
-          ai: item.ai,
-          model: item.model,
-          encoder: item.encoder,
-          format: item.format,
-          pixelFormat: item.pixelFormat,
-          maxFps: item.maxFps,
-          maxHeight: item.maxHeight,
-          sceneChange: item.sceneChange,
-          sceneSensitivity: item.sceneSensitivity
-        }, callbacks);
       } else {
         item.status = "error";
         item.error = "Unknown queue mode: " + (item.mode || "undefined");

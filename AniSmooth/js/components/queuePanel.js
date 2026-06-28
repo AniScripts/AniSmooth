@@ -93,8 +93,8 @@
         else if (item.status === "cancelled") { icon = "fa-circle-stop"; rowCls = "q-row-cancelled"; }
         else { icon = "fa-circle"; rowCls = ""; }
 
-        var taskIcon = item.mode === "upscale" ? "fa-maximize" : (item.mode === "dedupe" ? "fa-scissors" : (item.mode === "flowframes" ? "fa-wand-magic-sparkles" : "fa-forward"));
-        var taskLabel = item.mode === "upscale" ? "Upscale" : (item.mode === "dedupe" ? "Dedupe" : (item.mode === "flowframes" ? "Flowframes" : "Interpolation"));
+        var taskIcon = item.mode === "upscale" ? "fa-maximize" : (item.mode === "dedupe" ? "fa-scissors" : "fa-forward");
+        var taskLabel = item.mode === "upscale" ? "Upscale" : (item.mode === "dedupe" ? "Dedupe" : "Interpolation");
         var scaleLabel = item.mode === "upscale" ? (item.scale + "×") : (item.mode === "dedupe" ? ("t=" + (item.threshold || 0.05)) : (item.factor + "×"));
 
         var progressHtml = "";
