@@ -6,6 +6,7 @@ Free local After Effects extension for AI frame interpolation and video upscalin
 
 - **Update this file** when adding/removing files, changing architecture, adding new build steps, or introducing conventions.
 - **Commit style:** prefix tag in parentheses — `(add)` new features, `(fix)` bug fixes, `(update)` refactors/formatting/chores. Title case after colon. Example: `(fix) Clamp work area bounds to prevent AE out-of-range error`.
+- **Commit author:** always commit under the user's account. Do NOT add a `Co-Authored-By: Claude` trailer or any self-attribution — keep Claude out of the commit entirely.
 
 ## Build & Run
 

@@ -278,32 +278,27 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
     var savedWAStart = comp.workAreaStart;
     var savedWADuration = comp.workAreaDuration;
     var fd = comp.frameDuration;
-    var dispStart = comp.displayStartTime;
-    var dispEnd = dispStart + comp.duration;
-    // Work area stays in DISPLAY coordinates (same space as layer.inPoint),
-    // clamped to the comp's display window and snapped to whole frames.
-    var waStart = snapToFrame(layer.inPoint, fd);
-    var waEnd = snapToFrame(layer.outPoint, fd);
-    if (waStart < dispStart) waStart = dispStart;
-    if (waStart > dispEnd) waStart = dispEnd;
-    if (waEnd < dispStart) waEnd = dispStart;
-    if (waEnd > dispEnd) waEnd = dispEnd;
-    if (waEnd - waStart < fd) waEnd = Math.min(waStart + fd, dispEnd);
-    if (waEnd <= waStart) {
+    // BOTH comp.workAreaStart and RenderQueueItem.timeSpanStart are ABSOLUTE
+    // 0-based times (valid range [0, comp.duration]). layer.inPoint/outPoint are
+    // DISPLAY-relative (offset by displayStartTime). Convert via toAbsRenderTime,
+    // which subtracts displayStartTime, snaps to the frame grid, and clamps to
+    // [0, duration]. Setting work area to the raw display value throws AE's
+    // "workAreaStart value out of range" error when displayStartTime != 0.
+    var absStart = toAbsRenderTime(layer.inPoint, comp);
+    var absEnd = toAbsRenderTime(layer.outPoint, comp);
+    // Guarantee at least one frame inside the comp.
+    if (absEnd - absStart < fd) absEnd = Math.min(absStart + fd, comp.duration);
+    if (absEnd <= absStart) {
       for (var i = 0; i < originalSolos.length; i++) {
         try { var oLyr2 = originalSolos[i].layer; if (oLyr2.enabled) oLyr2.solo = originalSolos[i].solo; } catch (e) {}
       }
       item.remove();
       return "{\"ok\":false,\"message\":\"Layer is outside the composition time bounds.\"}";
     }
-    comp.workAreaStart = waStart;
-    comp.workAreaDuration = waEnd - waStart;
+    comp.workAreaStart = absStart;
+    comp.workAreaDuration = absEnd - absStart;
 
-    // RenderQueueItem.timeSpanStart is ABSOLUTE 0-based time -> convert from the
-    // display-relative in/out points so the render matches the trim exactly and
-    // never produces blank frames (issues #1 & #2).
-    var absStart = toAbsRenderTime(layer.inPoint, comp);
-    var absEnd = toAbsRenderTime(layer.outPoint, comp);
+    // RenderQueueItem.timeSpanStart is ABSOLUTE 0-based time (issues #1 & #2).
     var absDur = absEnd - absStart;
     if (absDur < fd) absDur = Math.min(fd, comp.duration - absStart);
     item.timeSpanStart = absStart;
