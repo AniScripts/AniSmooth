@@ -61,8 +61,8 @@ Repo root holds build tooling; the CEP extension itself lives in `AniSmooth/`.
 ├── index.html                 # SPA shell: topbar nav + tab containers
 ├── css/style.css              # Dark/light theme, ~860 lines
 ├── css/toolsSetup.css         # First-run wizard styles
-├── tabs/*.html                # Tab fragments: interpolation, upscale, deadframes,
-│                              #   queue, sysmon, console, settings, stopwatch (tabLoader.js)
+├── tabs/*.html                # Tab fragments: interpolation, upscale, flowframes,
+│                              #   deadframes, queue, sysmon, console, settings, stopwatch (tabLoader.js)
 ├── js/
 │   ├── CSInterface.js         # Adobe boilerplate (NOT obfuscated)
 │   ├── console.js             # dbg(level, source, msg) global logger
@@ -70,6 +70,7 @@ Repo root holds build tooling; the CEP extension itself lives in `AniSmooth/`.
 │   ├── components/            # One panel controller per tab
 │   │   ├── interpolationPanel.js
 │   │   ├── upscalePanel.js
+│   │   ├── flowframesPanel.js # Standalone Flowframes tab (no shared queue)
 │   │   ├── deadframesPanel.js
 │   │   ├── queuePanel.js
 │   │   ├── consolePanel.js
@@ -79,6 +80,7 @@ Repo root holds build tooling; the CEP extension itself lives in `AniSmooth/`.
 │       ├── fileSystem.js      # Node fs/path/os/child_process wrappers + PS dialogs
 │       ├── storage.js         # localStorage wrapper (keys: anismooth_*)
 │       ├── modelHandler.js    # Singleton: spawns Python for all 3 modes
+│       ├── flowframesHandler.js # Singleton: spawns Flowframes.exe, tails session log
 │       ├── queueManager.js    # Batch queue: pause/cancel/retry/persist
 │       ├── customSelect.js
 │       └── tabLoader.js
@@ -142,6 +144,19 @@ Python stdout format: `{"type":"info|warn|error|success|progress","msg":"...","p
 | `modelHandler.js` | Singleton `activeProcess` + `_cancelling` flag prevents concurrent Python spawns. `executeModel()` spawns, `cancelActiveProcess()` kills via `taskkill /F /T` |
 | `host.jsx` | `renderSelectedLayer()` renders one layer to a temp AVI. **Time-coord trap — three different spaces:** `layer.inPoint/outPoint` are DISPLAY-relative (offset by `displayStartTime`); `comp.workAreaStart` is ABSOLUTE 0-based (range `[0, duration]`); `RenderQueueItem.timeSpanStart` is DISPLAY-relative (range `[displayStartTime, displayStartTime+duration]`). Compute `absStart = toAbsRenderTime(inPoint)`, then `workAreaStart = absStart` but `timeSpanStart = absStart + displayStartTime`. Mixing them throws "value out of range" or the "timeSpanStart of 0 ... blank frames" warning (one-frame render). **Precomp:** if `layer.source instanceof CompItem`, queue that source comp at its full duration (no solo) instead of soloing the precomp in the parent — soloing renders the parent's slot, which is often offset/empty → black frames. `importFileToAE()`: capture `selectedLayers` BEFORE `layers.add()` — add reselects to the new layer, so `moveAfter` would target itself |
 | `main.py` | `argparse` → dispatch. Quality presets at top of file. Scene detection threshold: 0.40 |
+
+## Flowframes Integration
+
+The Flowframes tab is **fully standalone** — it does NOT use `modelHandler.js`, `queueManager.js`, or the Python backend. `flowframesPanel.js` pre-renders the selected AE layer (`renderSelectedLayer`), calls `FlowframesHandler.run()`, then moves/imports the result.
+
+`FlowframesHandler.run()` spawns the external **`Flowframes.exe`** (auto-detected at `%LOCALAPPDATA%/Flowframes/Flowframes.exe`, override via `settings.flowframesPath` / `anismooth_flowframes_path`). Hard-won quirks — change with care:
+
+- **Use `Flowframes.exe`, not `FlowframesCmd.exe`.** The latter is an IPC shim that only forwards args to an already-running instance.
+- **Single-instance.** A running instance silently swallows new launches (args forwarded/ignored). Always `taskkill /IM Flowframes.exe` before spawning.
+- **`-a` autorun** runs and exits after; window still appears (not truly headless). Args: `-a -nc -mdc -f <factor> -ai <impl> -m "<model>" -vf Mp4 -ve <enc> -pf Yuv420P -o <dir> <input>`. Pass via `spawn(exe, [array])` — args with spaces (model names, paths) only survive as separate array elements.
+- **Must strip `NoDefaultCurrentDirectoryInExePath` from the child env.** If set, Flowframes' bare-name `ffprobe` (run after `cd` into its pkg dir) fails → empty packet list → `Failed to initialize MediaFile: Sequence contains no elements` → import hangs. AE's own env is clean; only matters if a parent shell injected it.
+- **No stdout.** Progress/errors are logged to `FlowframesData/logs/<session>/sessionlog.txt` — tail the newest session dir created after launch. Output filename is chosen by Flowframes → locate the newest media file in the `-o` dir.
+- Model names come from `pkgs/<ai>/models.json` (`name` field, e.g. `RIFE 4.26`); model list depends on the `-ai` implementation.
 
 ## Python Path Resolution
 
