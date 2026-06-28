@@ -253,63 +253,78 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
     if (!layer) {
       return "{\"ok\":false,\"message\":\"No layer selected in the timeline.\"}";
     }
-    
-    
-    for (var i = 1; i <= comp.numLayers; i++) {
-      var lyr = comp.layer(i);
-      if (lyr.enabled) {
-        originalSolos.push({
-          layer: lyr,
-          solo: lyr.solo
-        });
+
+    // If the selected layer is a pre-comp, render its SOURCE composition directly
+    // at its own full duration instead of soloing it inside the parent comp. The
+    // parent only sees the precomp over the layer's slot (which may be offset,
+    // time-remapped, or empty there) -> soloing + trimming the parent yields
+    // black frames. Rendering the source comp gives the precomp's real content.
+    var src = null;
+    try { src = layer.source; } catch (e) {}
+    var isPrecomp = (src && src instanceof CompItem);
+    var renderComp = isPrecomp ? src : comp;
+
+    // Solo only matters when rendering the parent comp. Rendering a precomp
+    // source renders all of its own layers, so skip solo manipulation entirely.
+    if (!isPrecomp) {
+      for (var i = 1; i <= comp.numLayers; i++) {
+        var lyr = comp.layer(i);
+        if (lyr.enabled) {
+          originalSolos.push({ layer: lyr, solo: lyr.solo });
+        }
+      }
+      for (var i = 1; i <= comp.numLayers; i++) {
+        var lyr = comp.layer(i);
+        if (lyr.enabled) {
+          lyr.solo = (lyr === layer);
+        }
       }
     }
 
-    
-    for (var i = 1; i <= comp.numLayers; i++) {
-      var lyr = comp.layer(i);
-      if (lyr.enabled) {
-        lyr.solo = (lyr === layer);
-      }
-    }
 
-    
     var rq = app.project.renderQueue;
-    var item = rq.items.add(comp);
-    
-    // Save and temporarily set work area to match the selected layer
-    var savedWAStart = comp.workAreaStart;
-    var savedWADuration = comp.workAreaDuration;
-    var fd = comp.frameDuration;
-    // BOTH comp.workAreaStart and RenderQueueItem.timeSpanStart are ABSOLUTE
-    // 0-based times (valid range [0, comp.duration]). layer.inPoint/outPoint are
-    // DISPLAY-relative (offset by displayStartTime). Convert via toAbsRenderTime,
-    // which subtracts displayStartTime, snaps to the frame grid, and clamps to
-    // [0, duration]. Setting work area to the raw display value throws AE's
-    // "workAreaStart value out of range" error when displayStartTime != 0.
-    var absStart = toAbsRenderTime(layer.inPoint, comp);
-    var absEnd = toAbsRenderTime(layer.outPoint, comp);
-    // Guarantee at least one frame inside the comp.
-    if (absEnd - absStart < fd) absEnd = Math.min(absStart + fd, comp.duration);
-    if (absEnd <= absStart) {
-      for (var i = 0; i < originalSolos.length; i++) {
-        try { var oLyr2 = originalSolos[i].layer; if (oLyr2.enabled) oLyr2.solo = originalSolos[i].solo; } catch (e) {}
-      }
-      item.remove();
-      return "{\"ok\":false,\"message\":\"Layer is outside the composition time bounds.\"}";
-    }
-    comp.workAreaStart = absStart;
-    comp.workAreaDuration = absEnd - absStart;
+    var item = rq.items.add(renderComp);
 
-    // Coordinate-space trap: comp.workAreaStart is ABSOLUTE (set above), but
+    // Save and temporarily set work area on the comp being rendered.
+    var savedWAStart = renderComp.workAreaStart;
+    var savedWADuration = renderComp.workAreaDuration;
+    var fd = renderComp.frameDuration;
+
+    var absStart, absEnd;
+    if (isPrecomp) {
+      // Whole precomp: full duration, no trim.
+      absStart = 0;
+      absEnd = renderComp.duration;
+    } else {
+      // BOTH comp.workAreaStart and RenderQueueItem.timeSpanStart map from the
+      // layer's DISPLAY-relative in/out points (offset by displayStartTime).
+      // toAbsRenderTime subtracts displayStartTime, snaps to the frame grid, and
+      // clamps to [0, duration]. Raw display values throw AE's "workAreaStart
+      // value out of range" error when displayStartTime != 0.
+      absStart = toAbsRenderTime(layer.inPoint, comp);
+      absEnd = toAbsRenderTime(layer.outPoint, comp);
+      // Guarantee at least one frame inside the comp.
+      if (absEnd - absStart < fd) absEnd = Math.min(absStart + fd, comp.duration);
+      if (absEnd <= absStart) {
+        for (var i = 0; i < originalSolos.length; i++) {
+          try { var oLyr2 = originalSolos[i].layer; if (oLyr2.enabled) oLyr2.solo = originalSolos[i].solo; } catch (e) {}
+        }
+        item.remove();
+        return "{\"ok\":false,\"message\":\"Layer is outside the composition time bounds.\"}";
+      }
+    }
+    renderComp.workAreaStart = absStart;
+    renderComp.workAreaDuration = absEnd - absStart;
+
+    // Coordinate-space trap: workAreaStart is ABSOLUTE (set above), but
     // RenderQueueItem.timeSpanStart is DISPLAY-relative — its valid range is
     // [displayStartTime, displayStartTime + duration]. Assigning the absolute
     // start (0 when displayStartTime != 0) triggers AE's "timeSpanStart of 0
     // seconds ... frames outside range" warning and renders blank/one frame.
     // Duration is identical in both spaces; only the start needs the offset.
     var absDur = absEnd - absStart;
-    if (absDur < fd) absDur = Math.min(fd, comp.duration - absStart);
-    item.timeSpanStart = absStart + comp.displayStartTime;
+    if (absDur < fd) absDur = Math.min(fd, renderComp.duration - absStart);
+    item.timeSpanStart = absStart + renderComp.displayStartTime;
     item.timeSpanDuration = absDur;
     
     
@@ -334,9 +349,9 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
     rq.render();
     
     // Restore work area
-    comp.workAreaStart = savedWAStart;
-    comp.workAreaDuration = savedWADuration;
-    
+    renderComp.workAreaStart = savedWAStart;
+    renderComp.workAreaDuration = savedWADuration;
+
     for (var i = 0; i < originalSolos.length; i++) {
       try {
         var oLyr = originalSolos[i].layer;
@@ -372,7 +387,7 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
     return "{\"ok\":true,\"filePath\":\"" + jsonEscape(finalPath) + "\",\"name\":\"" + jsonEscape(layer.name) + "\",\"isTemp\":true}";
   } catch (err) {
     // Restore work area on error
-    try { comp.workAreaStart = savedWAStart; comp.workAreaDuration = savedWADuration; } catch (e) {}
+    try { renderComp.workAreaStart = savedWAStart; renderComp.workAreaDuration = savedWADuration; } catch (e) {}
     
     if (originalSolos) {
       for (var i = 0; i < originalSolos.length; i++) {
