@@ -51,6 +51,9 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 - **Output Encoders** - h264 / h265 / AV1, including NVENC and AMF variants.
 - **Hands-off** - The selected layer is pre-rendered, sent to Flowframes, and the finished clip is imported back automatically.
 
+> [!NOTE]
+> Only **Flowframes 1.42.0 (Patreon version)** is supported right now. Support for the **1.36.0 free version** is coming soon.
+
 ### Batch Queue
 
 - **Queue Everything** - Interpolation, upscaling, deadframe removal, and Flowframes jobs all run through one serial queue.
