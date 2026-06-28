@@ -44,6 +44,19 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 - **Upscaling Multipliers** - Make clips 2x or 4x larger.
 - **Model Support** - ShuffleCUGAN models built for anime and detailed clips.
 
+### Flowframes Interpolation
+
+- **Use Your Flowframes Install** - Drives your local [Flowframes](https://nmkd.itch.io/flowframes) app directly from After Effects (point AniSmooth at `Flowframes.exe` in Settings).
+- **Engines & Models** - Choose the AI implementation (RIFE NCNN, RIFE NCNN/VS, DAIN NCNN) and RIFE model (up to 4.26), with multipliers from 2x to 16x.
+- **Output Encoders** - h264 / h265 / AV1, including NVENC and AMF variants.
+- **Hands-off** - The selected layer is pre-rendered, sent to Flowframes, and the finished clip is imported back automatically.
+
+### Batch Queue
+
+- **Queue Everything** - Interpolation, upscaling, deadframe removal, and Flowframes jobs all run through one serial queue.
+- **Pre-render on Add** - Each clip is captured from the timeline the moment you add it, so changing your selection or adding more jobs while one runs never grabs the wrong layer.
+- **Control** - Pause, resume, cancel, and retry jobs; the queue persists across restarts.
+
 ### System & Environment
 
 ![System Monitor](previews/AniSmooth_SystemMonitor.png)
@@ -59,8 +72,10 @@ Unlike other large and heavy extensions, AniSmooth is built with a **small, clea
 
 - **GPU Diagnostics** - Shows VRAM usage and your graphics card model.
 - **Output Preferences** - Set where files save, customize names, prevent overwriting files, and automatically import completed clips into your composition.
-- **Interface Toggles** - Hide tabs you do not use and choose which models appear in the dropdown list.
-- **Config Presets** - Save, import, and export your settings to share them or keep backups.
+- **Interface Toggles** - Hide tabs you do not use and choose which models, Flowframes engines, and encoders appear in the dropdown lists. The panel opens on the first enabled tab.
+- **Collapsible Panels** - Every settings panel collapses to a one-line description so the tab stays compact.
+- **Flowframes Path** - Point AniSmooth at your `Flowframes.exe` (auto-detected when installed in the default location).
+- **Config Presets** - Save, import, and export your settings (including Flowframes options) to share them or keep backups.
 
 ---
 
