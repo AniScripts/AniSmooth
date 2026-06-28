@@ -72,17 +72,22 @@
         return;
       }
 
+      var isRendering = false;
+      for (var r = 0; r < queue.length; r++) {
+        if (queue[r].status === "rendering") { isRendering = true; break; }
+      }
       var hasActive = running;
       var html = '';
       html += '<div class="queue-summary">' +
         queue.length + ' item' + (queue.length !== 1 ? 's' : '') +
-        (paused ? ' · Paused' : (hasActive ? ' · Processing' : ' · Idle')) +
+        (paused ? ' · Paused' : (hasActive ? ' · Processing' : (isRendering ? ' · Pre-rendering' : ' · Idle'))) +
       '</div>';
 
       for (var i = 0; i < queue.length; i++) {
         var item = queue[i];
         var icon, rowCls;
         if (item.status === "processing") { icon = "fa-spinner fa-spin"; rowCls = "q-row-processing"; }
+        else if (item.status === "rendering") { icon = "fa-film fa-fade"; rowCls = "q-row-processing"; }
         else if (item.status === "done") { icon = "fa-circle-check"; rowCls = "q-row-done"; }
         else if (item.status === "error") { icon = "fa-circle-xmark"; rowCls = "q-row-error"; }
         else if (item.status === "cancelled") { icon = "fa-circle-stop"; rowCls = "q-row-cancelled"; }
@@ -123,12 +128,12 @@
             '<div class="q-name">' + escapeHtml(item.name) + '</div>' +
             '<div class="q-meta">' +
               '<i class="fa-solid ' + taskIcon + '"></i> ' + taskLabel + ' · ' + scaleLabel + ' · ' + escapeHtml(item.model ? item.model.replace("rife4.25", "RIFE 4.25") : "Unknown Model") +
-              (item.preRenderPath ? ' · <i class="fa-solid fa-film"></i> pre-render saved' : '') +
+              (item.status === "rendering" ? ' · <i class="fa-solid fa-film"></i> pre-rendering…' : (item.preRenderPath ? ' · <i class="fa-solid fa-film"></i> pre-render saved' : '')) +
             '</div>' +
               (item.status === "error" ? '<div class="q-err">' + escapeHtml(item.error || "Unknown error") + '</div>' : '') +
               progressHtml +
             '</div>' +
-            (item.status === "queued"
+            ((item.status === "queued" || item.status === "rendering")
               ? '<button class="q-remove" data-id="' + item.id + '"><i class="fa-solid fa-xmark"></i></button>'
               : (item.status === "processing"
                 ? '<button class="q-cancel"><i class="fa-solid fa-stop"></i></button>'

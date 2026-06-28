@@ -4,6 +4,7 @@
     _running: false,
     _paused: false,
     _currentProc: null,
+    _renderBusy: false,
     _listeners: [],
 
     init: function () {
@@ -12,11 +13,19 @@
       var saved = window.StorageManager.loadProcessingQueue();
       for (var i = 0; i < saved.length; i++) {
         var item = saved[i];
-        if (item.status === "processing") {
+        // Restart anything that was mid-flight. A pre-rendered temp input may no
+        // longer exist after a restart, so drop it and let the item re-render
+        // from the AE selection/layer index when it reaches the front.
+        if (item.status === "processing" || item.status === "rendering") {
           item.status = "queued";
           delete item.progress;
           delete item.startedAt;
           delete item.elapsed;
+        }
+        if (item.isTemp) {
+          delete item.inputPath;
+          delete item.isTemp;
+          delete item.renderName;
         }
         this._queue.push(item);
       }
@@ -55,11 +64,15 @@
         return;
       }
       item.id = Date.now() + "_" + Math.random().toString(36).substr(2, 5);
-      item.status = "queued";
+      // Pre-render the AE clip immediately at enqueue time so the correct layer/
+      // clip is captured NOW (the AE selection may change before this job's turn,
+      // especially when added while another job is still running). The model runs
+      // later from this stored render when the item reaches the front of the queue.
+      item.status = "rendering";
       this._queue.push(item);
-      dbg("info", "Queue", "Added: " + item.name + " (" + item.task + ", " + (item.factor || item.scale) + "x)");
+      dbg("info", "Queue", "Added: " + item.name + " (" + item.task + ", " + (item.factor || item.scale) + "x) — pre-rendering");
       this._notify();
-      if (!this._running && !this._paused) this._processNext();
+      this._pumpRender();
     },
 
     getAll: function () {
@@ -105,7 +118,9 @@
 
     remove: function (id) {
       for (var i = 0; i < this._queue.length; i++) {
-        if (this._queue[i].id === id && this._queue[i].status === "queued") {
+        if (this._queue[i].id === id && (this._queue[i].status === "queued" || this._queue[i].status === "rendering")) {
+          // If a render is in flight for this item it can't be aborted mid-render;
+          // splicing detaches it so the pump's callback becomes a harmless no-op.
           this._queue.splice(i, 1);
           this._notify();
           return true;
@@ -136,7 +151,7 @@
       }
       this._paused = false;
       for (var i = 0; i < this._queue.length; i++) {
-        if (this._queue[i].status === "queued") {
+        if (this._queue[i].status === "queued" || this._queue[i].status === "rendering") {
           this._queue[i].status = "cancelled";
         }
       }
@@ -194,35 +209,91 @@
       pending.status = "processing";
       this._notify();
 
-      this._render(pending);
+      this._beginModel(pending);
     },
 
-    _render: function (item) {
+    // Render pump — serialises AE renders so an enqueue-time pre-render never
+    // overlaps another (AE's render queue is single-threaded). Runs independently
+    // of the model worker, so a clip can pre-render while a previous job's model
+    // is still processing.
+    _pumpRender: function () {
       var self = this;
+      if (this._renderBusy) return;
+      var target = null;
+      for (var i = 0; i < this._queue.length; i++) {
+        if (this._queue[i].status === "rendering") { target = this._queue[i]; break; }
+      }
+      if (!target) return;
+
+      this._renderBusy = true;
+      this._doAERender(target, function (res) {
+        self._renderBusy = false;
+        // Item may have been removed or cancelled while rendering — only apply
+        // the result if it is still present and awaiting this render.
+        var stillRendering = false;
+        for (var j = 0; j < self._queue.length; j++) {
+          if (self._queue[j] === target && target.status === "rendering") { stillRendering = true; break; }
+        }
+        if (stillRendering) {
+          if (!res.ok) {
+            target.status = "error";
+            target.error = "Render failed: " + (res.message || "Unknown rendering error");
+          } else {
+            target.inputPath = res.filePath;
+            target.isTemp = res.isTemp;
+            target.renderName = res.name || target.name;
+            target.status = "queued";
+            dbg("success", "Queue", "Pre-rendered: " + target.name);
+          }
+          self._notify();
+        }
+        self._pumpRender();
+        if (!self._running && !self._paused) self._processNext();
+      });
+    },
+
+    // Runs the AE render for an item and returns a normalised result to cb.
+    // Falls back to the currently-selected layer's file if the render fails.
+    _doAERender: function (item, cb) {
       var renderDir = (window.App && window.App.settings.outputPath) || (window.FileSystem && window.FileSystem.os ? window.FileSystem.os.homedir() : "");
       var escapedDir = String(renderDir || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
       var escapedName = String(item.name || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-
       var layerIdx = item.layerIndex || 0;
+
       window.__adobe_cep__.evalScript('renderSelectedLayer("' + escapedDir + '", "' + escapedName + '", ' + layerIdx + ')', function (renderResult) {
         var res = {};
         try { res = JSON.parse(renderResult || "{}"); } catch (e) {}
+        if (res.ok) { cb(res); return; }
+        var renderError = res.message || "Unknown rendering error";
+        window.__adobe_cep__.evalScript("getSelectedLayerFile()", function (fb) {
+          var fbRes = {};
+          try { fbRes = JSON.parse(fb || "{}"); } catch (e) {}
+          if (fbRes.ok && fbRes.filePath) { cb(fbRes); return; }
+          cb({ ok: false, message: renderError });
+        });
+      });
+    },
+
+    // Start the model for an item that should already hold a pre-rendered input.
+    // If the input is missing (e.g. restored from storage), render on demand.
+    _beginModel: function (item) {
+      var self = this;
+      var haveInput = item.inputPath &&
+        (!window.FileSystem || !window.FileSystem.fs || window.FileSystem.fs.existsSync(item.inputPath));
+      if (haveInput) {
+        self._runModel(item, { ok: true, filePath: item.inputPath, isTemp: item.isTemp, name: item.renderName || item.name });
+        return;
+      }
+      this._doAERender(item, function (res) {
         if (!res.ok) {
-          var renderError = res.message || "Unknown rendering error";
-          window.__adobe_cep__.evalScript("getSelectedLayerFile()", function (fb) {
-            var fbRes = {};
-            try { fbRes = JSON.parse(fb || "{}"); } catch (e) {}
-            if (!fbRes.ok || !fbRes.filePath) {
-              item.status = "error";
-              item.error = "Render failed: " + renderError;
-              self._notify();
-              self._running = false;
-              self._processNext();
-              return;
-            }
-            self._runModel(item, fbRes);
-          });
-        } else { self._runModel(item, res); }
+          item.status = "error";
+          item.error = "Render failed: " + (res.message || "Unknown rendering error");
+          self._notify();
+          self._running = false;
+          self._processNext();
+          return;
+        }
+        self._runModel(item, res);
       });
     },
 
