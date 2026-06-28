@@ -147,7 +147,7 @@ Python stdout format: `{"type":"info|warn|error|success|progress","msg":"...","p
 
 ## Flowframes Integration
 
-The Flowframes tab is **fully standalone** — it does NOT use `modelHandler.js`, `queueManager.js`, or the Python backend. `flowframesPanel.js` pre-renders the selected AE layer (`renderSelectedLayer`), calls `FlowframesHandler.run()`, then moves/imports the result.
+The Flowframes tab runs through the **shared queue** (`mode: "flowframes"`), but with its **own engine** — it does NOT use `modelHandler.js` or the Python backend. `flowframesPanel.js` only collects params and calls `QueueManager.add()`. The queue pre-renders the AE layer at enqueue time (same as other modes), then `_runModel`'s flowframes branch calls `FlowframesHandler.run(input, jobOutDir, opts, cb)` instead of a `ModelHandler.*Clip`. Cancellation is routed by `_cancelActive()` (which checks `_currentMode`) to `FlowframesHandler.cancel()`. Since Flowframes names its own output, `onComplete(producedPath)` moves it to the AniSmooth output name.
 
 `FlowframesHandler.run()` spawns the external **`Flowframes.exe`** (auto-detected at `%LOCALAPPDATA%/Flowframes/Flowframes.exe`, override via `settings.flowframesPath` / `anismooth_flowframes_path`). Hard-won quirks — change with care:
 
