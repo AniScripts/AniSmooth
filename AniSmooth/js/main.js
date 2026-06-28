@@ -299,7 +299,7 @@
       var autoSaveInputs = [
         "interpolationModel", "upscaleModel", "upscaleScale",
         "deadframeThreshold", "pythonPathInput", "interpolationFactor",
-        "flowframesAi", "flowframesModel", "flowframesEncoder", "flowframesFactor"
+        "flowframesAi", "flowframesModel", "flowframesFormat", "flowframesEncoder", "flowframesPixFmt", "flowframesFactor"
       ];
       for (var ai = 0; ai < autoSaveInputs.length; ai++) {
         var el = document.getElementById(autoSaveInputs[ai]);
@@ -1011,7 +1011,9 @@
 
       var ffAiEl = document.getElementById("ffAiToggles");
       var ffModelEl = document.getElementById("ffModelToggles");
+      var ffFormatEl = document.getElementById("ffFormatToggles");
       var ffEncEl = document.getElementById("ffEncToggles");
+      var ffPixFmtEl = document.getElementById("ffPixFmtToggles");
 
       var ffAi = [
         { value: "RifeNcnn", label: "RIFE (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0" },
@@ -1019,7 +1021,7 @@
         { value: "FlavrCuda", label: "FLAVR", icon: "fa-microchip", ver: "1.36.0" },
         { value: "DainNcnn", label: "DAIN (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0" },
         { value: "XvfiCuda", label: "XVFI", icon: "fa-microchip", ver: "1.36.0" },
-        { value: "RifeNcnnVs", label: "RIFE (NCNN/VS)", icon: "fa-microchip", ver: "1.42.0" }
+        { value: "RifeNcnnVs", label: "RIFE (NCNN/VS)", icon: "fa-microchip", ver: "1.36.0 1.42.0" }
       ];
       var ffModels = [
         { value: "RIFE 4.0", label: "RIFE 4.0", icon: "fa-cube", ver: "1.36.0" },
@@ -1030,6 +1032,12 @@
         { value: "RIFE 2.4", label: "RIFE 2.4", icon: "fa-cube", ver: "1.36.0" },
         { value: "RIFE 2.3", label: "RIFE 2.3", icon: "fa-cube", ver: "1.36.0 1.42.0" },
         { value: "RIFE 1.8", label: "RIFE 1.8", icon: "fa-cube", ver: "1.36.0" },
+        { value: "FLAVR 2x", label: "FLAVR 2x", icon: "fa-cube", ver: "1.36.0" },
+        { value: "FLAVR 4x", label: "FLAVR 4x", icon: "fa-cube", ver: "1.36.0" },
+        { value: "FLAVR 8x", label: "FLAVR 8x", icon: "fa-cube", ver: "1.36.0" },
+        { value: "Default", label: "Default (DAIN)", icon: "fa-cube", ver: "1.36.0 1.42.0" },
+        { value: "X4K1000FPS", label: "X4K1000FPS", icon: "fa-cube", ver: "1.36.0" },
+        { value: "Vimeo", label: "Vimeo", icon: "fa-cube", ver: "1.36.0" },
         { value: "RIFE 4.26", label: "RIFE 4.26", icon: "fa-cube", ver: "1.42.0" },
         { value: "RIFE 4.25", label: "RIFE 4.25", icon: "fa-cube", ver: "1.42.0" },
         { value: "RIFE 4.24", label: "RIFE 4.24", icon: "fa-cube", ver: "1.42.0" },
@@ -1038,36 +1046,50 @@
         { value: "RIFE 4.13", label: "RIFE 4.13", icon: "fa-cube", ver: "1.42.0" },
         { value: "RIFE 4.9", label: "RIFE 4.9", icon: "fa-cube", ver: "1.42.0" }
       ];
+      var ffFormat = [
+        { value: "Mp4", label: "MP4", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "Mkv", label: "MKV", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "Webm", label: "WEBM", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "Mov", label: "MOV", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "Avi", label: "AVI", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "Gif", label: "GIF", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "Images", label: "Image Sequence", icon: "fa-film", ver: "1.36.0" }
+      ];
       var ffEnc = [
-        { value: "Mp4H264", label: "MP4 (h264)", icon: "fa-film", ver: "1.36.0" },
-        { value: "Mp4H265", label: "MP4 (h265)", icon: "fa-film", ver: "1.36.0" },
-        { value: "Mp4Av1", label: "MP4 (AV1)", icon: "fa-film", ver: "1.36.0" },
-        { value: "MkvH264", label: "MKV (h264)", icon: "fa-film", ver: "1.36.0" },
-        { value: "MkvH265", label: "MKV (h265)", icon: "fa-film", ver: "1.36.0" },
-        { value: "MkvAv1", label: "MKV (AV1)", icon: "fa-film", ver: "1.36.0" },
-        { value: "WebmVp9", label: "WEBM (VP9)", icon: "fa-film", ver: "1.36.0" },
-        { value: "MovProRes", label: "MOV (ProRes)", icon: "fa-film", ver: "1.36.0" },
-        { value: "AviFfv1", label: "AVI (ffv1)", icon: "fa-film", ver: "1.36.0" },
-        { value: "AviHuffyuv", label: "AVI (huffyuv)", icon: "fa-film", ver: "1.36.0" },
-        { value: "AviMagicYuv", label: "AVI (magicyuv)", icon: "fa-film", ver: "1.36.0" },
-        { value: "AviRaw", label: "AVI (rawvideo)", icon: "fa-film", ver: "1.36.0" },
-        { value: "Gif", label: "GIF", icon: "fa-film", ver: "1.36.0" },
-        { value: "PngSeq", label: "PNG Sequence", icon: "fa-film", ver: "1.36.0" },
-        { value: "JpgSeq", label: "JPG Sequence", icon: "fa-film", ver: "1.36.0" },
-        { value: "WebpSeq", label: "WEBP Sequence", icon: "fa-film", ver: "1.36.0" },
-        { value: "X264", label: "h264", icon: "fa-film", ver: "1.42.0" },
-        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt", ver: "1.42.0" },
-        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt", ver: "1.42.0" },
-        { value: "X265", label: "h265", icon: "fa-film", ver: "1.42.0" },
-        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt", ver: "1.42.0" },
-        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt", ver: "1.42.0" },
-        { value: "SvtAv1", label: "AV1", icon: "fa-film", ver: "1.42.0" },
-        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt", ver: "1.42.0" }
+        { value: "X264", label: "h264 (x264)", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "X265", label: "h265 (x265)", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "SvtAv1", label: "AV1 (SVT)", icon: "fa-film", ver: "1.36.0 1.42.0" },
+        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "VpxVp9", label: "VP9", icon: "fa-film", ver: "1.36.0" },
+        { value: "Qsv264", label: "h264 QSV", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "Qsv265", label: "h265 QSV", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "ProResKs", label: "ProRes", icon: "fa-film", ver: "1.36.0" },
+        { value: "Ffv1", label: "ffv1 (Lossless)", icon: "fa-film", ver: "1.36.0" },
+        { value: "Huffyuv", label: "huffyuv", icon: "fa-film", ver: "1.36.0" },
+        { value: "Magicyuv", label: "magicyuv", icon: "fa-film", ver: "1.36.0" },
+        { value: "Rawvideo", label: "rawvideo", icon: "fa-film", ver: "1.36.0" }
+      ];
+      var ffPixFmt = [
+        { value: "Yuv420P", label: "yuv420p", icon: "fa-palette", ver: "1.36.0 1.42.0" },
+        { value: "Yuv422P", label: "yuv422p", icon: "fa-palette", ver: "1.36.0 1.42.0" },
+        { value: "Yuv444P", label: "yuv444p", icon: "fa-palette", ver: "1.36.0 1.42.0" },
+        { value: "Yuv420P10Le", label: "yuv420p10le", icon: "fa-palette", ver: "1.36.0" },
+        { value: "Yuv422P10Le", label: "yuv422p10le", icon: "fa-palette", ver: "1.36.0" },
+        { value: "Yuv444P10Le", label: "yuv444p10le", icon: "fa-palette", ver: "1.36.0" },
+        { value: "Yuva420P", label: "yuva420p", icon: "fa-palette", ver: "1.36.0" },
+        { value: "Rgb24", label: "rgb24", icon: "fa-palette", ver: "1.36.0" },
+        { value: "Rgba", label: "rgba", icon: "fa-palette", ver: "1.36.0" }
       ];
 
       if (ffAiEl) ffAiEl.innerHTML = this._buildToggleGroup(ffAi, "anismooth_ff_ai_");
       if (ffModelEl) ffModelEl.innerHTML = this._buildToggleGroup(ffModels, "anismooth_ff_model_");
+      if (ffFormatEl) ffFormatEl.innerHTML = this._buildToggleGroup(ffFormat, "anismooth_ff_format_");
       if (ffEncEl) ffEncEl.innerHTML = this._buildToggleGroup(ffEnc, "anismooth_ff_enc_");
+      if (ffPixFmtEl) ffPixFmtEl.innerHTML = this._buildToggleGroup(ffPixFmt, "anismooth_ff_pixfmt_");
 
       var allToggles = document.querySelectorAll(".model-vis-toggle");
       for (var i = 0; i < allToggles.length; i++) {
@@ -1106,10 +1128,14 @@
       if (upscaleSelect) filterSelect(upscaleSelect, "anismooth_model_upscale_");
       var ffAiSelect = document.getElementById("flowframesAi");
       var ffModelSelect = document.getElementById("flowframesModel");
+      var ffFormatSelect = document.getElementById("flowframesFormat");
       var ffEncSelect = document.getElementById("flowframesEncoder");
+      var ffPixFmtSelect = document.getElementById("flowframesPixFmt");
       if (ffAiSelect) filterSelect(ffAiSelect, "anismooth_ff_ai_");
       if (ffModelSelect) filterSelect(ffModelSelect, "anismooth_ff_model_");
+      if (ffFormatSelect) filterSelect(ffFormatSelect, "anismooth_ff_format_");
       if (ffEncSelect) filterSelect(ffEncSelect, "anismooth_ff_enc_");
+      if (ffPixFmtSelect) filterSelect(ffPixFmtSelect, "anismooth_ff_pixfmt_");
 
       function filterSelect(select, prefix) {
         var children = select.querySelectorAll(".select-options")[0].children;

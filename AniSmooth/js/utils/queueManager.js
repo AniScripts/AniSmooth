@@ -471,7 +471,9 @@
           factor: item.factor,
           ai: item.ai,
           model: item.model,
-          encoder: item.encoder
+          format: item.format,
+          encoder: item.encoder,
+          pixFmt: item.pixFmt
         }, callbacks);
       } else {
         item.status = "error";

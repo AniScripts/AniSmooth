@@ -5,13 +5,16 @@
       this.view = document.getElementById('flowframesView');
       this.aiSelect = document.getElementById('flowframesAi');
       this.modelSelect = document.getElementById('flowframesModel');
+      this.formatSelect = document.getElementById('flowframesFormat');
       this.encoderSelect = document.getElementById('flowframesEncoder');
+      this.pixFmtSelect = document.getElementById('flowframesPixFmt');
       this.factorContainer = document.getElementById('flowframesFactor');
       this.factorCustom = document.getElementById('ffFactorCustom');
       this.startBtn = document.getElementById('startFlowframesBtn');
       this._sourceInfo = null;
       this.bindEvents();
       this.applyVersion();
+      this.applyAiFilter();
       this.checkAvailability();
       this.renderFactorInfo();
     },
@@ -53,6 +56,30 @@
           s.renderFactorInfo();
         });
       }
+      if (this.aiSelect) {
+        this.aiSelect.addEventListener('change', function () { s.applyAiFilter(); });
+      }
+    },
+
+    applyAiFilter: function () {
+      var ai = this.aiSelect ? this.aiSelect.value : '';
+      if (!this.modelSelect || !ai) return;
+      var options = this.modelSelect.querySelectorAll('.select-option');
+      var firstVisible = null;
+      var currentVal = this.modelSelect.value;
+      var currentVisible = false;
+      var version = (window.App && window.App.settings && window.App.settings.flowframesVersion) || "1.36.0";
+      for (var j = 0; j < options.length; j++) {
+        var optAi = options[j].getAttribute('data-ff-ai') || '';
+        var optVer = options[j].getAttribute('data-ff-version') || '';
+        var aiMatch = !optAi || optAi.split(/\s+/).indexOf(ai) !== -1;
+        var versionMatch = !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
+        var show = aiMatch && versionMatch;
+        options[j].style.display = show ? '' : 'none';
+        if (show && !firstVisible) firstVisible = options[j];
+        if (show && options[j].getAttribute('data-value') === currentVal) currentVisible = true;
+      }
+      if (!currentVisible && firstVisible) this.modelSelect.value = firstVisible.getAttribute('data-value');
     },
 
     checkAvailability: function () {
@@ -93,6 +120,7 @@
           labels[k].style.display = (lv.split(/\s+/).indexOf(version) !== -1) ? '' : 'none';
         }
       }
+      this.applyAiFilter();
       dbg('debug', 'Flowframes', 'Version filter applied: ' + version);
     },
 
@@ -159,7 +187,9 @@
         layerIndex: s.layerIndex || 0,
         ai: this.aiSelect ? this.aiSelect.value : 'RifeNcnn',
         model: this.modelSelect ? this.modelSelect.value : 'RIFE 4.26',
+        format: this.formatSelect ? this.formatSelect.value : 'Mp4',
         encoder: this.encoderSelect ? this.encoderSelect.value : 'X264',
+        pixFmt: this.pixFmtSelect ? this.pixFmtSelect.value : 'Yuv420P',
         factor: this.getFactor(),
         width: s.width || 0,
         height: s.height || 0,

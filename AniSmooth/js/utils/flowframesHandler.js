@@ -47,17 +47,32 @@
 
       var logsDir = path.join(path.dirname(exe), "FlowframesData", "logs");
 
-      var args = [
-        "-a", "-nc", "-mdc",
-        "-f", String(options.factor || "2"),
-        "-ai", options.ai || "RifeNcnn",
-        "-m", options.model || "RIFE 4.26",
-        "-vf", options.format || "Mp4",
-        "-ve", options.encoder || "X264",
-        "-pf", options.pixelFormat || "Yuv420P",
-        "-o", jobOutDir,
-        inputPath
-      ];
+      var version = (window.App && window.App.settings && window.App.settings.flowframesVersion) || "1.36.0";
+      var isLegacy = version === "1.36.0";
+
+      var args = isLegacy
+        ? [
+            "-a", "-nc",
+            "-f", String(options.factor || "2"),
+            "-ai", options.ai || "RifeCuda",
+            "-m", options.model || "RIFE 4.0",
+            "-vf", options.format || "Mp4",
+            "-ve", options.encoder || "X264",
+            "-pf", options.pixFmt || "Yuv420P",
+            "-o", jobOutDir,
+            inputPath
+          ]
+        : [
+            "-a", "-nc", "-mdc",
+            "-f", String(options.factor || "2"),
+            "-ai", options.ai || "RifeNcnn",
+            "-m", options.model || "RIFE 4.26",
+            "-vf", options.format || "Mp4",
+            "-ve", options.encoder || "X264",
+            "-pf", options.pixFmt || "Yuv420P",
+            "-o", jobOutDir,
+            inputPath
+          ];
       if (options.quality) args.push("-q", String(options.quality));
       if (options.maxFps && parseFloat(options.maxFps) > 0) args.push("-fps", String(parseFloat(options.maxFps)));
       if (options.maxHeight && parseInt(options.maxHeight) > 0) args.push("-mh", String(parseInt(options.maxHeight)));
