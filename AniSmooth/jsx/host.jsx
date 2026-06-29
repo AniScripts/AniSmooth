@@ -262,6 +262,19 @@ function renderSelectedLayer(outputPathDir, layerName, layerIndex) {
     var src = null;
     try { src = layer.source; } catch (e) {}
     var isPrecomp = (src && src instanceof CompItem);
+
+    // For non-precomp layers, validate the layer has renderable visual content.
+    // Soloing a null, adjustment layer, camera, light, or audio-only footage
+    // produces blank frames and a confusing render error. Catch early.
+    if (!isPrecomp) {
+      if (!src) {
+        return "{\"ok\":false,\"message\":\"The selected layer has no renderable visual source (null, adjustment layer, camera, or light). Only layers with visual content can be prerendered.\"}";
+      }
+      if (src.mainSource && src.hasVideo !== undefined && !src.hasVideo) {
+        return "{\"ok\":false,\"message\":\"The selected footage is audio-only and has no video to render.\"}";
+      }
+    }
+
     var renderComp = isPrecomp ? src : comp;
 
     // Solo only matters when rendering the parent comp. Rendering a precomp
@@ -410,6 +423,20 @@ function renderSelectedLayerPreview(outputPathDir, previewDuration) {
       return "{\"ok\":false,\"message\":\"No layer selected in the timeline.\"}";
     }
     var layer = comp.selectedLayers[0];
+
+    // Validate layer has renderable visual content (same check as renderSelectedLayer)
+    var previewSrc = null;
+    try { previewSrc = layer.source; } catch (e) {}
+    var isPrecompPreview = (previewSrc && previewSrc instanceof CompItem);
+    if (!isPrecompPreview) {
+      if (!previewSrc) {
+        return "{\"ok\":false,\"message\":\"The selected layer has no renderable visual source (null, adjustment layer, camera, or light).\"}";
+      }
+      if (previewSrc.mainSource && previewSrc.hasVideo !== undefined && !previewSrc.hasVideo) {
+        return "{\"ok\":false,\"message\":\"The selected footage is audio-only and has no video to render.\"}";
+      }
+    }
+
     var startTime = layer.inPoint;
     var duration = parseFloat(previewDuration) || 3;
     var endTime = Math.min(startTime + duration, layer.outPoint);
