@@ -3,6 +3,7 @@
     activeProcess: null,
     _poll: null,
     _cancelled: false,
+    _runToken: 0,
 
     findExe: function () {
       try {
@@ -67,13 +68,15 @@
     run: function (inputPath, jobOutDir, options, callbacks) {
       var self = this;
       callbacks = callbacks || {};
-      if (this.activeProcess) {
-        if (this.activeProcess.exitCode !== null || this.activeProcess.killed) {
-          this.activeProcess = null;
-        } else {
-          if (callbacks.onError) callbacks.onError("Flowframes is already running.");
-          return;
-        }
+      options = options || {};
+
+      var myToken = ++self._runToken;
+      if (self._poll) { clearInterval(self._poll); self._poll = null; }
+      self.activeProcess = null;
+
+      if (options.ai === "RifeNcnnVs") {
+        dbg("warn", "Flowframes", "RifeNcnnVs (VapourSynth) needs the ffms2 plugin and often crashes; using RifeNcnn instead.");
+        options.ai = "RifeNcnn";
       }
 
       var fs = window.FileSystem.fs;
@@ -143,11 +146,17 @@
           }
         }
 
+        if (myToken !== self._runToken) return;
+
         var proc;
         try {
           proc = cp.spawn(exe, args, { env: env, cwd: path.dirname(exe) });
         } catch (e) {
           if (callbacks.onError) callbacks.onError("Failed to launch Flowframes: " + e.message);
+          return;
+        }
+        if (myToken !== self._runToken) {
+          try { cp.exec('taskkill /F /T /PID ' + proc.pid, function () {}); } catch (e) {}
           return;
         }
         self.activeProcess = proc;
@@ -165,11 +174,15 @@
         var finished = false;
         var aiComplete = false;
         var lastLogTime = Date.now();
+        var pollHandle = null;
 
         var finalize = function (ok, message, producedPath) {
+          if (myToken !== self._runToken) return;
           if (finished) return;
           finished = true;
-          if (self._poll) { clearInterval(self._poll); self._poll = null; }
+          if (pollHandle) { clearInterval(pollHandle); }
+          if (self._poll === pollHandle) self._poll = null;
+          pollHandle = null;
           self.activeProcess = null;
           try { cp.exec('taskkill /F /T /IM Flowframes.exe', function () {}); } catch (e) {}
           if (progressFilePath) { try { fs.unlinkSync(progressFilePath); } catch (e) {} }
@@ -199,7 +212,8 @@
           } catch (e) { return null; }
         };
 
-        self._poll = setInterval(function () {
+        pollHandle = setInterval(function () {
+          if (myToken !== self._runToken) { clearInterval(pollHandle); return; }
           if (!sessionLog) {
             try {
               var dirs = fs.readdirSync(logsDir);
@@ -219,6 +233,10 @@
                 var ln = lines[j];
                 if (!ln) continue;
                 if (callbacks.onLog) callbacks.onLog(ln.replace(/^\[[^\]]*\]\s*\[[^\]]*\]:\s*/, ""));
+                if (/ffms2|No attribute with the name/i.test(ln)) {
+                  finalize(false, "Flowframes could not load the video: VapourSynth ffms2 plugin missing. Use the RIFE (NCNN) implementation instead of a VapourSynth/CUDA one.");
+                  return;
+                }
                 if (/Failed to initialize MediaFile|No frames left|Interpolation failed|\bError occured\b/i.test(ln)) {
                   finalize(false, "Flowframes error: " + ln.replace(/^\[[^\]]*\]\s*\[[^\]]*\]:\s*/, ""));
                   return;
@@ -271,9 +289,11 @@
             finalize(false, "Flowframes stalled - no progress for 60 seconds.");
           }
         }, 1500);
+        self._poll = pollHandle;
 
         proc.on('close', function () {
           setTimeout(function () {
+            if (myToken !== self._runToken) return;
             if (finished) return;
             var out = findNewestOutput();
             if (out) finalize(true, null, out);
@@ -282,6 +302,7 @@
         });
 
         proc.on('error', function (err) {
+          if (myToken !== self._runToken) return;
           finalize(false, "Flowframes process error: " + err.message);
         });
       };
@@ -332,6 +353,7 @@
     cancel: function () {
       if (!this.activeProcess) return false;
       this._cancelled = true;
+      this._runToken++;
       if (this._poll) { clearInterval(this._poll); this._poll = null; }
       var proc = this.activeProcess;
       try {
