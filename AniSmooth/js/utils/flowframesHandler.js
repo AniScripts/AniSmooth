@@ -145,7 +145,7 @@
 
         var proc;
         try {
-          proc = cp.spawn(exe, args, { env: env });
+          proc = cp.spawn(exe, args, { env: env, cwd: path.dirname(exe) });
         } catch (e) {
           if (callbacks.onError) callbacks.onError("Failed to launch Flowframes: " + e.message);
           return;
@@ -164,6 +164,7 @@
         var stableCount = 0;
         var finished = false;
         var aiComplete = false;
+        var lastLogTime = Date.now();
 
         var finalize = function (ok, message, producedPath) {
           if (finished) return;
@@ -236,6 +237,7 @@
                 }
               }
               lastLineCount = lines.length;
+              lastLogTime = Date.now();
             } catch (e) {}
           }
 
@@ -263,6 +265,10 @@
                 lastOutSize = sz;
               } catch (e) {}
             }
+          }
+
+          if (!finished && Date.now() - lastLogTime > 60000) {
+            finalize(false, "Flowframes stalled - no progress for 60 seconds.");
           }
         }, 1500);
 
