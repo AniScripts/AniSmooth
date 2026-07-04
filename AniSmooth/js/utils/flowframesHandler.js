@@ -68,8 +68,12 @@
       var self = this;
       callbacks = callbacks || {};
       if (this.activeProcess) {
-        if (callbacks.onError) callbacks.onError("Flowframes is already running.");
-        return;
+        if (this.activeProcess.exitCode !== null || this.activeProcess.killed) {
+          this.activeProcess = null;
+        } else {
+          if (callbacks.onError) callbacks.onError("Flowframes is already running.");
+          return;
+        }
       }
 
       var fs = window.FileSystem.fs;

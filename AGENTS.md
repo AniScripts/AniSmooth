@@ -10,6 +10,7 @@ Free local After Effects extension for AI frame interpolation and video upscalin
 - **Commit per task:** make a separate commit after each task / logical change. Do not batch unrelated changes into one commit.
 - **No code comments:** do NOT add comments when writing or modifying code. Put any needed explanation in the commit message or this file, not inline.
 - **No em dashes:** never use the `—` character in any prose, docs, README, or commit messages (it reads as AI-written). Use a comma, colon, parentheses, or a plain hyphen `-` instead.
+- **Communication mode:** ultra caveman per user request. Fragment style, drop articles/filler. Code/commits/docs full clarity. Revert on "stop caveman".
 
 ## Build & Run
 

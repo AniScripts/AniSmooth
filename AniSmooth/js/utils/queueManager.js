@@ -104,7 +104,7 @@
           }
         }
         if (this._currentProc) {
-          window.ModelHandler.cancelActiveProcess();
+          this._cancelActive();
           this._currentProc = null;
         }
         this._running = false;
