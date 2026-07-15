@@ -14,7 +14,7 @@ def _get_appdata_dir():
 
 WEIGHTS_DIR = os.path.join(_get_appdata_dir(), "weights")
 
-MODELS_URL = "https://github.com/moongetsu/AniSmooth-Models/releases/download/"
+MODELS_URL = "https://github.com/AniScripts/AniSmooth-Models/releases/download/"
 
 MODEL_FILES = {
     "rife4.25":          ("interpolation", "rife425.pth"),

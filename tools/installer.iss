@@ -5,7 +5,7 @@
 AppName=AniSmooth After Effects Extension
 AppVersion=1.0.0
 AppPublisher=AniSmooth
-AppPublisherURL=https://github.com/Moongetsu/AniSmooth
+AppPublisherURL=https://github.com/AniScripts/AniSmooth
 DefaultDirName={commoncf}\Adobe\CEP\extensions\AniSmooth
 DisableDirPage=yes
 DefaultGroupName=AniSmooth
