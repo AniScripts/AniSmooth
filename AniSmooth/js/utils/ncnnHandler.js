@@ -69,7 +69,6 @@
 
       var finalOutputPath = outputPath;
       var tempPngDir = null;
-      var pngOutputPath = null;
 
       if (outputExt === "avi") {
         finalOutputPath = outputPath.replace(/\.\w+$/, ".mp4");
@@ -96,8 +95,7 @@
 
       tempPngDir = inputPath.replace(/\.\w+$/, "_ncnn_frames");
       try { if (fs.existsSync(tempPngDir)) { var oldFiles = fs.readdirSync(tempPngDir); for (var fi = 0; fi < oldFiles.length; fi++) fs.unlinkSync(p.join(tempPngDir, oldFiles[fi])); } else { fs.mkdirSync(tempPngDir); } } catch (e) { dbg("warn", "NCNN-DEBUG", "Temp dir error: " + e.message); }
-      pngOutputPath = p.join(tempPngDir, "frame_%08d.png");
-      dbg("info", "NCNN-DEBUG", "PNG output to: " + pngOutputPath);
+      dbg("info", "NCNN-DEBUG", "PNG output dir: " + tempPngDir);
 
       var exeDir = p.dirname(exe);
       var gpuId = window.StorageManager.getItem("anismooth_ncnn_gpu_id", "0") || "0";
@@ -229,7 +227,7 @@
               dbg("info", "NCNN-DEBUG", "Encoding PNG sequence -> MP4 at " + fpsEstimate + "fps via FFmpeg");
               try {
                 var encResult = cp.spawnSync(ffmpegPath, [
-                  "-y", "-framerate", String(fpsEstimate), "-i", p.join(tempPngDir, "frame_%08d.png"),
+                  "-y", "-framerate", String(fpsEstimate), "-pattern_type", "glob", "-i", p.join(tempPngDir, "*.png"),
                   "-c:v", "libx264", "-preset", "medium", "-crf", "18",
                   "-pix_fmt", "yuv420p", "-an",
                   finalOutputPath
