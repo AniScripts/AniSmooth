@@ -30,7 +30,7 @@
           var keyName = label.getAttribute("data-df-group");
           if (!keyName) return;
 
-          if (window.StorageManager.getItem("anismooth_df_collapse_" + keyName) === "1") {
+          if (window.StorageManager.getItem("anismooth_df_collapse_" + keyName) !== "0") {
             group.classList.add("collapsed");
           }
 
