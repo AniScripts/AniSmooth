@@ -102,41 +102,82 @@
 
       var ncnnInputDir = null;
       var ncnnOutputDir = tempPngDir;
-      var ncnnInputFile = inputPath;
 
       if (inputExt === "avi" && ffmpegPath) {
-        var mp4Input = inputPath.replace(/\.\w+$/, "_ncnn_input.mp4");
-        dbg("info", "NCNN-DEBUG", "Converting AVI to MP4 for file mode: " + inputPath + " -> " + mp4Input);
+        ncnnInputDir = inputPath.replace(/\.\w+$/, "_ncnn_input");
+        dbg("info", "NCNN-DEBUG", "Converting AVI to PNG frames: " + inputPath + " -> " + ncnnInputDir);
         try {
-          var avi2mp4 = cp.spawnSync(ffmpegPath, [
+          if (fs.existsSync(ncnnInputDir)) {
+            var oldF = fs.readdirSync(ncnnInputDir);
+            for (var oi = 0; oi < oldF.length; oi++) fs.unlinkSync(p.join(ncnnInputDir, oldF[oi]));
+          } else { fs.mkdirSync(ncnnInputDir); }
+          var avi2png = cp.spawnSync(ffmpegPath, [
             "-y", "-i", inputPath,
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "0",
-            "-pix_fmt", "yuv420p", "-an",
-            mp4Input
+            "-fps_mode", "cfr",
+            p.join(ncnnInputDir, "frame_%08d.png")
           ], { windowsHide: true, timeout: 120000 });
-          dbg("info", "NCNN-DEBUG", "AVI->MP4 exit: " + avi2mp4.status);
-          if (avi2mp4.status === 0 && fs.existsSync(mp4Input)) {
-            ncnnInputFile = mp4Input;
-            dbg("info", "NCNN-DEBUG", "Using file input: " + mp4Input + " (" + fs.statSync(mp4Input).size + " bytes)");
-          } else {
-            dbg("warn", "NCNN-DEBUG", "AVI->MP4 failed, using original AVI");
-            try { if (fs.existsSync(mp4Input)) fs.unlinkSync(mp4Input); } catch (e) {}
+          dbg("info", "NCNN-DEBUG", "AVI->PNG exit: " + avi2png.status + " stderr: " + (avi2png.stderr ? avi2png.stderr.toString().slice(0, 300) : ""));
+          if (avi2png.status !== 0) {
+            dbg("warn", "NCNN-DEBUG", "AVI->PNG conversion failed, trying direct AVI file");
+            try { fs.rmdirSync(ncnnInputDir); } catch (e) {}
+            ncnnInputDir = null;
           }
         } catch (e) {
-          dbg("warn", "NCNN-DEBUG", "AVI->MP4 error: " + e.message);
+          dbg("warn", "NCNN-DEBUG", "AVI->PNG error: " + e.message);
+          ncnnInputDir = null;
         }
       }
-      ncnnOutputDir = tempPngDir;
 
       var args;
-      args = [
-        "-i", ncnnInputFile,
-        "-o", ncnnOutputDir,
-        "-g", gpuId,
-        "-m", options.model || "rife-v4.6",
-        "-j", String(options.threadCount || "4:4:4")
-      ];
-      dbg("info", "NCNN-DEBUG", "File input + dir output mode: " + ncnnInputFile + " -> " + ncnnOutputDir);
+      var factor = parseInt(options.factor, 10) || 2;
+      var passes = Math.max(1, Math.round(Math.log2(factor)));
+      dbg("info", "NCNN-DEBUG", "Factor " + factor + " -> " + passes + " pass(es)");
+
+      if (ncnnInputDir) {
+        ncnnOutputDir = tempPngDir;
+        var passInput = ncnnInputDir;
+        var passOutput = ncnnOutputDir;
+        var passSwapped = false;
+        for (var pass = 0; pass < passes; pass++) {
+          if (pass > 0) {
+            passInput = passSwapped ? ncnnOutputDir : ncnnInputDir;
+            passOutput = passSwapped ? ncnnInputDir : ncnnOutputDir;
+            passSwapped = !passSwapped;
+            try {
+              if (fs.existsSync(passOutput)) {
+                var oldF = fs.readdirSync(passOutput);
+                for (var oi = 0; oi < oldF.length; oi++) fs.unlinkSync(p.join(passOutput, oldF[oi]));
+              } else { fs.mkdirSync(passOutput); }
+            } catch (e) {}
+          }
+          dbg("info", "NCNN-DEBUG", "Pass " + (pass + 1) + "/" + passes + ": " + passInput + " -> " + passOutput);
+          args = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
+          if (passes === 1) args.push("-x", String(factor));
+          var runSync = cp.spawnSync(exe, args, { env: env, cwd: exeDir, windowsHide: true, timeout: 300000 });
+          if (runSync.status !== 0) {
+            dbg("error", "NCNN-DEBUG", "Pass " + (pass + 1) + " failed with code " + runSync.status);
+            dbg("error", "NCNN-DEBUG", "stderr: " + (runSync.stderr ? runSync.stderr.toString().slice(0, 500) : ""));
+            if (callbacks.onError) callbacks.onError("NCNN pass " + (pass + 1) + " failed with code " + runSync.status);
+            _cleanupTempDir();
+            return;
+          }
+        }
+        ncnnOutputDir = passOutput;
+        dbg("info", "NCNN-DEBUG", passOutput === ncnnInputDir ? "Even passes, output in input dir" : "Odd passes, output in output dir");
+        if (ncnnOutputDir === ncnnInputDir) ncnnOutputDir = ncnnInputDir;
+        var outFiles = [];
+        try { outFiles = fs.readdirSync(ncnnOutputDir); } catch (e) {}
+        dbg("info", "NCNN-DEBUG", "Final output: " + ncnnOutputDir + " (" + outFiles.length + " files)");
+        // Signal completion: skip the async spawn, go straight to finalize
+        finished = false;
+        self.activeProcess = null;
+        finalize(true);
+        return;
+      } else {
+        dbg("info", "NCNN-DEBUG", "No FFmpeg, direct file mode: " + inputPath + " -> " + finalOutputPath);
+        args = ["-i", inputPath, "-o", finalOutputPath, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
+        if (factor > 0) args.push("-x", String(factor));
+      }
       if (options.factor) args.push("-x", String(options.factor));
       if (options.scale) args.push("-s", String(options.scale));
       if (options.ttafnm) args.push("-f", options.ttafnm);
@@ -267,8 +308,14 @@
             }
           } catch (e) {}
         }
-        if (ncnnInputFile !== inputPath) {
-          try { if (fs.existsSync(ncnnInputFile)) fs.unlinkSync(ncnnInputFile); } catch (e) {}
+        if (ncnnInputDir) {
+          try {
+            if (fs.existsSync(ncnnInputDir)) {
+              var files2 = fs.readdirSync(ncnnInputDir);
+              for (var fi = 0; fi < files2.length; fi++) fs.unlinkSync(p.join(ncnnInputDir, files2[fi]));
+              fs.rmdirSync(ncnnInputDir);
+            }
+          } catch (e) {}
         }
       }
 
