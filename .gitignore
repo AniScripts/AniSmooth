@@ -17,3 +17,4 @@ tools/cert.p12
 # Inno Setup output
 *.exe
 /AniSmooth/python/models/__pycache__
+*.pyc
