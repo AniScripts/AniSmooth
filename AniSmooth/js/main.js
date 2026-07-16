@@ -1153,19 +1153,31 @@
       var upscaleEl = document.getElementById("upscaleModelToggles");
       var self = this;
 
-      var interpModels = [
+      var interpCudaModels = [
         { value: "rife4.25-heavy", label: "RIFE 4.25 HEAVY", icon: "fa-microchip", backend: "cuda" },
         { value: "rife4.25", label: "RIFE 4.25", icon: "fa-microchip", backend: "cuda" },
         { value: "rife4.25-heavy-tensorrt", label: "RIFE 4.25 HEAVY TensorRT", icon: "fa-bolt", backend: "cuda" },
         { value: "rife4.25-tensorrt", label: "RIFE 4.25 TensorRT", icon: "fa-bolt", backend: "cuda" }
       ];
-      var upscaleModels = [
+      var interpVulkanModels = [
+        { value: "rife-v4.26", label: "RIFE 4.26 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-v4.25", label: "RIFE 4.25 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-v4.15-lite", label: "RIFE 4.15 Lite (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-anime", label: "RIFE Anime (Vulkan)", icon: "fa-fire", backend: "vulkan" }
+      ];
+      var upscaleCudaModels = [
         { value: "adore", label: "Adore", icon: "fa-microchip", backend: "cuda" },
         { value: "fallin_soft", label: "Fallin Soft", icon: "fa-microchip", backend: "cuda" }
       ];
+      var upscaleVulkanModels = [
+        { value: "realesr-animevideov3", label: "AnimeVideo v3 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "realesrgan-x4plus-anime", label: "x4plus Anime (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "realesrgan-x4plus", label: "x4plus (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "realesrnet-x4plus", label: "x4plus Net (Vulkan)", icon: "fa-fire", backend: "vulkan" }
+      ];
 
-      if (interpEl) interpEl.innerHTML = this._buildToggleGroup(interpModels, "anismooth_model_interp_");
-      if (upscaleEl) upscaleEl.innerHTML = this._buildToggleGroup(upscaleModels, "anismooth_model_upscale_");
+      if (interpEl) interpEl.innerHTML = '<div class="toggle-category"><i class="fa-solid fa-microchip"></i> CUDA</div>' + this._buildToggleGroup(interpCudaModels, "anismooth_model_interp_") + '<div class="toggle-category"><i class="fa-solid fa-fire"></i> NCNN Vulkan</div>' + this._buildToggleGroup(interpVulkanModels, "anismooth_model_interp_");
+      if (upscaleEl) upscaleEl.innerHTML = '<div class="toggle-category"><i class="fa-solid fa-microchip"></i> CUDA</div>' + this._buildToggleGroup(upscaleCudaModels, "anismooth_model_upscale_") + '<div class="toggle-category"><i class="fa-solid fa-fire"></i> NCNN Vulkan</div>' + this._buildToggleGroup(upscaleVulkanModels, "anismooth_model_upscale_");
 
       var ffAiEl = document.getElementById("ffAiToggles");
       var ffModelEl = document.getElementById("ffModelToggles");
@@ -1173,12 +1185,14 @@
       var ffEncEl = document.getElementById("ffEncToggles");
       var ffPixFmtEl = document.getElementById("ffPixFmtToggles");
 
-      var ffAi = [
-        { value: "RifeNcnn", label: "RIFE (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0", backend: "vulkan" },
+      var ffAiCuda = [
         { value: "RifeCuda", label: "RIFE (CUDA)", icon: "fa-microchip", ver: "1.36.0", backend: "cuda" },
         { value: "FlavrCuda", label: "FLAVR", icon: "fa-microchip", ver: "1.36.0", backend: "cuda" },
+        { value: "XvfiCuda", label: "XVFI", icon: "fa-microchip", ver: "1.36.0", backend: "cuda" }
+      ];
+      var ffAiVulkan = [
+        { value: "RifeNcnn", label: "RIFE (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0", backend: "vulkan" },
         { value: "DainNcnn", label: "DAIN (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0", backend: "vulkan" },
-        { value: "XvfiCuda", label: "XVFI", icon: "fa-microchip", ver: "1.36.0", backend: "cuda" },
         { value: "RifeNcnnVs", label: "RIFE (NCNN/VS)", icon: "fa-microchip", ver: "1.36.0 1.42.0", backend: "vulkan" }
       ];
       var ffModels = [
@@ -1213,15 +1227,10 @@
         { value: "Gif", label: "GIF", icon: "fa-film", ver: "1.36.0 1.42.0" },
         { value: "Images", label: "Image Sequence", icon: "fa-film", ver: "1.36.0" }
       ];
-      var ffEnc = [
+      var ffEncUniversal = [
         { value: "X264", label: "h264 (x264)", icon: "fa-film", ver: "1.36.0 1.42.0" },
         { value: "X265", label: "h265 (x265)", icon: "fa-film", ver: "1.36.0 1.42.0" },
         { value: "SvtAv1", label: "AV1 (SVT)", icon: "fa-film", ver: "1.36.0 1.42.0" },
-        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
-        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
-        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
-        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "vulkan" },
-        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "vulkan" },
         { value: "VpxVp9", label: "VP9", icon: "fa-film", ver: "1.36.0" },
         { value: "Qsv264", label: "h264 QSV", icon: "fa-bolt", ver: "1.36.0" },
         { value: "Qsv265", label: "h265 QSV", icon: "fa-bolt", ver: "1.36.0" },
@@ -1230,6 +1239,15 @@
         { value: "Huffyuv", label: "huffyuv", icon: "fa-film", ver: "1.36.0" },
         { value: "Magicyuv", label: "magicyuv", icon: "fa-film", ver: "1.36.0" },
         { value: "Rawvideo", label: "rawvideo", icon: "fa-film", ver: "1.36.0" }
+      ];
+      var ffEncCuda = [
+        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
+        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
+        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" }
+      ];
+      var ffEncVulkan = [
+        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "vulkan" },
+        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "vulkan" }
       ];
       var ffPixFmt = [
         { value: "Yuv420P", label: "yuv420p", icon: "fa-palette", ver: "1.36.0 1.42.0" },
@@ -1243,10 +1261,10 @@
         { value: "Rgba", label: "rgba", icon: "fa-palette", ver: "1.36.0" }
       ];
 
-      if (ffAiEl) ffAiEl.innerHTML = this._buildToggleGroup(ffAi, "anismooth_ff_ai_");
+      if (ffAiEl) ffAiEl.innerHTML = '<div class="toggle-category"><i class="fa-solid fa-microchip"></i> CUDA</div>' + this._buildToggleGroup(ffAiCuda, "anismooth_ff_ai_") + '<div class="toggle-category"><i class="fa-solid fa-fire"></i> NCNN Vulkan</div>' + this._buildToggleGroup(ffAiVulkan, "anismooth_ff_ai_");
       if (ffModelEl) ffModelEl.innerHTML = this._buildToggleGroup(ffModels, "anismooth_ff_model_");
       if (ffFormatEl) ffFormatEl.innerHTML = this._buildToggleGroup(ffFormat, "anismooth_ff_format_");
-      if (ffEncEl) ffEncEl.innerHTML = this._buildToggleGroup(ffEnc, "anismooth_ff_enc_");
+      if (ffEncEl) ffEncEl.innerHTML = '<div class="toggle-category"><i class="fa-solid fa-globe"></i> Universal</div>' + this._buildToggleGroup(ffEncUniversal, "anismooth_ff_enc_") + '<div class="toggle-category"><i class="fa-solid fa-microchip"></i> NVIDIA NVENC</div>' + this._buildToggleGroup(ffEncCuda, "anismooth_ff_enc_") + '<div class="toggle-category"><i class="fa-solid fa-fire"></i> AMD AMF</div>' + this._buildToggleGroup(ffEncVulkan, "anismooth_ff_enc_");
       if (ffPixFmtEl) ffPixFmtEl.innerHTML = this._buildToggleGroup(ffPixFmt, "anismooth_ff_pixfmt_");
 
       var allToggles = document.querySelectorAll(".model-vis-toggle");
@@ -1271,14 +1289,12 @@
       for (var i = 0; i < allToggles.length; i++) {
         var row = allToggles[i];
         var backend = row.getAttribute("data-backend");
-        var checkbox = row.querySelector(".model-vis-toggle");
         if (backend === "cuda" && vendor !== "nvidia") {
-          row.classList.add("toggle-disabled");
-          if (checkbox) { checkbox.disabled = true; checkbox.checked = false; }
-        }
-        if (backend === "vulkan" && vendor === "nvidia") {
-          row.classList.add("toggle-disabled");
-          if (checkbox) { checkbox.disabled = true; checkbox.checked = false; }
+          row.classList.add("toggle-unsupported");
+        } else if (backend === "vulkan" && vendor === "nvidia") {
+          row.classList.add("toggle-unsupported");
+        } else {
+          row.classList.remove("toggle-unsupported");
         }
       }
     },
