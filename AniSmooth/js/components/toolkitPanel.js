@@ -1,4 +1,22 @@
 (function () {
+  if (!Element.prototype.closest) {
+    Element.prototype.closest = function (selector) {
+      var el = this;
+      do { if (el.matches && el.matches(selector)) return el; el = el.parentElement || el.parentNode; }
+      while (el && el.nodeType === 1);
+      return null;
+    };
+  }
+
+  function _tkClosest(el, selector) {
+    var matchesFn = el.matches || el.webkitMatchesSelector || el.mozMatchesSelector || el.msMatchesSelector || function () { return false; };
+    while (el && el !== document) {
+      if (matchesFn.call(el, selector)) return el;
+      el = el.parentElement || el.parentNode;
+    }
+    return null;
+  }
+
   var ToolkitPanel = {
     _subtabs: {},
     _tools: [
@@ -15,6 +33,7 @@
       this.view = document.getElementById("toolkitView");
       this.subNav = document.getElementById("toolkitSubNav");
       this.subContent = document.getElementById("toolkitSubContent");
+      dbg("debug", "Toolkit", "init: view=" + !!this.view + " nav=" + !!this.subNav + " content=" + !!this.subContent);
       this._initToolToggles();
       this._loadToolHTMLs();
     },
@@ -62,8 +81,11 @@
 
         if (!enabled) {
           subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '" style="display:none;"><div class="tk-disabled-placeholder"><i class="fa-solid ' + tool.icon + '"></i><p>' + tool.label + ' is disabled.</p><span>Enable in Settings &gt; Interface &gt; Toolkit Tools.</span></div></div>';
+          dbg("debug", "Toolkit", tool.id + " disabled, skipping load");
           continue;
         }
+
+        dbg("debug", "Toolkit", "Loading " + tool.id + " from " + tool.html);
 
         var html = "";
         try {
@@ -86,6 +108,7 @@
       this._buildNav(allTools);
       this._bindActions();
       this._initColorFlow();
+      dbg("debug", "Toolkit", "HTMLs loaded, nav built, actions bound");
     },
 
     _buildNav: function (allTools) {
@@ -144,17 +167,18 @@
       var subContent = this.subContent;
 
       subContent.addEventListener("click", function (e) {
-        var btn = e.target.closest("[data-tk-action]");
+        var btn = _tkClosest(e.target, "[data-tk-action]");
         if (!btn) return;
         var action = btn.getAttribute("data-tk-action");
         var arg = btn.getAttribute("data-tk-arg");
+        dbg("debug", "Toolkit", "Action: " + action + " arg: " + (arg || "none"));
         self._handleAction(action, arg);
       });
 
       var innerNavs = subContent.querySelectorAll(".tk-inner-nav");
       for (var i = 0; i < innerNavs.length; i++) {
         innerNavs[i].addEventListener("click", function (e) {
-          var tab = e.target.closest(".tk-inner-tab");
+          var tab = _tkClosest(e.target, ".tk-inner-tab");
           if (!tab) return;
           self._switchInnerTab(tab);
         });
@@ -179,7 +203,7 @@
 
       var tabValue = tab.getAttribute("data-tk-qt") || tab.getAttribute("data-tk-cf");
       var dataKey = tab.hasAttribute("data-tk-qt") ? "data-tk-qt" : "data-tk-cf";
-      var parent = tab.closest(".toolkit-subtab");
+      var parent = _tkClosest(tab, ".toolkit-subtab");
       var panels = parent.querySelectorAll(".tk-qt-panel, .tk-cf-panel");
       for (var j = 0; j < panels.length; j++) {
         panels[j].classList.remove("active");
@@ -391,7 +415,9 @@
 
       if (evalFn) { evalFn(); }
       if (script && window.__adobe_cep__ && window.__adobe_cep__.evalScript) {
+        dbg("debug", "Toolkit", "evalScript: " + script.slice(0, 120));
         window.__adobe_cep__.evalScript(script, function (res) {
+          dbg("debug", "Toolkit", "evalScript result: " + (res || "").slice(0, 200));
           try { var r = JSON.parse(res); if (r && r.ok) window.showToast("Done.", "success"); else if (r && r.error) window.showToast(r.error, "error"); } catch (e) {}
         });
       } else if (script) {
@@ -752,8 +778,8 @@
 
       var self = this;
       container.addEventListener("click", function (e) {
-        var swatch = e.target.closest(".tk-label-swatch");
-        var action = e.target.closest(".tk-label-action");
+        var swatch = _tkClosest(e.target, ".tk-label-swatch");
+        var action = _tkClosest(e.target, ".tk-label-action");
         if (!swatch && !action) return;
 
         if (swatch) {
