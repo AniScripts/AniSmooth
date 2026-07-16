@@ -170,6 +170,8 @@
     _cancelActive: function () {
       if (this._currentMode === "flowframes") {
         if (window.FlowframesHandler) window.FlowframesHandler.cancel();
+      } else if (window.NcnnHandler && window.NcnnHandler.activeProcess) {
+        window.NcnnHandler.cancel();
       } else if (window.ModelHandler) {
         window.ModelHandler.cancelActiveProcess();
       }

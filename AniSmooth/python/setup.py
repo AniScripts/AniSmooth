@@ -570,55 +570,62 @@ def force_gpu_pytorch():
         log("error", "GPU environment install failed.")
     return ok
 
-def force_dml_pytorch():
-    log("section", "DirectML PyTorch Installer", step=1, total=1)
+def install_ncnn_binaries():
+    log("section", "NCNN Vulkan Binary Installer", step=1, total=1)
 
-    venv_python = ensure_venv()
-    if not venv_python:
-        log("error", "Failed to create virtual environment")
-        return False
+    ncnn_dir = os.path.join(SCRIPT_DIR, "ncnn_binaries")
+    os.makedirs(ncnn_dir, exist_ok=True)
 
-    log("info", "Using venv Python: " + venv_python)
+    binaries = {
+        "rife-ncnn-vulkan": "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-windows.zip",
+        "realesrgan-ncnn-vulkan": "https://github.com/nihui/realesrgan-ncnn-vulkan/releases/download/v0.2.0/realesrgan-ncnn-vulkan-20220424-windows.zip",
+    }
 
-    _run_pip(venv_python, ["install", "--upgrade", "pip", "setuptools", "wheel"])
+    import zipfile
+    import urllib.request
 
-    log("info", "Installing torch-directml for AMD GPU acceleration...")
-    rc = _run_pip(venv_python, ["install", "torch-directml"])
-    ok = rc == 0
-
-    log("info", "Installing FFmpeg...")
-    if not install_ffmpeg():
-        log("error", "FFmpeg install failed during --force-dml")
-        ok = False
-
-    log("info", "Installing remaining backend packages (opencv-python, numpy, spandrel)...")
-    if not install_non_torch_packages(venv_python):
-        log("error", "Failed to install non-torch backend packages during --force-dml")
-        ok = False
-
-    if ok:
-        log("info", "Verifying backend imports in venv...")
-        smoke = subprocess.run(
-            [venv_python, "-c", "import torch; import torch_directml; import cv2; import numpy; import spandrel; import psutil"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if smoke.returncode != 0:
-            log("error", "Backend import smoke test failed:")
-            for line in (smoke.stderr or "").splitlines():
-                log("error", line)
+    ok = True
+    for name, url in binaries.items():
+        log("info", "Downloading " + name + "...")
+        zip_path = os.path.join(ncnn_dir, name + ".zip")
+        try:
+            urllib.request.urlretrieve(url, zip_path)
+        except Exception as e:
+            log("error", "Download failed for " + name + ": " + str(e))
             ok = False
+            continue
+
+        log("info", "Extracting " + name + "...")
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                for member in zf.namelist():
+                    if member.endswith(".exe"):
+                        exe_name = name + ".exe"
+                        dest = os.path.join(ncnn_dir, exe_name)
+                        with zf.open(member) as src, open(dest, "wb") as dst:
+                            dst.write(src.read())
+                        log("info", "Extracted: " + exe_name)
+                        break
+        except Exception as e:
+            log("error", "Extract failed for " + name + ": " + str(e))
+            ok = False
+        finally:
+            try:
+                os.remove(zip_path)
+            except Exception:
+                pass
 
     if ok:
-        log("success", "DirectML PyTorch + backend environment installed. Restart GPU detection.")
-        log("venv", VENV_PYTHON)
+        log("success", "NCNN Vulkan binaries installed to: " + ncnn_dir)
     else:
-        log("error", "DirectML environment install failed.")
+        log("error", "NCNN binary install had errors.")
     return ok
 
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="AniSmooth Setup")
     parser.add_argument("--force-gpu", action="store_true", help="Reinstall PyTorch with CUDA support")
-    parser.add_argument("--force-dml", action="store_true", help="Install torch-directml for AMD GPU support")
+    parser.add_argument("--force-ncnn", action="store_true", help="Download NCNN Vulkan binaries for AMD GPU support")
     args = parser.parse_args()
 
     # Fail fast on interpreters too old to have any compatible torch wheel rather
@@ -640,9 +647,9 @@ def main():
             sys.exit(1)
         return
 
-    if args.force_dml:
+    if args.force_ncnn:
         try:
-            ok = force_dml_pytorch()
+            ok = install_ncnn_binaries()
             sys.exit(0 if ok else 1)
         except Exception as e:
             log("fatal", str(e))

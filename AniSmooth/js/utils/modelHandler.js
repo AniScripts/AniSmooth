@@ -235,6 +235,21 @@
 
     
     interpolateClip: function (inputPath, outputPath, modelKey, options, callbacks) {
+      var vendor = (window.App && window.App._gpuVendor) || "unknown";
+      if (vendor === "amd" && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
+        var ncnnOpts = {
+          model: modelKey || "rife-v4.26",
+          factor: options.fpsFactor || "2",
+          threadCount: "4:4:4"
+        };
+        window.NcnnHandler.run(inputPath, outputPath, "rife-ncnn-vulkan", ncnnOpts, callbacks);
+        return;
+      }
+      if (vendor === "amd") {
+        if (callbacks.onError) callbacks.onError("NCNN Vulkan binaries not found. Install them in Settings → Tools.");
+        return;
+      }
+
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
       
       var extPath = "";
@@ -265,6 +280,21 @@
 
     
     upscaleClip: function (inputPath, outputPath, modelKey, options, callbacks) {
+      var vendor = (window.App && window.App._gpuVendor) || "unknown";
+      if (vendor === "amd" && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
+        var ncnnOpts = {
+          model: modelKey || "realesr-animevideov3",
+          scale: options.scale || "2",
+          threadCount: "4:4:4"
+        };
+        window.NcnnHandler.run(inputPath, outputPath, "realesrgan-ncnn-vulkan", ncnnOpts, callbacks);
+        return;
+      }
+      if (vendor === "amd") {
+        if (callbacks.onError) callbacks.onError("NCNN Vulkan binaries not found. Install them in Settings → Tools.");
+        return;
+      }
+
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
       
       var extPath = "";
