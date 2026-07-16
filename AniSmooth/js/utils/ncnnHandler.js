@@ -68,8 +68,8 @@
       dbg("info", "NCNN-DEBUG", "Input ext: " + inputExt + ", Output ext: " + outputExt);
 
       if (outputExt === "avi") {
-        outputPath = outputPath.replace(/\.\w+$/, ".mp4");
-        dbg("info", "NCNN-DEBUG", "Output AVI forced to MP4: " + outputPath);
+        outputPath = outputPath.replace(/\.\w+$/, ".mkv");
+        dbg("info", "NCNN-DEBUG", "Output AVI forced to MKV: " + outputPath);
       }
 
       var actualInput = inputPath;
