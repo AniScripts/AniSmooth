@@ -165,6 +165,7 @@
         var finished = false;
         var aiComplete = false;
         var lastLogTime = Date.now();
+        var watchdogSize = -1;
 
         var finalize = function (ok, message, producedPath) {
           if (finished) return;
@@ -215,6 +216,7 @@
             try {
               var content = fs.readFileSync(sessionLog, "utf8");
               var lines = content.split(/\r?\n/);
+              if (lines.length > lastLineCount) {
               for (var j = lastLineCount; j < lines.length; j++) {
                 var ln = lines[j];
                 if (!ln) continue;
@@ -238,6 +240,7 @@
               }
               lastLineCount = lines.length;
               lastLogTime = Date.now();
+              }
             } catch (e) {}
           }
 
@@ -268,7 +271,19 @@
           }
 
           if (!finished && Date.now() - lastLogTime > 60000) {
-            finalize(false, "Flowframes stalled - no progress for 60 seconds.");
+            var wOut = findNewestOutput();
+            var wGrew = false;
+            if (wOut) {
+              try {
+                var wSz = fs.statSync(wOut).size;
+                if (wSz !== watchdogSize) { watchdogSize = wSz; wGrew = true; }
+              } catch (e) {}
+            }
+            if (wGrew) {
+              lastLogTime = Date.now();
+            } else {
+              finalize(false, "Flowframes stopped responding - no progress for 60 seconds.");
+            }
           }
         }, 1500);
 
