@@ -137,7 +137,7 @@
           "-i", ncnnInputDir,
           "-o", ncnnOutputDir,
           "-g", gpuId,
-          "-m", options.model || "rife-v4.22",
+          "-m", options.model || "rife-v4.6",
           "-j", String(options.threadCount || "4:4:4")
         ];
       } else {
@@ -146,7 +146,7 @@
           "-i", inputPath,
           "-o", finalOutputPath,
           "-g", gpuId,
-          "-m", options.model || "rife-v4.22",
+          "-m", options.model || "rife-v4.6",
           "-j", String(options.threadCount || "4:4:4")
         ];
       }
@@ -369,11 +369,13 @@
 
     getRifeModels: function () {
       return [
-        { value: "rife-v4.22", label: "RIFE 4.22", backend: "vulkan", desc: "Latest available, best quality" },
-        { value: "rife-v4.15", label: "RIFE 4.15", backend: "vulkan", desc: "Stable, good quality" },
-        { value: "rife-v4.6", label: "RIFE 4.6", backend: "vulkan", desc: "Widely compatible, fast" },
-        { value: "rife-v4.15-lite", label: "RIFE 4.15 Lite", backend: "vulkan", desc: "Fastest, lower VRAM" },
-        { value: "rife-v2.4", label: "RIFE 2.4", backend: "vulkan", desc: "Widest GPU compatibility" }
+        { value: "rife-v4.6", label: "RIFE 4.6", backend: "vulkan", desc: "Latest, best quality" },
+        { value: "rife-v4", label: "RIFE 4.0", backend: "vulkan", desc: "v4 base model" },
+        { value: "rife-v3.1", label: "RIFE 3.1", backend: "vulkan", desc: "v3 general model" },
+        { value: "rife-v2.4", label: "RIFE 2.4", backend: "vulkan", desc: "Widest GPU compatibility" },
+        { value: "rife-anime", label: "RIFE Anime", backend: "vulkan", desc: "2D/anime optimized" },
+        { value: "rife-HD", label: "RIFE HD", backend: "vulkan", desc: "HD optimized" },
+        { value: "rife-UHD", label: "RIFE UHD", backend: "vulkan", desc: "4K+ optimized" }
       ];
     },
 

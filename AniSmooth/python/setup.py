@@ -576,26 +576,20 @@ def install_ncnn_binaries():
     ncnn_dir = os.path.join(SCRIPT_DIR, "ncnn_binaries")
     os.makedirs(ncnn_dir, exist_ok=True)
 
-    NCNN_VERSION = "1.0.0"
+    NCNN_VERSION = "1.1.0"
     BIN_URL = "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/"
-    MODEL_URL = "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn-models/"
 
     NCNN_BINARIES = {
         "rife-ncnn-vulkan": {
-            "url": BIN_URL + "rife-ncnn-vulkan.exe",
+            "url": BIN_URL + "rife.zip",
             "version": "20221029",
+            "is_zip": True,
         },
         "realesrgan-ncnn-vulkan": {
             "url": BIN_URL + "realesrgan-ncnn-vulkan.exe",
             "version": "20220424",
+            "is_zip": False,
         },
-    }
-
-    NCNN_MODELS = {
-        "rife-v4.22": MODEL_URL + "rife-v4.22-ncnn.zip",
-        "rife-v4.15": MODEL_URL + "rife-v4.15-ncnn.zip",
-        "rife-v4.6": MODEL_URL + "rife-v4.6-ncnn.zip",
-        "rife-v4.15-lite": MODEL_URL + "rife-v4.15-lite-ncnn.zip",
     }
 
     version_file = os.path.join(ncnn_dir, "version.json")
@@ -608,6 +602,7 @@ def install_ncnn_binaries():
             pass
 
     import urllib.request
+    import zipfile
 
     ok = True
     for name, meta in NCNN_BINARIES.items():
@@ -619,13 +614,30 @@ def install_ncnn_binaries():
             continue
 
         log("info", "Downloading " + name + " (" + meta["version"] + ")...")
-        try:
-            urllib.request.urlretrieve(meta["url"], exe_path)
-            installed[name] = {"version": meta["version"]}
-            log("info", "Downloaded: " + name + ".exe")
-        except Exception as e:
-            log("error", "Download failed for " + name + ": " + str(e))
-            ok = False
+        if meta.get("is_zip"):
+            zip_path = os.path.join(ncnn_dir, name + ".zip")
+            try:
+                urllib.request.urlretrieve(meta["url"], zip_path)
+                with zipfile.ZipFile(zip_path, "r") as zf:
+                    zf.extractall(ncnn_dir)
+                installed[name] = {"version": meta["version"]}
+                log("info", "Extracted: " + name + " (with models)")
+            except Exception as e:
+                log("error", "Download/extract failed for " + name + ": " + str(e))
+                ok = False
+            finally:
+                try:
+                    os.remove(zip_path)
+                except Exception:
+                    pass
+        else:
+            try:
+                urllib.request.urlretrieve(meta["url"], exe_path)
+                installed[name] = {"version": meta["version"]}
+                log("info", "Downloaded: " + name + ".exe")
+            except Exception as e:
+                log("error", "Download failed for " + name + ": " + str(e))
+                ok = False
 
     if installed:
         try:
@@ -633,34 +645,6 @@ def install_ncnn_binaries():
                 json.dump({"_version": NCNN_VERSION, "binaries": installed}, f, indent=2)
         except Exception:
             pass
-
-    log("info", "Downloading NCNN model weights...")
-    import zipfile
-    for model_name, model_url in NCNN_MODELS.items():
-        model_dir = os.path.join(ncnn_dir, model_name)
-        if os.path.exists(model_dir) and len(os.listdir(model_dir)) > 0:
-            log("info", model_name + " already installed, skipping")
-            continue
-        zip_path = os.path.join(ncnn_dir, model_name + ".zip")
-        try:
-            log("info", "Downloading " + model_name + "...")
-            urllib.request.urlretrieve(model_url, zip_path)
-            os.makedirs(model_dir, exist_ok=True)
-            with zipfile.ZipFile(zip_path, "r") as zf:
-                for member in zf.namelist():
-                    fname = member.split("/")[-1].split("\\")[-1]
-                    if fname and (fname.endswith(".param") or fname.endswith(".bin")):
-                        with zf.open(member) as src, open(os.path.join(model_dir, fname), "wb") as dst:
-                            dst.write(src.read())
-            log("info", "Extracted: " + model_name)
-        except Exception as e:
-            log("error", "Model download failed for " + model_name + ": " + str(e))
-            ok = False
-        finally:
-            try:
-                os.remove(zip_path)
-            except Exception:
-                pass
 
     if ok:
         log("success", "NCNN Vulkan binaries installed to: " + ncnn_dir)
