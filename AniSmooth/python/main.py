@@ -592,6 +592,7 @@ def run_dedupe(
             parallax_mode=parallax_mode,
             detect_scale=detect_scale,
             small_movements=small_movements,
+            no_audio=True,
             progress_cb=progress_cb,
         )
         log("info", "Deadframe report: Total={}, Kept={}, Dropped={}".format(
