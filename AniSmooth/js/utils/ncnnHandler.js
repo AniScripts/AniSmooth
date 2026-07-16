@@ -75,6 +75,7 @@
       var actualInput = inputPath;
       var tempInput = null;
 
+      var ffmpegDir = "";
       if (inputExt === "avi") {
         dbg("info", "NCNN-DEBUG", "AVI input detected, looking for FFmpeg...");
         var appdata = "";
@@ -86,6 +87,7 @@
         if (appdata) {
           var backendDir = p.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend");
           ffmpegPath = p.join(backendDir, "ffmpeg.exe");
+          ffmpegDir = backendDir;
           dbg("info", "NCNN-DEBUG", "Checking FFmpeg at: " + ffmpegPath + " (exists: " + fs.existsSync(ffmpegPath) + ")");
           if (!fs.existsSync(ffmpegPath)) ffmpegPath = null;
         }
@@ -180,8 +182,8 @@
         if (process.env.hasOwnProperty(key)) { env[key] = process.env[key]; envKeys++; }
       }
       if (!env.PATH) env.PATH = "";
-      env.PATH = exeDir + ";" + env.PATH;
-      dbg("info", "NCNN-DEBUG", "Env keys: " + envKeys + ", PATH prefix: " + exeDir);
+      env.PATH = exeDir + ";" + (ffmpegDir ? ffmpegDir + ";" : "") + env.PATH;
+      dbg("info", "NCNN-DEBUG", "Env keys: " + envKeys + ", PATH prefix: " + exeDir + (ffmpegDir ? ";" + ffmpegDir : ""));
 
       var proc;
       try {
