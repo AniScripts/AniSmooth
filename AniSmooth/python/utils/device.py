@@ -61,8 +61,10 @@ def _detect_dml_vendor():
 
 def _detect_gpu_vendor_wmi():
     try:
-        ps_cmd = 'powershell -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"'
-        result = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=10, shell=True)
+        result = subprocess.run(
+            ["wmic", "path", "Win32_VideoController", "get", "Name"],
+            capture_output=True, text=True, timeout=10
+        )
         if result.returncode == 0 and result.stdout.strip():
             name_lower = result.stdout.strip().lower()
             if "nvidia" in name_lower or "geforce" in name_lower or "rtx" in name_lower or "gtx" in name_lower or "quadro" in name_lower:
@@ -147,20 +149,29 @@ def _run_nvidia_smi():
 
 def _run_amd_gpu_query():
     try:
-        ps_cmd = (
-            'powershell -NoProfile -Command "'
-            '$gpu = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match ''(AMD|Radeon|RX)'' } | Select-Object -First 1;'
-            'if ($gpu) { Write-Output ($gpu.Name + ''|'' + [math]::Round($gpu.AdapterRAM/1MB) + ''|'' + $gpu.DriverVersion) }"'
+        result = subprocess.run(
+            ["wmic", "path", "Win32_VideoController", "get", "Name,AdapterRAM,DriverVersion", "/format:csv"],
+            capture_output=True, text=True, timeout=10
         )
-        result = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=10, shell=True)
         if result.returncode == 0 and result.stdout.strip():
-            parts = result.stdout.strip().split("|")
-            if len(parts) >= 2:
-                return {
-                    "name": parts[0].strip(),
-                    "memory_total_mb": int(parts[1]) if parts[1].isdigit() else 0,
-                    "driver_version": parts[2].strip() if len(parts) > 2 else None,
-                }
+            for line in result.stdout.strip().split("\n")[1:]:
+                line = line.strip()
+                if not line:
+                    continue
+                name_lower = line.lower()
+                if "amd" in name_lower or "radeon" in name_lower or "rx" in name_lower:
+                    parts = line.split(",")
+                    idx = 1 if len(parts) >= 4 else 0
+                    gpu_name = parts[idx].strip() if len(parts) > idx else ""
+                    mem_bytes = 0
+                    if len(parts) > idx + 1 and parts[idx + 1].strip().isdigit():
+                        mem_bytes = int(parts[idx + 1].strip())
+                    driver = parts[idx + 2].strip() if len(parts) > idx + 2 else None
+                    return {
+                        "name": gpu_name,
+                        "memory_total_mb": mem_bytes // (1024 * 1024),
+                        "driver_version": driver,
+                    }
     except Exception:
         pass
     return None
