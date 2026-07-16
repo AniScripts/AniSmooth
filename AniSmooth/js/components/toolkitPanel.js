@@ -51,52 +51,91 @@
 
     _loadToolHTMLs: function () {
       var self = this;
-      var enabled = this._getEnabledTools();
+      var allTools = this._tools;
       var subContent = this.subContent;
       subContent.innerHTML = "";
 
-      for (var i = 0; i < enabled.length; i++) {
-        (function (tool) {
+      var loadedCount = 0;
+      var totalCount = allTools.length;
+
+      for (var i = 0; i < allTools.length; i++) {
+        (function (tool, idx) {
+          var key = "anismooth_toolkit_" + tool.id;
+          var enabled = window.StorageManager.getItem(key, "0") === "1";
+
+          if (!enabled) {
+            subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '"><div class="info-card" style="text-align:center;padding:20px 12px;"><i class="fa-solid ' + tool.icon + '" style="font-size:24px;color:var(--text-3);display:block;margin-bottom:8px;"></i><span class="meta-strip meta-strip-sm">' + tool.label + ' is disabled.</span><br><span class="form-hint" style="margin-top:4px;">Enable it in Settings &gt; Interface &gt; Toolkit Tools.</span></div></div>';
+            loadedCount++;
+            if (loadedCount >= totalCount) {
+              self._buildNav(allTools);
+              self._bindActions();
+            }
+            return;
+          }
+
           var xhr = new XMLHttpRequest();
           xhr.open("GET", tool.html, true);
           xhr.onload = function () {
+            loadedCount++;
             if (xhr.status >= 200 && xhr.status < 400) {
               subContent.innerHTML += xhr.responseText;
               self._subtabs[tool.id] = true;
-              if (i === enabled.length - 1) {
-                self._buildNav(enabled);
-                self._bindActions();
-                self._initColorFlow();
-              }
+            } else {
+              subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '"><div class="info-card"><span class="meta-strip meta-strip-sm"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load: ' + tool.label + '</span></div></div>';
+            }
+            if (loadedCount >= totalCount) {
+              self._buildNav(allTools);
+              self._bindActions();
+              self._initColorFlow();
             }
           };
           xhr.onerror = function () {
-            subContent.innerHTML += '<div class="info-card"><span class="meta-strip meta-strip-sm"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load: ' + tool.label + '</span></div>';
+            loadedCount++;
+            subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '"><div class="info-card"><span class="meta-strip meta-strip-sm"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load: ' + tool.label + '</span></div></div>';
+            if (loadedCount >= totalCount) {
+              self._buildNav(allTools);
+              self._bindActions();
+              self._initColorFlow();
+            }
           };
           xhr.send();
-        })(enabled[i]);
+        })(allTools[i], i);
       }
     },
 
-    _buildNav: function (enabled) {
+    _buildNav: function (allTools) {
       var self = this;
       var nav = this.subNav;
       nav.innerHTML = "";
 
-      for (var i = 0; i < enabled.length; i++) {
+      var firstEnabledIdx = -1;
+      for (var i = 0; i < allTools.length; i++) {
+        var key = "anismooth_toolkit_" + allTools[i].id;
+        if (window.StorageManager.getItem(key, "0") === "1") {
+          firstEnabledIdx = i;
+          break;
+        }
+      }
+      if (firstEnabledIdx < 0) firstEnabledIdx = 0;
+
+      for (var j = 0; j < allTools.length; j++) {
         (function (tool, idx) {
+          var key = "anismooth_toolkit_" + tool.id;
+          var enabled = window.StorageManager.getItem(key, "0") === "1";
           var btn = document.createElement("button");
-          btn.className = "sub-tab" + (idx === 0 ? " active" : "");
-          btn.title = tool.label;
+          btn.className = "sub-tab" + (idx === firstEnabledIdx ? " active" : "");
+          btn.title = tool.label + (enabled ? "" : " (disabled)");
           btn.innerHTML = '<i class="fa-solid ' + tool.icon + '"></i>';
+          if (!enabled) btn.style.opacity = "0.4";
           btn.addEventListener("click", function () {
             self._switchSubTool(tool.id);
           });
           nav.appendChild(btn);
-        })(enabled[i], i);
+        })(allTools[j], j);
       }
 
-      this._showSubTool(enabled[0].id);
+      var firstTool = allTools[firstEnabledIdx];
+      this._showSubTool(firstTool.id);
     },
 
     _switchSubTool: function (toolId) {
@@ -104,9 +143,8 @@
       var btns = nav.querySelectorAll(".sub-tab");
       for (var i = 0; i < btns.length; i++) btns[i].classList.remove("active");
 
-      var tools = this._getEnabledTools();
-      for (var j = 0; j < tools.length; j++) {
-        if (tools[j].id === toolId) {
+      for (var j = 0; j < this._tools.length; j++) {
+        if (this._tools[j].id === toolId) {
           btns[j].classList.add("active");
           break;
         }
