@@ -1275,10 +1275,10 @@
         if (backend === "cuda" && vendor !== "nvidia") {
           row.classList.add("toggle-disabled");
           if (checkbox) { checkbox.disabled = true; checkbox.checked = false; }
-        } else if (backend === "vulkan" && vendor === "nvidia") {
-          row.classList.remove("toggle-disabled");
-        } else if (backend === "vulkan") {
-          row.classList.remove("toggle-disabled");
+        }
+        if (backend === "vulkan" && vendor === "nvidia") {
+          row.classList.add("toggle-disabled");
+          if (checkbox) { checkbox.disabled = true; checkbox.checked = false; }
         }
       }
     },
@@ -1335,7 +1335,7 @@
           var optBackend = child.getAttribute('data-backend') || '';
           var versionMatch = version === "both" || !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
           var toggled = window.StorageManager.getItem(prefix + val, "1") !== "0";
-          var vendorMatch = !optBackend || optBackend !== "cuda" || vendor === "nvidia";
+          var vendorMatch = !optBackend || (optBackend === "cuda" && vendor === "nvidia") || (optBackend === "vulkan" && vendor === "amd");
           var visible = versionMatch && toggled && vendorMatch;
           child._visible = visible;
           if (visible) {
