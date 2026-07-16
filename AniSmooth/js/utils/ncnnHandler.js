@@ -244,7 +244,7 @@
                   dbg("info", "NCNN-DEBUG", "Final MP4: " + finalOutputPath + " (" + fs.statSync(finalOutputPath).size + " bytes)");
                   _cleanupTempDir();
                   dbg("success", "NCNN", "Completed: " + finalOutputPath);
-                  if (callbacks.onComplete) callbacks.onComplete();
+                  if (callbacks.onComplete) callbacks.onComplete(finalOutputPath);
                   return;
                 }
               } catch (e) { dbg("error", "NCNN-DEBUG", "FFmpeg encode error: " + e.message); }
@@ -254,7 +254,7 @@
           if (fs.existsSync(finalOutputPath)) {
             dbg("info", "NCNN-DEBUG", "Output exists: " + finalOutputPath + " (size: " + fs.statSync(finalOutputPath).size + ")");
             dbg("success", "NCNN", "Completed: " + finalOutputPath);
-            if (callbacks.onComplete) callbacks.onComplete();
+            if (callbacks.onComplete) callbacks.onComplete(finalOutputPath);
           } else {
             dbg("error", "NCNN-DEBUG", "Output missing: " + finalOutputPath);
             dbg("error", "NCNN", "Output file not found: " + finalOutputPath);
