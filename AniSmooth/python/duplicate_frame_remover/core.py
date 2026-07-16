@@ -1,168 +1,442 @@
-"""Duplicate ("deadframe") detection for anime / AMV footage.
-
-Rewritten for speed and accuracy. Anime is animated on 2s/3s, so the same drawn
-cel is held for several consecutive frames; "deadframes" are those exact (or
-near-exact, after compression) repeats. The job is therefore to compare each new
-frame against the *last kept* frame and drop it when almost nothing changed.
-
-Design notes (why this replaces the previous multi-signal implementation):
-
-* The old detector blended six hand-weighted signals (regions, Farneback optical
-  flow, edges, pHash, block-motion, center-similarity) plus camera-motion and
-  "static-subject" compensation. That was slow (dense optical flow + nested
-  Python block-matching every frame pair) and over-aggressive - it would mark
-  genuinely different frames as ``camera_only`` duplicates.
-* It also had a correctness bug: ``self.prev_phash`` / ``self.prev_edges`` were
-  cached on *every* call, including dropped duplicates, while the actual anchor
-  (``prev_frame`` in the processor) only advanced on kept frames. The hash/edge
-  comparisons therefore referenced a different frame than the pixel comparisons.
-
-This version derives every signal from the exact frames passed in (no
-desynchronised cache), runs entirely on a small fixed-size thumbnail, and is
-fully vectorised - no per-frame Python loops, no optical flow.
-
-Two cheap, complementary signals decide a duplicate:
-
-1. ``frac_changed`` - fraction of thumbnail pixels whose absolute difference
-   exceeds ``pixel_threshold``. A per-pixel threshold ignores codec noise while
-   still catching small *localised* motion (a blink, a mouth moving).
-2. ``phash_distance`` - normalised Hamming distance of a DCT perceptual hash,
-   a robust *global/structural* backstop that survives compression artifacts.
-
-A frame is a duplicate when *both* stay at or below the user difference
-threshold (``1 - base_threshold``). Taking the max of the two means either
-signal alone is enough to mark a frame as unique, which is the safe bias for
-deadframe removal (never silently drop real animation).
-"""
-
 import cv2
 import numpy as np
-from collections import deque
-from typing import Dict, List
+import subprocess
+import sys
+import json
+import os
+import time
 
-class CadenceDetector:
-    """Detects a repeating duplicate/unique pattern (e.g. on-2s, on-3s)."""
+_CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
-    def __init__(self, window_size: int = 24):
-        self.window_size = window_size
-        self.duplicate_pattern = deque(maxlen=window_size)
 
-    def add_frame_result(self, is_duplicate: bool):
-        self.duplicate_pattern.append(1 if is_duplicate else 0)
+def _get_video_info(input_path, ffprobe_path="ffprobe"):
+    cmd = [
+        ffprobe_path,
+        "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=r_frame_rate,width,height,pix_fmt,field_order,codec_name,duration",
+        "-of", "json",
+        input_path,
+    ]
+    result = subprocess.run(
+        cmd, capture_output=True, text=True,
+        creationflags=_CREATE_NO_WINDOW,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("FFprobe failed: " + result.stderr.strip())
+    data = json.loads(result.stdout)
+    streams = data.get("streams", [])
+    if not streams:
+        raise RuntimeError("No video stream found in: " + input_path)
+    s = streams[0]
+    rfr = s.get("r_frame_rate", "30/1")
 
-    def detect_cadence(self) -> Dict:
-        if len(self.duplicate_pattern) < self.window_size // 2:
-            return {'detected': False, 'pattern': None}
-        pattern = list(self.duplicate_pattern)
-        for period in [2, 3, 4, 5, 6]:
-            if self._check_pattern_period(pattern, period):
-                return {'detected': True, 'period': period, 'pattern': pattern[:period]}
-        return {'detected': False, 'pattern': None}
+    def _parse_fraction(frac_str):
+        if "/" in frac_str:
+            num, den = frac_str.split("/")
+            return float(num) / float(den)
+        return float(frac_str)
 
-    def _check_pattern_period(self, pattern: List[int], period: int) -> bool:
-        if len(pattern) < period * 3:
-            return False
-        matches = sum(1 for i in range(len(pattern) - period) if pattern[i] == pattern[i + period])
-        total = len(pattern) - period
-        return (matches / total) > 0.8 if total > 0 else False
+    fps = _parse_fraction(rfr)
+    duration = float(s.get("duration", 0))
+    if duration <= 0:
+        w = s.get("width", 0)
+        h = s.get("height", 0)
+        if w > 0 and h > 0:
+            total = s.get("nb_frames")
+            if total:
+                duration = float(total) / fps
+    return {
+        "fps": fps,
+        "width": s.get("width", 0),
+        "height": s.get("height", 0),
+        "pix_fmt": s.get("pix_fmt", "yuv420p"),
+        "duration": duration,
+    }
 
-class AdvancedDuplicateRemover:
-    """Fast consecutive near-duplicate detector.
 
-    The constructor keeps the previous keyword arguments so it remains a
-    drop-in replacement for the processor; signals that are no longer used
-    (optical flow / camera compensation / region grid) are accepted and
-    ignored. ``base_threshold`` is treated as a *similarity* threshold in
-    [0, 1]: a frame is a duplicate when its difference from the anchor is at or
-    below ``1 - base_threshold``.
-    """
+def _get_audio_info(input_path, ffprobe_path="ffprobe"):
+    try:
+        cmd = [
+            ffprobe_path,
+            "-v", "error",
+            "-select_streams", "a:0",
+            "-show_entries", "stream=codec_name,sample_rate,channels",
+            "-of", "json",
+            input_path,
+        ]
+        result = subprocess.run(
+            cmd, capture_output=True, text=True,
+            creationflags=_CREATE_NO_WINDOW,
+        )
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout)
+        streams = data.get("streams", [])
+        if streams:
+            return streams[0]
+        return None
+    except Exception:
+        return None
 
+
+def _decisions_to_segments(decisions, fps):
+    segments = []
+    in_segment = False
+    segment_start = 0.0
+    for i, keep in enumerate(decisions):
+        t = i / fps
+        if keep and not in_segment:
+            segment_start = t
+            in_segment = True
+        elif not keep and in_segment:
+            segments.append((segment_start, t))
+            in_segment = False
+    if in_segment:
+        segments.append((segment_start, len(decisions) / fps))
+    return segments
+
+
+def _smooth_decisions(decisions, min_dead):
+    if min_dead <= 0:
+        return decisions
+    smoothed = list(decisions)
+    n = len(smoothed)
+    i = 0
+    while i < n:
+        if not smoothed[i]:
+            start = i
+            while i < n and not smoothed[i]:
+                i += 1
+            if (i - start) < min_dead:
+                for j in range(start, i):
+                    smoothed[j] = True
+        else:
+            i += 1
+    return smoothed
+
+
+def _get_color_args(input_path, ffprobe_path="ffprobe"):
+    try:
+        out = subprocess.check_output(
+            [
+                ffprobe_path, "-v", "error", "-select_streams", "v:0",
+                "-show_entries",
+                "stream=color_primaries,color_transfer,color_space,color_range",
+                "-of", "default=nw=1", str(input_path),
+            ],
+            text=True, stderr=subprocess.DEVNULL,
+            creationflags=_CREATE_NO_WINDOW,
+        )
+    except Exception:
+        return []
+    vals = {}
+    for line in out.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            vals[k] = v.strip()
+
+    def ok(x):
+        return x and x.lower() not in ("unknown", "n/a", "reserved", "")
+
+    args = []
+    if ok(vals.get("color_primaries")):
+        args += ["-color_primaries", vals["color_primaries"]]
+    if ok(vals.get("color_transfer")):
+        args += ["-color_trc", vals["color_transfer"]]
+    if ok(vals.get("color_space")):
+        args += ["-colorspace", vals["color_space"]]
+    if ok(vals.get("color_range")):
+        args += ["-color_range", vals["color_range"]]
+    return args
+
+
+def _build_ffmpeg_cmd(
+    input_path,
+    output_path,
+    segments,
+    fps,
+    pix_fmt,
+    ffmpeg_path="ffmpeg",
+    ffprobe_path="ffprobe",
+    no_audio=False,
+    audio_filter="",
+):
+    filter_parts = []
+    video_labels = []
+    for i, (start, end) in enumerate(segments):
+        filter_parts.append(
+            "[0:v]trim=start={}:end={},setpts=PTS-STARTPTS[v{}]".format(start, end, i)
+        )
+        video_labels.append("[v{}]".format(i))
+    video_concat = "".join(video_labels)
+    filter_parts.append(
+        "{}concat=n={}:v=1:a=0[outv]".format(video_concat, len(segments))
+    )
+
+    has_audio_track = bool(audio_filter)
+    if has_audio_track:
+        filter_parts.append(audio_filter)
+
+    is_10bit = "10" in pix_fmt or "p10" in pix_fmt
+    color_args = _get_color_args(input_path, ffprobe_path)
+
+    encoder = "libx265" if is_10bit else "libx264"
+    output_pix_fmt = pix_fmt if is_10bit else "yuv420p"
+
+    cmd = [
+        ffmpeg_path, "-y",
+        "-fflags", "+genpts",
+        "-i", input_path,
+        "-filter_complex", ";".join(filter_parts),
+        "-map", "[outv]",
+        "-fps_mode", "cfr",
+        "-r", str(fps),
+        "-c:v", encoder,
+        "-pix_fmt", output_pix_fmt,
+        "-crf", "18",
+        "-preset", "medium",
+        "-tune", "animation",
+        "-profile:v", "high",
+        "-movflags", "+faststart",
+    ]
+
+    if has_audio_track:
+        cmd += ["-map", "[outa]"]
+    elif no_audio:
+        cmd += ["-an"]
+
+    if is_10bit:
+        cmd.insert(cmd.index("high") + 1, "5.1")
+        cmd.insert(cmd.index("-profile:v"), "-level")
+
+    if color_args:
+        cmd += color_args
+
+    cmd.append(output_path)
+    return cmd
+
+
+def _build_audio_filter(segments):
+    audio_parts = []
+    audio_labels = []
+    for i, (start, end) in enumerate(segments):
+        audio_parts.append(
+            "[0:a]atrim=start={}:end={},asetpts=PTS-STARTPTS[a{}]".format(start, end, i)
+        )
+        audio_labels.append("[a{}]".format(i))
+    audio_concat = "".join(audio_labels)
+    audio_parts.append(
+        "{}concat=n={}:v=0:a=1[outa]".format(audio_concat, len(segments))
+    )
+    return ";".join(audio_parts)
+
+
+class DeadFrameDetector:
     def __init__(
         self,
-        base_threshold: float = 0.95,
-        pixel_threshold: int = 12,
-        thumb_size: int = 128,
-        hash_size: int = 8,
-        min_changed_regions: int = 1,
-        use_gpu: bool = False,
-        **_ignored,
+        flow_threshold=0.5,
+        motion_area_fraction=0.15,
+        homography_inlier_ratio=0.5,
+        orb_features=500,
+        min_matches=8,
+        ransac_threshold=5.0,
+        detect_scale=1.0,
+        keep_talking=False,
+        keep_camera=False,
+        parallax_mode=False,
     ):
-        
-        self.diff_threshold = float(min(1.0, max(0.0, 1.0 - base_threshold)))
-        
-        
-        self.pixel_threshold = int(pixel_threshold)
-        self.thumb_size = int(thumb_size)
-        self.hash_size = int(hash_size)
-        
-        
-        
-        self.min_frac = max(0.0, (int(min_changed_regions) - 1) * 0.01)
+        self.cv2 = cv2
+        self.flow_threshold = 0.05 if keep_talking else flow_threshold
+        self.motion_area_fraction = 0.0 if keep_talking else motion_area_fraction
+        self.homography_inlier_ratio = homography_inlier_ratio
+        self.skip_homography = keep_camera
+        self.parallax_mode = parallax_mode
+        self.orb_features = orb_features
+        self.min_matches = min_matches
+        self.ransac_threshold = ransac_threshold
+        self.detect_scale = max(0.1, min(1.0, detect_scale))
+        self.orb = self.cv2.ORB_create(nfeatures=orb_features)
+        self.matcher = self.cv2.BFMatcher(self.cv2.NORM_HAMMING, crossCheck=True)
 
-        
-        
-        self._anchor = None
-        self._anchor_small = None
-        self._anchor_hash = None
+    def _maybe_scale(self, gray):
+        if self.detect_scale >= 1.0:
+            return gray, 1.0
+        h, w = gray.shape
+        nh, nw = int(h * self.detect_scale), int(w * self.detect_scale)
+        return self.cv2.resize(gray, (nw, nh)), self.detect_scale
 
-        self.frame_cadence_detector = CadenceDetector(window_size=24)
+    def _collect_pair_stats(self, prev_gray, curr_gray):
+        h, w = curr_gray.shape
+        mean_prev = float(self.cv2.mean(prev_gray)[0])
+        mean_curr = float(self.cv2.mean(curr_gray)[0])
+        if abs(mean_curr - mean_prev) > 40:
+            return 0.0, 0.0, 0.0, None
+        var_curr = float(self.cv2.meanStdDev(curr_gray)[1][0][0]) ** 2
+        if var_curr < 5.0:
+            return 0.0, 0.0, 0.0, None
+        flow = self.cv2.calcOpticalFlowFarneback(
+            prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0
+        )
+        mag, _ = self.cv2.cartToPolar(flow[..., 0], flow[..., 1])
+        mean_mag = float(self.cv2.mean(mag)[0])
+        diff_frame = self.cv2.absdiff(prev_gray, curr_gray)
+        _, diff_mask = self.cv2.threshold(
+            diff_frame, 25, 255, self.cv2.THRESH_BINARY
+        )
+        diff_mask = diff_mask.astype("uint8")
+        kernel = self.cv2.getStructuringElement(self.cv2.MORPH_ELLIPSE, (5, 5))
+        diff_mask = self.cv2.morphologyEx(diff_mask, self.cv2.MORPH_CLOSE, kernel)
+        contours, _ = self.cv2.findContours(
+            diff_mask, self.cv2.RETR_EXTERNAL, self.cv2.CHAIN_APPROX_SIMPLE
+        )
+        total_area = float(h * w)
+        diff_area = 0.0
+        for c in contours:
+            area = self.cv2.contourArea(c)
+            if area > 25:
+                diff_area += area
+        diff_fraction = diff_area / total_area
+        inlier_ratio = 0.0
+        frob_norm = None
+        kp1, des1 = self.orb.detectAndCompute(prev_gray, None)
+        kp2, des2 = self.orb.detectAndCompute(curr_gray, None)
+        if des1 is not None and des2 is not None and len(des1) >= self.min_matches:
+            try:
+                matches = self.matcher.match(des1, des2)
+                matches = sorted(matches, key=lambda m: m.distance)
+                good = matches[:min(200, len(matches))]
+                if len(good) >= self.min_matches:
+                    src_pts = self.cv2.KeyPoint_convert(
+                        [kp1[m.queryIdx] for m in good]
+                    )
+                    dst_pts = self.cv2.KeyPoint_convert(
+                        [kp2[m.trainIdx] for m in good]
+                    )
+                    H, mask = self.cv2.findHomography(
+                        src_pts, dst_pts, self.cv2.RANSAC, self.ransac_threshold,
+                        maxIters=500,
+                    )
+                    if H is not None and mask is not None:
+                        inlier_count = int(self.cv2.countNonZero(mask))
+                        inlier_ratio = inlier_count / len(good)
+                        frob_norm = float(
+                            np.linalg.norm(H.astype(np.float64) - np.eye(3))
+                        )
+            except self.cv2.error:
+                pass
+        return mean_mag, diff_fraction, inlier_ratio, frob_norm
 
-    
+    def _is_dead_from_stats(self, mean_mag, diff_frac, inlier_ratio, frob_norm):
+        if mean_mag < self.flow_threshold:
+            return True
+        if not self.skip_homography and (
+            inlier_ratio > self.homography_inlier_ratio
+            and frob_norm is not None
+            and frob_norm > 1.0
+        ):
+            return not self.parallax_mode
+        if diff_frac < self.motion_area_fraction:
+            return True
+        return False
 
-    def _to_gray_small(self, frame: np.ndarray) -> np.ndarray:
-        if frame.ndim == 3:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = frame
-        small = cv2.resize(gray, (self.thumb_size, self.thumb_size),
-                           interpolation=cv2.INTER_AREA)
-        return small.astype(np.float32)
+    def _compute_thresholds_from_stats(self, stats_list, lock_flow=False, lock_area=False):
+        if not lock_flow:
+            flow_means = [
+                float(s["mean_mag"]) for s in stats_list if s["mean_mag"] is not None
+            ]
+            if len(flow_means) >= 2:
+                p_flow = float(np.percentile(flow_means, 20))
+                self.flow_threshold = max(0.2, min(2.0, p_flow * 0.6))
+        if not lock_area:
+            diff_fracs = [
+                float(s["diff_fraction"])
+                for s in stats_list
+                if s["diff_fraction"] is not None
+            ]
+            if len(diff_fracs) >= 2:
+                p_diff = float(np.percentile(diff_fracs, 15))
+                self.motion_area_fraction = max(0.03, min(0.25, p_diff * 0.4))
 
-    def _phash(self, small: np.ndarray) -> np.ndarray:
-        
-        
-        side = self.hash_size * 4
-        img = cv2.resize(small, (side, side), interpolation=cv2.INTER_AREA)
-        dct = cv2.dct(img)
-        low = dct[:self.hash_size, :self.hash_size]
-        return (low > np.median(low)).flatten()
+    def process_video(self, input_path, auto=False, auto_sample_limit=0, progress_cb=None):
+        cap = self.cv2.VideoCapture(input_path)
+        if not cap.isOpened():
+            raise RuntimeError("Cannot open video: " + input_path)
+        total_frames = int(cap.get(self.cv2.CAP_PROP_FRAME_COUNT))
+        stats_list = []
+        decisions = [True]
+        ret, prev_frame = cap.read()
+        if not ret:
+            cap.release()
+            return decisions
+        prev_gray = self.cv2.cvtColor(prev_frame, self.cv2.COLOR_BGR2GRAY)
+        prev_gray, _ = self._maybe_scale(prev_gray)
+        pair_idx = 0
 
-    def _features(self, frame: np.ndarray):
-        small = self._to_gray_small(frame)
-        return small, self._phash(small)
+        def _emit(pct, stage="Detecting"):
+            if progress_cb:
+                progress_cb(pct, "{}... frame {}/{}".format(stage, pair_idx, total_frames - 1))
 
-    
+        _emit(0)
 
-    def analyze_frame_difference(self, frame1: np.ndarray, frame2: np.ndarray) -> Dict:
-        """Compare ``frame2`` (candidate) against ``frame1`` (last kept frame).
+        while True:
+            ret, curr_frame = cap.read()
+            if not ret:
+                break
+            curr_gray = self.cv2.cvtColor(curr_frame, self.cv2.COLOR_BGR2GRAY)
+            curr_gray, _ = self._maybe_scale(curr_gray)
+            try:
+                mean_mag, diff_frac, inlier_ratio, frob_norm = (
+                    self._collect_pair_stats(prev_gray, curr_gray)
+                )
+            except Exception:
+                mean_mag, diff_frac, inlier_ratio, frob_norm = (
+                    0.0, 0.0, 0.0, None
+                )
+            is_dead = self._is_dead_from_stats(
+                mean_mag, diff_frac, inlier_ratio, frob_norm
+            )
+            stats_list.append(
+                {
+                    "frame_index": pair_idx + 1,
+                    "mean_mag": mean_mag,
+                    "diff_fraction": diff_frac,
+                    "inlier_ratio": inlier_ratio,
+                    "frob_norm": frob_norm,
+                    "is_dead": is_dead,
+                }
+            )
+            decisions.append(not is_dead)
+            prev_gray = curr_gray
+            pair_idx += 1
+            if pair_idx % 10 == 0 and total_frames > 1:
+                pct = min(50, int(pair_idx * 50 / (total_frames - 1)))
+                _emit(pct)
+        cap.release()
+        _emit(50, "Detected")
 
-        ``frame1`` is the anchor the processor advances only on kept frames, so
-        caching its features by object identity stays correct.
-        """
-        if frame1 is None or frame2 is None:
-            return {'is_duplicate': False, 'confidence': 0.0, 'motion_type': 'none'}
-
-        
-        if self._anchor is not frame1 or self._anchor_small is None:
-            self._anchor = frame1
-            self._anchor_small, self._anchor_hash = self._features(frame1)
-
-        cur_small, cur_hash = self._features(frame2)
-
-        absd = np.abs(self._anchor_small - cur_small)
-        frac_changed = float(np.count_nonzero(absd > self.pixel_threshold)) / absd.size
-        phash_distance = float(np.count_nonzero(self._anchor_hash != cur_hash)) / self._anchor_hash.size
-
-        
-        diff = max(frac_changed, phash_distance)
-        effective_threshold = max(self.diff_threshold, self.min_frac)
-        is_duplicate = diff <= effective_threshold
-
-        return {
-            'is_duplicate': is_duplicate,
-            'confidence': float(min(1.0, abs(diff - effective_threshold) + 0.5)),
-            'motion_type': 'none' if is_duplicate else 'local',
-            'diff': diff,
-            'frac_changed': frac_changed,
-            'phash_distance': phash_distance,
-        }
+        if auto and len(stats_list) > 0:
+            sample = stats_list
+            if auto_sample_limit > 0:
+                sample = stats_list[:auto_sample_limit]
+            self._compute_thresholds_from_stats(
+                sample,
+                lock_flow=(self.flow_threshold < 0.1),
+                lock_area=(self.motion_area_fraction < 0.01),
+            )
+            _emit(55, "Calibrating")
+            for i, s in enumerate(stats_list):
+                old = s["is_dead"]
+                new = self._is_dead_from_stats(
+                    float(s["mean_mag"]),
+                    float(s["diff_fraction"]),
+                    float(s["inlier_ratio"]),
+                    s["frob_norm"],
+                )
+                s["is_dead"] = new
+                if i % 100 == 0:
+                    _emit(55 + int(i / len(stats_list) * 15), "Reclassifying")
+            decisions = [True]
+            for s in stats_list:
+                decisions.append(not bool(s["is_dead"]))
+        return decisions

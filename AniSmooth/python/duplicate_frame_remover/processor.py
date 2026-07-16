@@ -1,172 +1,142 @@
 import cv2
 import numpy as np
 import subprocess
-import traceback
+import shutil
+import sys
 from pathlib import Path
-from typing import Optional, Dict
 
-from duplicate_frame_remover.core import AdvancedDuplicateRemover
+from duplicate_frame_remover.core import (
+    DeadFrameDetector,
+    _get_video_info,
+    _get_audio_info,
+    _decisions_to_segments,
+    _smooth_decisions,
+    _build_ffmpeg_cmd,
+    _build_audio_filter,
+)
 
-def process_single_video(
-    input_path: Path,
-    output_path: Path,
-    ffmpeg_path: Optional[str],
-    similarity_threshold: float,
-    use_optical_flow: bool,
-    region_sensitivity: int,
-    camera_motion_compensation: bool,
-    remove_static_subject: bool,
-    verbose: bool,
-    use_gpu: bool = False,
-    progress_callback = None,
-) -> Dict:
-    """
-    Process one video file: detect duplicate frames, mute output, write to output_path.
-    Returns a stats dict.
-    Supports GPU acceleration and thread-safe progress reporting via progress_callback.
-    """
-    cap = cv2.VideoCapture(str(input_path))
-    if not cap.isOpened():
-        raise ValueError(f"Could not open video: {input_path}")
+_CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
-    fps = cap.get(cv2.CAP_PROP_FPS) or 0
-    if not fps or fps <= 0 or not np.isfinite(fps):
-        fps = 30.0
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    if width <= 0 or height <= 0:
-        cap.release()
-        raise ValueError(f"Could not determine dimensions: {input_path}")
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    remover = AdvancedDuplicateRemover(
-        base_threshold=similarity_threshold,
-        motion_threshold=1.5,
-        region_grid=(4, 4),
-        min_changed_regions=region_sensitivity,
-        use_optical_flow=use_optical_flow,
-        camera_motion_compensation=camera_motion_compensation,
-        remove_static_subject_frames=remove_static_subject,
-        temporal_window=5,
-        edge_sensitivity=0.3,
-        use_gpu=use_gpu,
+def run_deadframes(
+    input_path,
+    output_path,
+    ffmpeg_path="ffmpeg",
+    ffprobe_path="ffprobe",
+    flow_threshold=0.5,
+    motion_area_fraction=0.15,
+    homography_inlier_ratio=0.5,
+    orb_features=500,
+    min_matches=8,
+    ransac_threshold=5.0,
+    detect_scale=1.0,
+    keep_talking=False,
+    keep_camera=False,
+    parallax_mode=False,
+    auto=False,
+    auto_sample_limit=0,
+    cadence=3,
+    small_movements=None,
+    no_audio=False,
+    progress_cb=None,
+):
+    if detect_scale >= 1.0:
+        info = _get_video_info(input_path, ffprobe_path)
+        detect_scale = min(1.0, 360.0 / max(1, info["height"]))
+
+    detector = DeadFrameDetector(
+        flow_threshold=flow_threshold,
+        motion_area_fraction=motion_area_fraction,
+        homography_inlier_ratio=homography_inlier_ratio,
+        orb_features=orb_features,
+        min_matches=min_matches,
+        ransac_threshold=ransac_threshold,
+        detect_scale=detect_scale,
+        keep_talking=keep_talking,
+        keep_camera=keep_camera,
+        parallax_mode=parallax_mode,
     )
 
-    use_ffmpeg = ffmpeg_path is not None
-    ffmpeg_proc = None
-    cv_out = None
+    if small_movements is not None:
+        detector.flow_threshold = small_movements
 
-    if use_ffmpeg:
-        ffmpeg_cmd = [
-            ffmpeg_path, "-y", "-hide_banner", "-loglevel", "error",
-            "-f", "rawvideo", "-vcodec", "rawvideo",
-            "-pix_fmt", "rgb24",
-            "-s", f"{width}x{height}",
-            "-r", str(fps),
-            "-i", "-",
-            "-an",
-            "-c:v", "libx264",
-            "-preset", "medium",
-            "-crf", "18",
-            "-tune", "animation",
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
-            str(output_path),
-        ]
-        try:
-            ffmpeg_proc = subprocess.Popen(
-                ffmpeg_cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-            )
-        except Exception as e:
-            if verbose:
-                print(f"  [warn] FFmpeg failed to start ({e}), falling back to OpenCV")
-                traceback.print_exc()
-            use_ffmpeg = False
+    decisions = detector.process_video(
+        input_path,
+        auto=auto,
+        auto_sample_limit=auto_sample_limit,
+        progress_cb=progress_cb,
+    )
 
-    if not use_ffmpeg:
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        cv_out = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
-        if not cv_out.isOpened():
-            cap.release()
-            raise ValueError(f"Could not create output: {output_path}")
+    if progress_cb:
+        progress_cb(70, "Smoothing cadence")
 
-    def write_frame(frame):
-        if use_ffmpeg and ffmpeg_proc:
-            try:
-                ffmpeg_proc.stdin.write(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).tobytes())
-            except BrokenPipeError:
-                pass
-        elif cv_out:
-            cv_out.write(frame)
+    decisions = _smooth_decisions(decisions, cadence)
 
-    prev_frame = None
-    unique_count = dup_count = cam_motion = local_motion = cam_only_removed = 0
-    frame_index = 0
+    info = _get_video_info(input_path, ffprobe_path)
+    fps = info["fps"]
+    pix_fmt = info["pix_fmt"]
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frame_index += 1
+    segments = _decisions_to_segments(decisions, fps)
+    total = len(decisions)
+    kept = sum(1 for d in decisions if d)
+    dropped = total - kept
 
-        if prev_frame is None:
-            write_frame(frame)
-            unique_count += 1
-            prev_frame = frame.copy()
-            continue
+    if dropped == 0 or kept == 0:
+        if progress_cb:
+            progress_cb(90, "Copying input")
+        shutil.copy2(input_path, output_path)
+        return {
+            "total_frames": total,
+            "kept_frames": kept,
+            "dropped_frames": dropped,
+            "segments": segments,
+            "duration_after": sum(e - s for s, e in segments) if segments else 0,
+            "flow_threshold": detector.flow_threshold,
+            "motion_area_fraction": detector.motion_area_fraction,
+        }
 
-        analysis = remover.analyze_frame_difference(prev_frame, frame)
-        remover.frame_cadence_detector.add_frame_result(analysis['is_duplicate'])
+    has_audio = False
+    audio_filter = ""
+    if not no_audio:
+        audio_info = _get_audio_info(input_path, ffprobe_path)
+        if audio_info is not None:
+            has_audio = True
 
-        if not analysis['is_duplicate']:
-            write_frame(frame)
-            unique_count += 1
-            prev_frame = frame.copy()
-            if analysis['motion_type'] == 'camera':
-                cam_motion += 1
-            elif analysis['motion_type'] == 'local':
-                local_motion += 1
-        else:
-            dup_count += 1
-            if analysis.get('motion_type') == 'camera_only':
-                cam_only_removed += 1
+    if has_audio:
+        audio_filter = _build_audio_filter(segments)
 
-        
-        if progress_callback:
-            if frame_index % 10 == 0 or frame_index == total_frames:
-                progress_callback(frame_index, total_frames, unique_count, dup_count)
+    if progress_cb:
+        progress_cb(75, "Building FFmpeg command")
 
-        if verbose and frame_index % 200 == 0:
-            pct = (frame_index / total_frames * 100) if total_frames > 0 else 0
-            print(f"    [{pct:5.1f}%] unique={unique_count} dupes={dup_count}")
+    cmd = _build_ffmpeg_cmd(
+        input_path=input_path,
+        output_path=output_path,
+        segments=segments,
+        fps=fps,
+        pix_fmt=pix_fmt,
+        ffmpeg_path=ffmpeg_path,
+        ffprobe_path=ffprobe_path,
+        no_audio=no_audio,
+        audio_filter=audio_filter,
+    )
 
-    cap.release()
+    if progress_cb:
+        progress_cb(80, "Encoding")
 
-    if use_ffmpeg and ffmpeg_proc:
-        ffmpeg_proc.stdin.close()
-        ffmpeg_proc.wait()
-        stderr_out = ffmpeg_proc.stderr.read().decode(errors='replace') if ffmpeg_proc.stderr else ""
-        if stderr_out.strip() and verbose:
-            print(f"  [ffmpeg] {stderr_out.strip()}")
-    elif cv_out:
-        cv_out.release()
+    try:
+        subprocess.run(cmd, check=True, creationflags=_CREATE_NO_WINDOW)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("FFmpeg failed: " + str(e))
 
-    if progress_callback:
-        progress_callback(frame_index, total_frames, unique_count, dup_count)
-
-    cadence = remover.frame_cadence_detector.detect_cadence()
+    if progress_cb:
+        progress_cb(100, "Done")
 
     return {
-        'total_frames': total_frames,
-        'unique_frames': unique_count,
-        'duplicate_frames': dup_count,
-        'camera_only_removed': cam_only_removed,
-        'camera_motion_frames': cam_motion,
-        'local_motion_frames': local_motion,
-        'fps': fps,
-        'cadence_detected': cadence['detected'],
-        'cadence_period': cadence.get('period'),
+        "total_frames": total,
+        "kept_frames": kept,
+        "dropped_frames": dropped,
+        "segments": segments,
+        "duration_after": sum(e - s for s, e in segments),
+        "flow_threshold": detector.flow_threshold,
+        "motion_area_fraction": detector.motion_area_fraction,
     }
