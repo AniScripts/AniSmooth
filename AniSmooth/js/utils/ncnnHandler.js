@@ -47,7 +47,7 @@
       }
 
       var fs = window.FileSystem.fs;
-      var path = window.FileSystem.path;
+      var p = window.FileSystem.path;
       var cp = window.FileSystem.childProcess;
 
       var exe = this.findExe(exeName);
@@ -56,10 +56,63 @@
         return;
       }
 
-      var exeDir = path.dirname(exe);
+      var outputExt = outputPath.replace(/^.*\./, "").toLowerCase();
+      var inputExt = inputPath.replace(/^.*\./, "").toLowerCase();
+      if (outputExt === "avi") {
+        outputPath = outputPath.replace(/\.\w+$/, ".mp4");
+      }
+
+      var actualInput = inputPath;
+      var tempInput = null;
+
+      if (inputExt === "avi") {
+        var appdata = "";
+        try { appdata = process.env.APPDATA || ""; } catch (e) {}
+        if (!appdata && window.FileSystem.os) {
+          appdata = p.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
+        }
+        var ffmpegPath = null;
+        if (appdata) {
+          var backendDir = p.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend");
+          ffmpegPath = p.join(backendDir, "ffmpeg.exe");
+          if (!fs.existsSync(ffmpegPath)) ffmpegPath = null;
+        }
+        if (!ffmpegPath) {
+          try {
+            ffmpegPath = require("child_process").execSync("where ffmpeg", { encoding: "utf8" }).trim().split("\n")[0];
+          } catch (e) {}
+        }
+
+        if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+          tempInput = inputPath.replace(/\.\w+$/, "_ncnn_temp.mp4");
+          dbg("info", "NCNN", "Converting AVI input to MP4: " + inputPath + " -> " + tempInput);
+          try {
+            var convResult = cp.spawnSync(ffmpegPath, [
+              "-y", "-i", inputPath,
+              "-c:v", "libx264", "-preset", "ultrafast", "-crf", "0",
+              "-pix_fmt", "yuv420p", "-an",
+              tempInput
+            ], { windowsHide: true, timeout: 60000 });
+            if (convResult.status === 0 && fs.existsSync(tempInput)) {
+              actualInput = tempInput;
+              dbg("info", "NCNN", "AVI to MP4 conversion complete");
+            } else {
+              dbg("warn", "NCNN", "FFmpeg conversion failed, using original AVI");
+              try { if (fs.existsSync(tempInput)) fs.unlinkSync(tempInput); } catch (e) {}
+              tempInput = null;
+            }
+          } catch (e) {
+            dbg("warn", "NCNN", "FFmpeg conversion error: " + e.message);
+            try { if (fs.existsSync(tempInput)) fs.unlinkSync(tempInput); } catch (e2) {}
+            tempInput = null;
+          }
+        }
+      }
+
+      var exeDir = p.dirname(exe);
       var gpuId = window.StorageManager.getItem("anismooth_ncnn_gpu_id", "0") || "0";
       var args = [
-        "-i", inputPath,
+        "-i", actualInput,
         "-o", outputPath,
         "-g", gpuId,
         "-m", options.model || "rife-v4.26",
@@ -100,6 +153,7 @@
         if (finished) return;
         finished = true;
         self.activeProcess = null;
+        if (tempInput) { try { fs.unlinkSync(tempInput); } catch (e) {} }
         if (self._cancelled) { self._cancelled = false; return; }
         if (ok) {
           if (fs.existsSync(outputPath)) {
