@@ -134,15 +134,13 @@
       dbg("info", "NCNN-DEBUG", "Factor " + factor + " -> " + passes + " pass(es)");
 
       if (ncnnInputDir) {
-        ncnnOutputDir = tempPngDir;
         var passInput = ncnnInputDir;
-        var passOutput = ncnnOutputDir;
-        var passSwapped = false;
+        var passOutput = tempPngDir;
         for (var pass = 0; pass < passes; pass++) {
           if (pass > 0) {
-            passInput = passSwapped ? ncnnOutputDir : ncnnInputDir;
-            passOutput = passSwapped ? ncnnInputDir : ncnnOutputDir;
-            passSwapped = !passSwapped;
+            var tmp = passInput;
+            passInput = passOutput;
+            passOutput = tmp;
             try {
               if (fs.existsSync(passOutput)) {
                 var oldF = fs.readdirSync(passOutput);
@@ -150,7 +148,7 @@
               } else { fs.mkdirSync(passOutput); }
             } catch (e) {}
           }
-          dbg("info", "NCNN-DEBUG", "Pass " + (pass + 1) + "/" + passes + ": " + passInput + " -> " + passOutput);
+          dbg("info", "NCNN-DEBUG", "Pass " + (pass + 1) + "/" + passes + ": " + passInput + " -> " + passOutput + " (" + (fs.existsSync(passInput) ? fs.readdirSync(passInput).length : 0) + " input frames)");
           args = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
           if (passes === 1) args.push("-x", String(factor));
           var runSync = cp.spawnSync(exe, args, { env: env, cwd: exeDir, windowsHide: true, timeout: 300000 });
@@ -162,13 +160,8 @@
             return;
           }
         }
-        ncnnOutputDir = passOutput;
-        dbg("info", "NCNN-DEBUG", passOutput === ncnnInputDir ? "Even passes, output in input dir" : "Odd passes, output in output dir");
-        if (ncnnOutputDir === ncnnInputDir) ncnnOutputDir = ncnnInputDir;
-        var outFiles = [];
-        try { outFiles = fs.readdirSync(ncnnOutputDir); } catch (e) {}
-        dbg("info", "NCNN-DEBUG", "Final output: " + ncnnOutputDir + " (" + outFiles.length + " files)");
-        // Signal completion: skip the async spawn, go straight to finalize
+        tempPngDir = passOutput;
+        dbg("info", "NCNN-DEBUG", "All passes done, final output dir: " + tempPngDir + " (" + (fs.existsSync(tempPngDir) ? fs.readdirSync(tempPngDir).length : 0) + " frames)");
         finished = false;
         self.activeProcess = null;
         finalize(true);
@@ -178,6 +171,7 @@
         args = ["-i", inputPath, "-o", finalOutputPath, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
         if (factor > 0) args.push("-x", String(factor));
       }
+
       if (options.factor) args.push("-x", String(options.factor));
       if (options.scale) args.push("-s", String(options.scale));
       if (options.ttafnm) args.push("-f", options.ttafnm);
