@@ -166,21 +166,72 @@
       var self = this;
       var subContent = this.subContent;
 
-      subContent.addEventListener("click", function (e) {
-        var btn = _tkClosest(e.target, "[data-tk-action]");
-        if (!btn) return;
-        var action = btn.getAttribute("data-tk-action");
-        var arg = btn.getAttribute("data-tk-arg");
-        dbg("debug", "Toolkit", "Action: " + action + " arg: " + (arg || "none"));
-        self._handleAction(action, arg);
-      });
+      var actionBtns = subContent.querySelectorAll("[data-tk-action]");
+      for (var i = 0; i < actionBtns.length; i++) {
+        (function (btn) {
+          if (btn._tkBound) return;
+          btn._tkBound = true;
+          btn.addEventListener("click", function (e) {
+            var action = btn.getAttribute("data-tk-action");
+            var arg = btn.getAttribute("data-tk-arg");
+            dbg("debug", "Toolkit", "Action: " + action + " arg: " + (arg || "none"));
+            self._handleAction(action, arg);
+          });
+        })(actionBtns[i]);
+      }
 
       var innerNavs = subContent.querySelectorAll(".tk-inner-nav");
-      for (var i = 0; i < innerNavs.length; i++) {
-        innerNavs[i].addEventListener("click", function (e) {
-          var tab = _tkClosest(e.target, ".tk-inner-tab");
-          if (!tab) return;
-          self._switchInnerTab(tab);
+      for (var j = 0; j < innerNavs.length; j++) {
+        (function (nav) {
+          if (nav._tkInnerBound) return;
+          nav._tkInnerBound = true;
+          var tabs = nav.querySelectorAll(".tk-inner-tab");
+          for (var k = 0; k < tabs.length; k++) {
+            (function (tab) {
+              tab.addEventListener("click", function () {
+                self._switchInnerTab(tab);
+              });
+            })(tabs[k]);
+          }
+        })(innerNavs[j]);
+      }
+
+      var sysmonRefresh = document.getElementById("tk-sysmon-refresh");
+      if (sysmonRefresh && !sysmonRefresh._tkBound) {
+        sysmonRefresh._tkBound = true;
+        sysmonRefresh.addEventListener("click", function () { self._refreshSysmon(); });
+      }
+
+      this._bindColorFlowListeners();
+    },
+
+    _bindColorFlowListeners: function () {
+      var self = this;
+      var subContent = this.subContent;
+      var cfSubtab = document.getElementById("tk-colorflow");
+      if (!cfSubtab || cfSubtab._cfListenersBound) return;
+      cfSubtab._cfListenersBound = true;
+
+      var picker = document.getElementById("tk-cf-color-picker");
+      var hexInput = document.getElementById("tk-cf-hex-input");
+      if (picker && hexInput) {
+        picker.addEventListener("input", function () { hexInput.value = picker.value.toUpperCase(); });
+        hexInput.addEventListener("change", function () {
+          var val = hexInput.value.trim();
+          if (/^#[0-9a-fA-F]{6}$/.test(val)) picker.value = val;
+        });
+      }
+
+      var hbase = document.getElementById("tk-cf-hbase");
+      if (hbase) {
+        hbase.addEventListener("input", function () {
+          var label = document.getElementById("tk-cf-hbase-hex");
+          if (label) label.textContent = hbase.value.toUpperCase();
+        });
+        hbase.addEventListener("change", function () {
+          var label = document.getElementById("tk-cf-hbase-hex");
+          if (label) label.textContent = hbase.value.toUpperCase();
+          self._cfBuildHarmonies();
         });
       }
     },
@@ -471,19 +522,6 @@
     },
 
     _initColorFlow: function () {
-      var picker = document.getElementById("tk-cf-color-picker");
-      var hexInput = document.getElementById("tk-cf-hex-input");
-      if (!picker || !hexInput || picker._cfBound) return;
-      picker._cfBound = true;
-
-      picker.addEventListener("input", function () {
-        hexInput.value = picker.value.toUpperCase();
-      });
-      hexInput.addEventListener("change", function () {
-        var val = hexInput.value.trim();
-        if (/^#[0-9a-fA-F]{6}$/.test(val)) picker.value = val;
-      });
-
       this._cfRefreshSwatches();
       this._cfBuildHarmonies();
       this._cfBuildLabels();
@@ -728,13 +766,6 @@
         }
       }
 
-      hbase.addEventListener("input", function () {
-        document.getElementById("tk-cf-hbase-hex").textContent = hbase.value.toUpperCase();
-      });
-      hbase.addEventListener("change", function () {
-        document.getElementById("tk-cf-hbase-hex").textContent = hbase.value.toUpperCase();
-        updateHarmonies();
-      });
       updateHarmonies();
     },
 
@@ -777,36 +808,40 @@
       container.innerHTML = html;
 
       var self = this;
-      container.addEventListener("click", function (e) {
-        var swatch = _tkClosest(e.target, ".tk-label-swatch");
-        var action = _tkClosest(e.target, ".tk-label-action");
-        if (!swatch && !action) return;
+      var swatches = container.querySelectorAll(".tk-label-swatch");
+      for (var s = 0; s < swatches.length; s++) {
+        (function (swatch) {
+          swatch.addEventListener("click", function () {
+            var idx = swatch.getAttribute("data-tk-label-idx");
+            if (window.__adobe_cep__ && window.__adobe_cep__.evalScript) {
+              window.__adobe_cep__.evalScript("MoongetsuToolkit.setSelectionLabelColor(" + idx + ")");
+            }
+          });
+        })(swatches[s]);
+      }
 
-        if (swatch) {
-          var idx = swatch.getAttribute("data-tk-label-idx");
-          if (window.__adobe_cep__ && window.__adobe_cep__.evalScript) {
-            window.__adobe_cep__.evalScript("MoongetsuToolkit.setSelectionLabelColor(" + idx + ")");
-          }
-          return;
-        }
-
-        var act = action.getAttribute("data-tk-label-action");
-        var idx2 = action.getAttribute("data-tk-label-idx");
-        if (!window.__adobe_cep__ || !window.__adobe_cep__.evalScript) return;
-
-        if (act === "select") {
-          window.__adobe_cep__.evalScript("MoongetsuToolkit.selectLayersByLabelColor(" + idx2 + ")");
-        } else if (act === "toggle") {
-          action.classList.toggle("active");
-          window.__adobe_cep__.evalScript("MoongetsuToolkit.toggleLabelColorVisibility(" + idx2 + "," + action.classList.contains("active") + ")");
-        } else if (act === "solo") {
-          var allSolo = container.querySelectorAll('[data-tk-label-action="solo"]');
-          var isActive = action.classList.contains("active");
-          for (var a = 0; a < allSolo.length; a++) allSolo[a].classList.remove("active");
-          if (!isActive) action.classList.add("active");
-          window.__adobe_cep__.evalScript("MoongetsuToolkit.soloLabelColorLayers(" + idx2 + "," + (!isActive) + ")");
-        }
-      });
+      var actions = container.querySelectorAll(".tk-label-action");
+      for (var a = 0; a < actions.length; a++) {
+        (function (action) {
+          action.addEventListener("click", function () {
+            var act = action.getAttribute("data-tk-label-action");
+            var idx2 = action.getAttribute("data-tk-label-idx");
+            if (!window.__adobe_cep__ || !window.__adobe_cep__.evalScript) return;
+            if (act === "select") {
+              window.__adobe_cep__.evalScript("MoongetsuToolkit.selectLayersByLabelColor(" + idx2 + ")");
+            } else if (act === "toggle") {
+              action.classList.toggle("active");
+              window.__adobe_cep__.evalScript("MoongetsuToolkit.toggleLabelColorVisibility(" + idx2 + "," + action.classList.contains("active") + ")");
+            } else if (act === "solo") {
+              var allSolo = container.querySelectorAll('[data-tk-label-action="solo"]');
+              var isActive = action.classList.contains("active");
+              for (var sa = 0; sa < allSolo.length; sa++) allSolo[sa].classList.remove("active");
+              if (!isActive) action.classList.add("active");
+              window.__adobe_cep__.evalScript("MoongetsuToolkit.soloLabelColorLayers(" + idx2 + "," + (!isActive) + ")");
+            }
+          });
+        })(actions[a]);
+      }
     },
 
     _sysmonTimer: null,

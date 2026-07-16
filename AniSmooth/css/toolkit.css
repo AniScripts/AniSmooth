@@ -19,6 +19,7 @@
   font-weight: 500;
   border-radius: 3px;
   cursor: pointer;
+  outline: none;
   transition: opacity 0.15s, background 0.15s;
   opacity: 0.6;
 }
@@ -44,6 +45,7 @@
   border-radius: 3px;
   cursor: pointer;
   font-size: 10px;
+  outline: none;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
