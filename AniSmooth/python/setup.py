@@ -582,7 +582,7 @@ def install_ncnn_binaries():
     NCNN_BINARIES = {
         "rife-ncnn-vulkan": {
             "url": BIN_URL + "rife.zip",
-            "version": "20221029",
+            "version": "20221029-full",
             "is_zip": True,
         },
         "realesrgan-ncnn-vulkan": {
