@@ -570,10 +570,55 @@ def force_gpu_pytorch():
         log("error", "GPU environment install failed.")
     return ok
 
+def force_dml_pytorch():
+    log("section", "DirectML PyTorch Installer", step=1, total=1)
+
+    venv_python = ensure_venv()
+    if not venv_python:
+        log("error", "Failed to create virtual environment")
+        return False
+
+    log("info", "Using venv Python: " + venv_python)
+
+    _run_pip(venv_python, ["install", "--upgrade", "pip", "setuptools", "wheel"])
+
+    log("info", "Installing torch-directml for AMD GPU acceleration...")
+    rc = _run_pip(venv_python, ["install", "torch-directml"])
+    ok = rc == 0
+
+    log("info", "Installing FFmpeg...")
+    if not install_ffmpeg():
+        log("error", "FFmpeg install failed during --force-dml")
+        ok = False
+
+    log("info", "Installing remaining backend packages (opencv-python, numpy, spandrel)...")
+    if not install_non_torch_packages(venv_python):
+        log("error", "Failed to install non-torch backend packages during --force-dml")
+        ok = False
+
+    if ok:
+        log("info", "Verifying backend imports in venv...")
+        smoke = subprocess.run(
+            [venv_python, "-c", "import torch; import torch_directml; import cv2; import numpy; import spandrel; import psutil"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if smoke.returncode != 0:
+            log("error", "Backend import smoke test failed:")
+            for line in (smoke.stderr or "").splitlines():
+                log("error", line)
+            ok = False
+
+    if ok:
+        log("success", "DirectML PyTorch + backend environment installed. Restart GPU detection.")
+        log("venv", VENV_PYTHON)
+    else:
+        log("error", "DirectML environment install failed.")
+    return ok
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="AniSmooth Setup")
     parser.add_argument("--force-gpu", action="store_true", help="Reinstall PyTorch with CUDA support")
+    parser.add_argument("--force-dml", action="store_true", help="Install torch-directml for AMD GPU support")
     args = parser.parse_args()
 
     # Fail fast on interpreters too old to have any compatible torch wheel rather
@@ -589,6 +634,15 @@ def main():
     if args.force_gpu:
         try:
             ok = force_gpu_pytorch()
+            sys.exit(0 if ok else 1)
+        except Exception as e:
+            log("fatal", str(e))
+            sys.exit(1)
+        return
+
+    if args.force_dml:
+        try:
+            ok = force_dml_pytorch()
             sys.exit(0 if ok else 1)
         except Exception as e:
             log("fatal", str(e))
