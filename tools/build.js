@@ -145,6 +145,23 @@ async function runBuild() {
         console.warn('⚠️ host.jsx not found in dist/jsx/');
     }
 
+    const toolkitJsxPath = path.join(DIST_DIR, 'jsx', 'toolkit.jsx');
+    const toolkitJsxbinPath = path.join(DIST_DIR, 'jsx', 'toolkit.jsxbin');
+
+    if (fs.existsSync(toolkitJsxPath)) {
+        console.log('💎 Compiling toolkit.jsx to toolkit.jsxbin...');
+        try {
+            await jsxbin(toolkitJsxPath, toolkitJsxbinPath);
+            console.log(' - Compilation successful!');
+            fs.unlinkSync(toolkitJsxPath);
+            console.log(' - Removed original toolkit.jsx');
+        } catch (err) {
+            console.error('❌ Toolkit ExtendScript binary compilation failed:', err.message);
+        }
+    } else {
+        console.warn('⚠️ toolkit.jsx not found in dist/jsx/');
+    }
+
     const manifestPath = path.join(DIST_DIR, 'CSXS', 'manifest.xml');
     if (fs.existsSync(manifestPath)) {
         console.log(`📝 Patching manifest.xml for ${PROFILE.label}...`);
@@ -153,6 +170,11 @@ async function runBuild() {
         manifestContent = manifestContent.replace(
             /host\.jsx<\/ScriptPath>/g,
             'host.jsxbin</ScriptPath>'
+        );
+
+        manifestContent = manifestContent.replace(
+            /toolkit\.jsx<\/ScriptPath>/g,
+            'toolkit.jsxbin</ScriptPath>'
         );
 
         manifestContent = manifestContent.replace(
