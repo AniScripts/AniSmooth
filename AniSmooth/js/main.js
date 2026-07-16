@@ -1124,6 +1124,10 @@
 
       if (!gpuOption || !cpuOption) return;
 
+      if (gpuOption && !gpuOption._bound) { gpuOption._bound = true; gpuOption.addEventListener("click", function () { changeGpuMode("gpu"); }); }
+      if (amdOption && !amdOption._bound) { amdOption._bound = true; amdOption.addEventListener("click", function () { changeGpuMode("amd"); }); }
+      if (cpuOption && !cpuOption._bound) { cpuOption._bound = true; cpuOption.addEventListener("click", function () { changeGpuMode("cpu"); }); }
+
       if (currentMode === "gpu") {
         gpuOption.classList.add("ts-gpu-selected");
         if (gpuCheck) gpuCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';

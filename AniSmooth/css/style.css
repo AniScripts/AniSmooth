@@ -726,7 +726,8 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accen
 
 /* ---- Confirm Modal ---- */
 .modal-overlay {
-  position: fixed; inset: 0; background: var(--modal-scrim); z-index: 99998;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; inset: 0;
+  background: var(--modal-scrim); z-index: 99998;
   display: flex; align-items: center; justify-content: center; animation: fadeIn 0.15s ease;
 }
 .modal-card {
