@@ -1,0 +1,109 @@
+/* AniSmooth - Compact Dark Theme */
+@font-face {
+  font-family: 'Archivo';
+  src: url('../fonts/Archivo-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('../fonts/Archivo-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('../fonts/Archivo-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('../fonts/Archivo-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* ---- Theme Tokens (DARK = default) ---- */
+:root {
+  /* surfaces */
+  --bg: #2a2a2a;
+  --surface: #202020;
+  --surface-2: #1e1e1e;
+  --topbar-bg: #1c1c1c;
+  --inset: #161616;
+  --inset-dark: #0a0c10;
+  /* borders */
+  --border: #3c3c3c;
+  --border-strong: #555555;
+  --border-badge: #444444;
+  /* text scale */
+  --text: #ffffff;
+  --text-strong: #e5e7eb;
+  --text-2: #cccccc;
+  --text-3: #aaaaaa;
+  --text-muted: #9ca3af;
+  --text-dim: #888888;
+  --text-faint: #6b7280;
+  --hint: #999999;
+  /* accent */
+  --accent: #ffffff;
+  --accent-on: #161616;
+  /* overlays */
+  --hover-overlay: rgba(255,255,255,.06);
+  --active-overlay: rgba(255,255,255,.1);
+  --shadow: rgba(0,0,0,.5);
+  --modal-scrim: rgba(2,3,6,.75);
+  /* scrollbar */
+  --scroll-thumb: #1f2129;
+  --scroll-thumb-hover: #2a2d38;
+  /* toggle ON track (tinted) */
+  --toggle-on-track: rgba(255,255,255,.15);
+  /* status */
+  --error: #ef4444;
+  --error-text: #fca5a5;
+  --warn: #f59e0b;
+  --warn-text: #fcd34d;
+  --ok: #10b981;
+  --ok-text: #6ee7b7;
+  --debug: #6b7280;
+  /* preset dot hues (theme-neutral) */
+  --dot-i: #3b82f6;
+  --dot-u: #8b5cf6;
+  --dot-d: #f59e0b;
+  --dot-o: #6b7280;
+  --dot-p: #10b981;
+  --dot-f: #ec4899;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  width: 100%;
+  user-select: none;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+::-webkit-scrollbar-corner { background: transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+

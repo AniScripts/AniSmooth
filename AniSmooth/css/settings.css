@@ -1,0 +1,22 @@
+/* Collapsible settings panels */
+.settings-cat .panel > .panel-head {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+.settings-cat .panel > .panel-head .panel-collapse-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.6;
+  transition: transform 0.2s var(--ease-out, ease);
+}
+.settings-cat .panel.collapsed > .panel-head .panel-collapse-arrow {
+  transform: rotate(-90deg);
+}
+.settings-cat .panel.collapsed > *:not(.panel-head):not(.form-hint) {
+  display: none !important;
+}
+.settings-cat .panel.collapsed > .form-hint {
+  margin-top: 6px;
+}

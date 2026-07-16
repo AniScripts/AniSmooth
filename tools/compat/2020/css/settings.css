@@ -1,0 +1,69 @@
+/* Collapsible settings panels */
+.settings-cat .panel > .panel-head {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+.settings-cat .panel > .panel-head .panel-collapse-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.6;
+  transition: transform 0.2s var(--ease-out, ease);
+}
+.settings-cat .panel.collapsed > .panel-head .panel-collapse-arrow {
+  transform: rotate(-90deg);
+}
+.settings-cat .panel.collapsed > *:not(.panel-head):not(.form-hint) {
+  display: none !important;
+}
+.settings-cat .panel.collapsed > .form-hint {
+  margin-top: 6px;
+}
+
+.topbar-nav > * + * { margin-left: 0; }
+.panel-head > * + * { margin-left: 5px; }
+.panel-head-right > * + * { margin-left: 0; }
+.collapse-label > * + * { margin-left: 5px; }
+.btn-row > * + * { margin-left: 6px; }
+.console-bar > * + * { margin-left: 6px; }
+.console-bar-right > * + * { margin-left: 3px; }
+.console-categories > * + * { margin-left: 3px; }
+.console-entry-header > * + * { margin-left: 4px; }
+.folder-row > * + * { margin-left: 4px; }
+.gpu-status-row > * + * { margin-left: 8px; }
+.gpu-vram-bar-wrap > * + * { margin-left: 6px; }
+.gpu-badges > * + * { margin-left: 3px; }
+.gpu-badge > * + * { margin-left: 3px; }
+.meta-chip > * + * { margin-left: 2px; }
+.toggle-row > * + * { margin-left: 8px; }
+.env-row > * + * { margin-left: 8px; }
+.preset-row-actions > * + * { margin-left: 1px; }
+.model-row > * + * { margin-left: 6px; }
+.factor-presets > * + * { margin-left: 2px; }
+.queue-toolbar > * + * { margin-left: 4px; }
+.q-row-inner > * + * { margin-left: 8px; }
+.q-meta > * + * { margin-left: 3px; }
+.q-progress-info > * + * { margin-left: 8px; }
+.select-option > * + * { margin-left: 5px; }
+.select-value > * + * { margin-left: 5px; }
+.modal-btns > * + * { margin-left: 6px; }
+.section-toggle-row > * + * { margin-left: 8px; }
+.preset-row-body > * + * { margin-left: 5px; }
+.preset-row-tags > * + * { margin-left: 2px; }
+
+.btn > * + * { margin-left: 4px; }
+.btn-sm > * + * { margin-left: 3px; }
+.gpu-badge > * + * { margin-left: 3px; }
+.meta-chip > * + * { margin-left: 2px; }
+.select-value > * + * { margin-left: 5px; }
+
+.gpu-details > * + * { margin-top: 6px; }
+.gpu-stat > * + * { margin-top: 2px; }
+.env-list > * + * { margin-top: 1px; }
+.env-actions > * + * { margin-top: 2px; }
+.preset-list > * + * { margin-top: 2px; }
+.preset-empty > * + * { margin-top: 2px; }
+.model-list > * + * { margin-top: 1px; }
+.queue-empty > * + * { margin-top: 2px; }
+

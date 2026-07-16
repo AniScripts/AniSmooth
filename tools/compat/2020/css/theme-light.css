@@ -1,0 +1,48 @@
+   LIGHT THEME - overrides every token for full legibility.
+   Activated via <html data-theme="light">. Dark remains default.
+   ============================================================ */
+html[data-theme="light"] {
+  /* surfaces */
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --topbar-bg: #ececef;
+  --inset: #f0f1f3;
+  --inset-dark: #e4e6ea;
+  /* borders */
+  --border: #d0d3d9;
+  --border-strong: #b8bcc4;
+  --border-badge: #c4c8d0;
+  /* text scale */
+  --text: #1a1c20;
+  --text-strong: #16181c;
+  --text-2: #2f333a;
+  --text-3: #555a63;
+  --text-muted: #5b616b;
+  --text-dim: #6b7280;
+  --text-faint: #6b7280;
+  --hint: #5b616b;
+  /* accent (branded blue, NOT white - critical for visibility on white) */
+  --accent: #2563eb;
+  --accent-on: #ffffff;
+  /* overlays */
+  --hover-overlay: rgba(0,0,0,.05);
+  --active-overlay: rgba(0,0,0,.08);
+  --shadow: rgba(0,0,0,.18);
+  --modal-scrim: rgba(0,0,0,.45);
+  /* scrollbar */
+  --scroll-thumb: #c4c8d0;
+  --scroll-thumb-hover: #aeb3bd;
+  /* toggle ON track - tinted accent so the ON state reads clearly on white */
+  --toggle-on-track: rgba(37,99,235,.18);
+  /* status - base hues read on both; text variants darkened for white bg */
+  --error: #ef4444;
+  --error-text: #b91c1c;
+  --warn: #f59e0b;
+  --warn-text: #b45309;
+  --ok: #10b981;
+  --ok-text: #047857;
+  --debug: #6b7280;
+  /* preset dot hues stay (theme-neutral) */
+}
+
