@@ -586,9 +586,9 @@ def install_ncnn_binaries():
             "is_zip": True,
         },
         "realesrgan-ncnn-vulkan": {
-            "url": BIN_URL + "realesrgan-ncnn-vulkan.exe",
-            "version": "20220424",
-            "is_zip": False,
+            "url": BIN_URL + "realesrgan.zip",
+            "version": "20220424-full",
+            "is_zip": True,
         },
     }
 

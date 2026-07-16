@@ -226,9 +226,15 @@
           }
           var inCount = fs.existsSync(passInput) ? fs.readdirSync(passInput).length : 0;
           dbg("info", "NCNN-DEBUG", "Pass " + (currentPass + 1) + "/" + passes + ": " + inCount + " frames, " + passInput + " -> " + passOutput);
-          var passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
-          if (passes === 1) passArgs.push("-x", String(factor));
-
+          var isRealEsrgan = /realesrgan/i.test(exeName);
+          var passArgs;
+          if (isRealEsrgan) {
+            var modelsDir = p.join(exeDir, "models");
+            passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", modelsDir, "-n", options.model || "realesrgan-x4plus", "-s", String(options.scale || "2"), "-j", String(options.threadCount || "4:4:4")];
+          } else {
+            passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
+            if (passes === 1) passArgs.push("-x", String(factor));
+          }
           var passProc = cp.spawn(exe, passArgs, { env: envAsync, cwd: exeDir, windowsHide: true });
           self.activeProcess = passProc;
           if (callbacks.onProgress && currentPass === 0) callbacks.onProgress(0);
@@ -309,8 +315,7 @@
         { value: "realesr-animevideov3", label: "AnimeVideo v3", backend: "vulkan", desc: "Best for anime, 4x" },
         { value: "realesrgan-x4plus-anime", label: "x4plus Anime", backend: "vulkan", desc: "4x anime upscale" },
         { value: "realesrgan-x4plus", label: "x4plus", backend: "vulkan", desc: "General 4x upscale" },
-        { value: "realesrnet-x4plus", label: "x4plus Net", backend: "vulkan", desc: "Faster, lighter 4x" },
-        { value: "realesrgan-x2plus", label: "x2plus", backend: "vulkan", desc: "General 2x upscale" }
+        { value: "realesrnet-x4plus", label: "x4plus Net", backend: "vulkan", desc: "Faster, lighter 4x" }
       ];
     }
   };
