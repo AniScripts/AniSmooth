@@ -144,6 +144,8 @@
 }
 .ts-gpu-download-log div { color: var(--text-3); white-space: pre-wrap; word-break: break-all; }
 
+.setup-gate .btn > * + * { margin-left: 4px; }
+.setup-nav .btn > * + * { margin-left: 4px; }
 .ts-gpu-choice > * + * { margin-top: 6px; }
 .ts-gpu-option > * + * { margin-left: 8px; }
 .setup-card h1 > * + * { margin-left: 6px; }

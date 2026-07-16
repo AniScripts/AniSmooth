@@ -942,6 +942,12 @@ html[data-theme="light"] {
 .preset-row-body > * + * { margin-left: 5px; }
 .preset-row-tags > * + * { margin-left: 2px; }
 
+.btn > * + * { margin-left: 4px; }
+.btn-sm > * + * { margin-left: 3px; }
+.gpu-badge > * + * { margin-left: 3px; }
+.meta-chip > * + * { margin-left: 2px; }
+.select-value > * + * { margin-left: 5px; }
+
 .gpu-details > * + * { margin-top: 6px; }
 .gpu-stat > * + * { margin-top: 2px; }
 .env-list > * + * { margin-top: 1px; }
