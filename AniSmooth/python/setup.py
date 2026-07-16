@@ -577,16 +577,15 @@ def install_ncnn_binaries():
     os.makedirs(ncnn_dir, exist_ok=True)
 
     NCNN_VERSION = "1.0.0"
+    MODELS_URL = "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/"
     NCNN_BINARIES = {
         "rife-ncnn-vulkan": {
-            "url": "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-windows.zip",
+            "url": MODELS_URL + "rife-ncnn-vulkan.exe",
             "version": "20221029",
-            "sha256": None,
         },
         "realesrgan-ncnn-vulkan": {
-            "url": "https://github.com/nihui/realesrgan-ncnn-vulkan/releases/download/v0.2.0/realesrgan-ncnn-vulkan-20220424-windows.zip",
+            "url": MODELS_URL + "realesrgan-ncnn-vulkan.exe",
             "version": "20220424",
-            "sha256": None,
         },
     }
 
@@ -599,13 +598,11 @@ def install_ncnn_binaries():
         except Exception:
             pass
 
-    import zipfile
     import urllib.request
 
     ok = True
     for name, meta in NCNN_BINARIES.items():
-        exe_name = name + ".exe"
-        exe_path = os.path.join(ncnn_dir, exe_name)
+        exe_path = os.path.join(ncnn_dir, name + ".exe")
         installed_ver = installed.get(name, {}).get("version", "")
 
         if os.path.exists(exe_path) and installed_ver == meta["version"]:
@@ -613,33 +610,13 @@ def install_ncnn_binaries():
             continue
 
         log("info", "Downloading " + name + " (" + meta["version"] + ")...")
-        zip_path = os.path.join(ncnn_dir, name + ".zip")
         try:
-            urllib.request.urlretrieve(meta["url"], zip_path)
+            urllib.request.urlretrieve(meta["url"], exe_path)
+            installed[name] = {"version": meta["version"]}
+            log("info", "Downloaded: " + name + ".exe")
         except Exception as e:
             log("error", "Download failed for " + name + ": " + str(e))
-            log("error", "Check https://github.com/nihui/" + name + "/releases")
             ok = False
-            continue
-
-        log("info", "Extracting " + name + "...")
-        try:
-            with zipfile.ZipFile(zip_path, "r") as zf:
-                for member in zf.namelist():
-                    if member.endswith(".exe"):
-                        with zf.open(member) as src, open(exe_path, "wb") as dst:
-                            dst.write(src.read())
-                        log("info", "Extracted: " + exe_name)
-                        installed[name] = {"version": meta["version"]}
-                        break
-        except Exception as e:
-            log("error", "Extract failed for " + name + ": " + str(e))
-            ok = False
-        finally:
-            try:
-                os.remove(zip_path)
-            except Exception:
-                pass
 
     if installed:
         try:

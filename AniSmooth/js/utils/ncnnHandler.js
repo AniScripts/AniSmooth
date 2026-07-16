@@ -25,8 +25,10 @@
         }
         if (appdata) {
           var backend = path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend");
-          var guess2 = path.join(backend, exeName);
+          var guess2 = path.join(backend, "ncnn_binaries", exeName);
           if (fs.existsSync(guess2)) return guess2;
+          var guess3 = path.join(backend, exeName);
+          if (fs.existsSync(guess3)) return guess3;
         }
       } catch (e) {}
       return null;
