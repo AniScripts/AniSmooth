@@ -1348,7 +1348,7 @@
         var anyVisible = false;
         var firstVisible = null;
         var activeFound = false;
-        var vendor = self._gpuVendor || "unknown";
+        var vendor = (window.App && window.App._gpuVendor) || "unknown";
 
         for (var i = 0; i < children.length; i++) {
           var child = children[i];
