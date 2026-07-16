@@ -1167,7 +1167,10 @@
         { value: "rife-v4.6", label: "RIFE 4.6 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
         { value: "rife-v4", label: "RIFE 4.0 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
         { value: "rife-v3.1", label: "RIFE 3.1 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
-        { value: "rife-v2.4", label: "RIFE 2.4 (Vulkan)", icon: "fa-fire", backend: "vulkan" }
+        { value: "rife-v3.0", label: "RIFE 3.0 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-v2.4", label: "RIFE 2.4 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-v2.3", label: "RIFE 2.3 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-v2", label: "RIFE 2.0 (Vulkan)", icon: "fa-fire", backend: "vulkan" }
       ];
       var upscaleCudaModels = [
         { value: "adore", label: "Adore", icon: "fa-microchip", backend: "cuda" },

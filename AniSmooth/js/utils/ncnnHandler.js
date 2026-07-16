@@ -369,11 +369,15 @@
       return [
         { value: "rife-v4.6", label: "RIFE 4.6", backend: "vulkan", desc: "Latest, best quality" },
         { value: "rife-v4", label: "RIFE 4.0", backend: "vulkan", desc: "v4 base model" },
-        { value: "rife-v3.1", label: "RIFE 3.1", backend: "vulkan", desc: "v3 general model" },
-        { value: "rife-v2.4", label: "RIFE 2.4", backend: "vulkan", desc: "Widest GPU compatibility" },
+        { value: "rife-v3.1", label: "RIFE 3.1", backend: "vulkan", desc: "v3 general" },
+        { value: "rife-v3.0", label: "RIFE 3.0", backend: "vulkan", desc: "v3 base model" },
+        { value: "rife-v2.4", label: "RIFE 2.4", backend: "vulkan", desc: "Widest GPU compat" },
+        { value: "rife-v2.3", label: "RIFE 2.3", backend: "vulkan", desc: "Legacy v2 model" },
+        { value: "rife-v2", label: "RIFE 2.0", backend: "vulkan", desc: "Oldest v2 model" },
         { value: "rife-anime", label: "RIFE Anime", backend: "vulkan", desc: "2D/anime optimized" },
         { value: "rife-HD", label: "RIFE HD", backend: "vulkan", desc: "HD optimized" },
-        { value: "rife-UHD", label: "RIFE UHD", backend: "vulkan", desc: "4K+ optimized" }
+        { value: "rife-UHD", label: "RIFE UHD", backend: "vulkan", desc: "4K+ optimized" },
+        { value: "rife", label: "RIFE (default)", backend: "vulkan", desc: "Original default model" }
       ];
     },
 
