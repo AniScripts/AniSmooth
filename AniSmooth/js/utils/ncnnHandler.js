@@ -125,6 +125,21 @@
       if (options.uhdMode) args.push("-u");
 
       this._cancelled = false;
+
+      var missingDlls = [];
+      try {
+        var sysDir = process.env.SystemRoot ? p.join(process.env.SystemRoot, "System32") : "C:\\Windows\\System32";
+        if (!fs.existsSync(p.join(sysDir, "vulkan-1.dll"))) missingDlls.push("Vulkan runtime (vulkan-1.dll)");
+        if (!fs.existsSync(p.join(sysDir, "vcruntime140.dll"))) missingDlls.push("VC++ Redistributable (vcruntime140.dll)");
+      } catch (e) {}
+      if (missingDlls.length > 0) {
+        if (callbacks.onError) callbacks.onError(
+          "Missing system libraries: " + missingDlls.join(", ") + ". " +
+          "Install Vulkan drivers from your GPU vendor and download VC++ Redistributable from https://aka.ms/vs/17/release/vc_redist.x64.exe"
+        );
+        return;
+      }
+
       dbg("info", "NCNN", "Launching: " + exe + " " + args.join(" "));
 
       var env = {};
