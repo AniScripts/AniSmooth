@@ -126,22 +126,30 @@
   
   function renderGpuChoiceStep() {
     var html = '<div class="setup-card">' +
-      '<h2>Choose Hardware Mode</h2>' +
-      '<p class="setup-desc">Select how you want to run AniSmooth. GPU mode provides much faster processing but requires an NVIDIA GPU with CUDA support.</p>' +
+      '<h2>Choose GPU Mode</h2>' +
+      '<p class="setup-desc">Select your GPU type. NVIDIA uses PyTorch CUDA. AMD uses NCNN Vulkan binaries (~50MB). CPU mode works everywhere but is slow.</p>' +
       '<div class="ts-gpu-choice">' +
         '<div class="ts-gpu-option' + (_gpuChoice === 'gpu' ? ' ts-gpu-selected' : '') + '" onclick="selectGpuChoice(\'gpu\')">' +
           '<div class="ts-gpu-option-icon"><i class="fa-solid fa-microchip"></i></div>' +
           '<div class="ts-gpu-option-info">' +
-            '<div class="ts-gpu-option-title">GPU Acceleration</div>' +
-            '<div class="ts-gpu-option-desc">NVIDIA GPU with CUDA. Requires ~2.5GB download for PyTorch CUDA.</div>' +
+            '<div class="ts-gpu-option-title">NVIDIA CUDA</div>' +
+            '<div class="ts-gpu-option-desc">PyTorch CUDA acceleration. Requires ~2.5GB download.</div>' +
           '</div>' +
           '<div class="ts-gpu-option-check">' + (_gpuChoice === 'gpu' ? '<i class="fa-solid fa-circle-check"></i>' : '') + '</div>' +
+        '</div>' +
+        '<div class="ts-gpu-option' + (_gpuChoice === 'amd' ? ' ts-gpu-selected' : '') + '" onclick="selectGpuChoice(\'amd\')">' +
+          '<div class="ts-gpu-option-icon"><i class="fa-solid fa-fire"></i></div>' +
+          '<div class="ts-gpu-option-info">' +
+            '<div class="ts-gpu-option-title">AMD Vulkan (NCNN)</div>' +
+            '<div class="ts-gpu-option-desc">NCNN Vulkan binaries for Radeon GPUs. ~50MB download.</div>' +
+          '</div>' +
+          '<div class="ts-gpu-option-check">' + (_gpuChoice === 'amd' ? '<i class="fa-solid fa-circle-check"></i>' : '') + '</div>' +
         '</div>' +
         '<div class="ts-gpu-option' + (_gpuChoice === 'cpu' ? ' ts-gpu-selected' : '') + '" onclick="selectGpuChoice(\'cpu\')">' +
           '<div class="ts-gpu-option-icon"><i class="fa-solid fa-computer"></i></div>' +
           '<div class="ts-gpu-option-info">' +
             '<div class="ts-gpu-option-title">CPU Only</div>' +
-            '<div class="ts-gpu-option-desc">Slower processing but works on any system. No GPU required.</div>' +
+            '<div class="ts-gpu-option-desc">Slower but works on any system.</div>' +
           '</div>' +
           '<div class="ts-gpu-option-check">' + (_gpuChoice === 'cpu' ? '<i class="fa-solid fa-circle-check"></i>' : '') + '</div>' +
         '</div>' +
@@ -177,13 +185,10 @@
 
   function confirmGpuChoice() {
     if (!_gpuChoice) return;
-    if (_gpuChoice === 'gpu') {
+    if (_gpuChoice === 'gpu' || _gpuChoice === 'amd') {
       if (_gpuDownloadState && _gpuDownloadState.running) return;
       if (!_gpuDownloadState || !_gpuDownloadState.done) {
-        // The --force-gpu install needs a real interpreter. We are still on the
-        // 'gpuchoice' step where Python has not been detected yet, so detect it
-        // first and only then kick off the download.
-        ensurePythonThen(startGpuDownload);
+        ensurePythonThen(function () { startGpuDownload(_gpuChoice); });
         return;
       }
     }
@@ -218,8 +223,12 @@
     checkPythonAsync();
   }
 
-  function startGpuDownload() {
-    _gpuDownloadState = { running: true, done: false, progress: 0, message: 'Preparing to download PyTorch CUDA...', log: [] };
+  function startGpuDownload(mode) {
+    mode = mode || 'gpu';
+    var isAmd = mode === 'amd';
+    var label = isAmd ? 'NCNN Vulkan binaries' : 'PyTorch CUDA';
+    var flag = isAmd ? '--force-ncnn' : '--force-gpu';
+    _gpuDownloadState = { running: true, done: false, progress: 0, message: 'Preparing to download ' + label + '...', log: [] };
     renderSetupStep();
 
     var pythonCmd = _resolvePythonCmd();
@@ -241,12 +250,12 @@
       return;
     }
 
-    _gpuDownloadState.message = 'Installing PyTorch CUDA (~2.5GB download)...';
-    _gpuDownloadState.log.push('--- Installing PyTorch CUDA ---');
+    _gpuDownloadState.message = isAmd ? 'Downloading NCNN Vulkan binaries (~50MB)...' : 'Installing PyTorch CUDA (~2.5GB download)...';
+    _gpuDownloadState.log.push('--- ' + (isAmd ? 'NCNN Vulkan' : 'PyTorch CUDA') + ' ---');
     renderSetupStep();
 
     try {
-      _installProc = window.FileSystem.childProcess.spawn(pythonCmd, ['setup.py', '--force-gpu'], { cwd: _toolsFolder, windowsHide: true });
+      _installProc = window.FileSystem.childProcess.spawn(pythonCmd, ['setup.py', flag], { cwd: _toolsFolder, windowsHide: true });
       var proc = _installProc;
       var buf = '';
       proc.stdout.on('data', function (d) {
@@ -935,7 +944,8 @@
     renderSetupStep();
   }
 
-  function showToolsSetupForGpuInstall() {
+  function showToolsSetupForGpuInstall(mode) {
+    mode = mode || 'gpu';
     var gate = document.getElementById('tools-setup-gate');
     if (!gate) {
       gate = document.createElement('div');
@@ -945,7 +955,7 @@
     }
     gate.style.display = 'flex';
     _step = 'gpuchoice';
-    _gpuChoice = 'gpu';
+    _gpuChoice = mode;
     _gpuDownloadState = null;
     _gpuChecked = false;
     _pytorchChecked = false;

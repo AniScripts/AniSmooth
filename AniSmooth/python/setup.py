@@ -576,22 +576,49 @@ def install_ncnn_binaries():
     ncnn_dir = os.path.join(SCRIPT_DIR, "ncnn_binaries")
     os.makedirs(ncnn_dir, exist_ok=True)
 
-    binaries = {
-        "rife-ncnn-vulkan": "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-windows.zip",
-        "realesrgan-ncnn-vulkan": "https://github.com/nihui/realesrgan-ncnn-vulkan/releases/download/v0.2.0/realesrgan-ncnn-vulkan-20220424-windows.zip",
+    NCNN_VERSION = "1.0.0"
+    NCNN_BINARIES = {
+        "rife-ncnn-vulkan": {
+            "url": "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-windows.zip",
+            "version": "20221029",
+            "sha256": None,
+        },
+        "realesrgan-ncnn-vulkan": {
+            "url": "https://github.com/nihui/realesrgan-ncnn-vulkan/releases/download/v0.2.0/realesrgan-ncnn-vulkan-20220424-windows.zip",
+            "version": "20220424",
+            "sha256": None,
+        },
     }
+
+    version_file = os.path.join(ncnn_dir, "version.json")
+    installed = {}
+    if os.path.exists(version_file):
+        try:
+            with open(version_file, "r") as f:
+                installed = json.load(f)
+        except Exception:
+            pass
 
     import zipfile
     import urllib.request
 
     ok = True
-    for name, url in binaries.items():
-        log("info", "Downloading " + name + "...")
+    for name, meta in NCNN_BINARIES.items():
+        exe_name = name + ".exe"
+        exe_path = os.path.join(ncnn_dir, exe_name)
+        installed_ver = installed.get(name, {}).get("version", "")
+
+        if os.path.exists(exe_path) and installed_ver == meta["version"]:
+            log("info", name + " " + meta["version"] + " already installed, skipping")
+            continue
+
+        log("info", "Downloading " + name + " (" + meta["version"] + ")...")
         zip_path = os.path.join(ncnn_dir, name + ".zip")
         try:
-            urllib.request.urlretrieve(url, zip_path)
+            urllib.request.urlretrieve(meta["url"], zip_path)
         except Exception as e:
             log("error", "Download failed for " + name + ": " + str(e))
+            log("error", "Check https://github.com/nihui/" + name + "/releases")
             ok = False
             continue
 
@@ -600,11 +627,10 @@ def install_ncnn_binaries():
             with zipfile.ZipFile(zip_path, "r") as zf:
                 for member in zf.namelist():
                     if member.endswith(".exe"):
-                        exe_name = name + ".exe"
-                        dest = os.path.join(ncnn_dir, exe_name)
-                        with zf.open(member) as src, open(dest, "wb") as dst:
+                        with zf.open(member) as src, open(exe_path, "wb") as dst:
                             dst.write(src.read())
                         log("info", "Extracted: " + exe_name)
+                        installed[name] = {"version": meta["version"]}
                         break
         except Exception as e:
             log("error", "Extract failed for " + name + ": " + str(e))
@@ -615,10 +641,17 @@ def install_ncnn_binaries():
             except Exception:
                 pass
 
+    if installed:
+        try:
+            with open(version_file, "w") as f:
+                json.dump({"_version": NCNN_VERSION, "binaries": installed}, f, indent=2)
+        except Exception:
+            pass
+
     if ok:
         log("success", "NCNN Vulkan binaries installed to: " + ncnn_dir)
     else:
-        log("error", "NCNN binary install had errors.")
+        log("error", "NCNN binary install had errors. Check your internet connection.")
     return ok
 
 def main():

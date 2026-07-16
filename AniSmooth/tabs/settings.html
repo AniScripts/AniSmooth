@@ -30,16 +30,24 @@
               <i class="fa-solid fa-microchip panel-head-icon"></i>
               <span class="panel-title">Hardware Mode</span>
             </div>
-            <span class="form-hint" style="margin-bottom:8px;display:block;">Choose GPU or CPU processing for AI tasks.</span>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Choose your GPU type for AI tasks. NVIDIA uses CUDA, AMD uses NCNN Vulkan.</span>
             <div class="form-group">
               <div class="ts-gpu-choice" id="settingsGpuChoice">
                 <div class="ts-gpu-option" id="settingsGpuOptionGpu" onclick="changeGpuMode('gpu')">
                   <div class="ts-gpu-option-icon"><i class="fa-solid fa-microchip"></i></div>
                   <div class="ts-gpu-option-info">
-                    <div class="ts-gpu-option-title">GPU Acceleration</div>
-                    <div class="ts-gpu-option-desc">NVIDIA GPU with CUDA. Faster processing.</div>
+                    <div class="ts-gpu-option-title">NVIDIA CUDA</div>
+                    <div class="ts-gpu-option-desc">PyTorch CUDA acceleration. Best for GeForce/RTX.</div>
                   </div>
                   <div class="ts-gpu-option-check" id="settingsGpuCheckGpu"></div>
+                </div>
+                <div class="ts-gpu-option" id="settingsGpuOptionAmd" onclick="changeGpuMode('amd')">
+                  <div class="ts-gpu-option-icon"><i class="fa-solid fa-fire"></i></div>
+                  <div class="ts-gpu-option-info">
+                    <div class="ts-gpu-option-title">AMD Vulkan (NCNN)</div>
+                    <div class="ts-gpu-option-desc">NCNN Vulkan acceleration. For Radeon GPUs.</div>
+                  </div>
+                  <div class="ts-gpu-option-check" id="settingsGpuCheckAmd"></div>
                 </div>
                 <div class="ts-gpu-option" id="settingsGpuOptionCpu" onclick="changeGpuMode('cpu')">
                   <div class="ts-gpu-option-icon"><i class="fa-solid fa-computer"></i></div>

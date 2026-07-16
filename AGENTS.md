@@ -1,6 +1,6 @@
 # AGENTS.md - AniSmooth
 
-Free local After Effects extension for AI frame interpolation and video upscaling. Windows-only. NVIDIA GPU required.
+Free local After Effects extension for AI frame interpolation and video upscaling. Windows-only. NVIDIA GPU (CUDA) or AMD GPU (Vulkan/NCNN) required for acceleration.
 
 ## AI Agent Instructions
 

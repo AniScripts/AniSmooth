@@ -687,6 +687,12 @@
 
       this._buildSysInfo(info);
 
+      this._applyBackendFilter();
+      this._applyModelVisibility();
+      if (window.FlowframesPanel && window.FlowframesPanel.applyVendorFilter) {
+        window.FlowframesPanel.applyVendorFilter();
+      }
+
       var actionsEl = document.getElementById("gpuActions");
       if (actionsEl) {
         if (nvidiaGpu && !cuda) {
@@ -1109,8 +1115,10 @@
     _buildGpuModeSelector: function () {
       var currentMode = window.StorageManager.getItem("anismooth_gpu_choice", null);
       var gpuOption = document.getElementById("settingsGpuOptionGpu");
+      var amdOption = document.getElementById("settingsGpuOptionAmd");
       var cpuOption = document.getElementById("settingsGpuOptionCpu");
       var gpuCheck = document.getElementById("settingsGpuCheckGpu");
+      var amdCheck = document.getElementById("settingsGpuCheckAmd");
       var cpuCheck = document.getElementById("settingsGpuCheckCpu");
       var statusEl = document.getElementById("settingsGpuStatus");
 
@@ -1118,15 +1126,20 @@
 
       if (currentMode === "gpu") {
         gpuOption.classList.add("ts-gpu-selected");
-        gpuCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        if (gpuCheck) gpuCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      } else if (currentMode === "amd") {
+        if (amdOption) { amdOption.classList.add("ts-gpu-selected"); }
+        if (amdCheck) amdCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
       } else if (currentMode === "cpu") {
         cpuOption.classList.add("ts-gpu-selected");
-        cpuCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        if (cpuCheck) cpuCheck.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
       }
 
       if (statusEl) {
         if (currentMode === "gpu") {
-          statusEl.innerHTML = '<span class="form-hint" style="color:var(--ok-text);"><i class="fa-solid fa-check"></i> GPU mode active</span>';
+          statusEl.innerHTML = '<span class="form-hint" style="color:var(--ok-text);"><i class="fa-solid fa-check"></i> NVIDIA CUDA mode active</span>';
+        } else if (currentMode === "amd") {
+          statusEl.innerHTML = '<span class="form-hint" style="color:var(--ok-text);"><i class="fa-solid fa-check"></i> AMD Vulkan (NCNN) mode active</span>';
         } else if (currentMode === "cpu") {
           statusEl.innerHTML = '<span class="form-hint" style="color:var(--warn-text);"><i class="fa-solid fa-computer"></i> CPU mode active</span>';
         } else {
@@ -2393,11 +2406,21 @@
 
     if (mode === "gpu") {
       window.showConfirm(
-        "Switch to GPU mode? This will install PyTorch CUDA (~2.5GB download). The panel may be unresponsive during installation.",
+        "Switch to NVIDIA CUDA mode? This will install PyTorch CUDA (~2.5GB download). The panel may be unresponsive during installation.",
         function () {
           window.StorageManager.setItem("anismooth_gpu_choice", "gpu");
           if (window.ToolsSetup && window.ToolsSetup.showToolsSetupForGpuInstall) {
             window.ToolsSetup.showToolsSetupForGpuInstall();
+          }
+        }
+      );
+    } else if (mode === "amd") {
+      window.showConfirm(
+        "Switch to AMD Vulkan (NCNN) mode? This will download NCNN Vulkan binaries (~50MB).",
+        function () {
+          window.StorageManager.setItem("anismooth_gpu_choice", "amd");
+          if (window.ToolsSetup && window.ToolsSetup.showToolsSetupForGpuInstall) {
+            window.ToolsSetup.showToolsSetupForGpuInstall("amd");
           }
         }
       );
