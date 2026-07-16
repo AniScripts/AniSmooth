@@ -134,10 +134,24 @@
       dbg("info", "NCNN-DEBUG", "Factor " + factor + " -> " + passes + " pass(es)");
 
       if (ncnnInputDir) {
+        this._cancelled = false;
         var passInput = ncnnInputDir;
         var passOutput = tempPngDir;
-        for (var pass = 0; pass < passes; pass++) {
-          if (pass > 0) {
+        var currentPass = 0;
+
+        var envAsync = {};
+        for (var key in process.env) {
+          if (process.env.hasOwnProperty(key)) envAsync[key] = process.env[key];
+        }
+        if (!envAsync.PATH) envAsync.PATH = "";
+        envAsync.PATH = exeDir + ";" + (ffmpegDir ? ffmpegDir + ";" : "") + envAsync.PATH;
+
+        function runNextPass() {
+          if (self._cancelled) {
+            _cleanupTempDir();
+            return;
+          }
+          if (currentPass > 0) {
             var tmp = passInput;
             passInput = passOutput;
             passOutput = tmp;
@@ -148,23 +162,50 @@
               } else { fs.mkdirSync(passOutput); }
             } catch (e) {}
           }
-          dbg("info", "NCNN-DEBUG", "Pass " + (pass + 1) + "/" + passes + ": " + passInput + " -> " + passOutput + " (" + (fs.existsSync(passInput) ? fs.readdirSync(passInput).length : 0) + " input frames)");
-          args = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
-          if (passes === 1) args.push("-x", String(factor));
-          var runSync = cp.spawnSync(exe, args, { env: env, cwd: exeDir, windowsHide: true, timeout: 300000 });
-          if (runSync.status !== 0) {
-            dbg("error", "NCNN-DEBUG", "Pass " + (pass + 1) + " failed with code " + runSync.status);
-            dbg("error", "NCNN-DEBUG", "stderr: " + (runSync.stderr ? runSync.stderr.toString().slice(0, 500) : ""));
-            if (callbacks.onError) callbacks.onError("NCNN pass " + (pass + 1) + " failed with code " + runSync.status);
+          var inCount = fs.existsSync(passInput) ? fs.readdirSync(passInput).length : 0;
+          dbg("info", "NCNN-DEBUG", "Pass " + (currentPass + 1) + "/" + passes + ": " + inCount + " frames, " + passInput + " -> " + passOutput);
+          var passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
+          if (passes === 1) passArgs.push("-x", String(factor));
+
+          var passProc = cp.spawn(exe, passArgs, { env: envAsync, cwd: exeDir, windowsHide: true });
+          self.activeProcess = passProc;
+          if (callbacks.onProgress && currentPass === 0) callbacks.onProgress(0);
+
+          passProc.on("close", function (code) {
+            if (self._cancelled) { _cleanupTempDir(); return; }
+            if (code !== 0) {
+              dbg("error", "NCNN-DEBUG", "Pass " + (currentPass + 1) + " failed with code " + code);
+              if (callbacks.onError) callbacks.onError("NCNN pass " + (currentPass + 1) + " failed with code " + code);
+              _cleanupTempDir();
+              return;
+            }
+            dbg("info", "NCNN-DEBUG", "Pass " + (currentPass + 1) + " done");
+            currentPass++;
+            if (callbacks.onProgress) callbacks.onProgress(Math.round((currentPass / passes) * 50));
+            if (currentPass >= passes) {
+              tempPngDir = passOutput;
+              self.activeProcess = null;
+              dbg("info", "NCNN-DEBUG", "All passes done, output dir: " + tempPngDir + " (" + (fs.existsSync(tempPngDir) ? fs.readdirSync(tempPngDir).length : 0) + " frames)");
+              finished = false;
+              finalize(true);
+            } else {
+              runNextPass();
+            }
+          });
+          passProc.on("error", function (err) {
+            dbg("error", "NCNN-DEBUG", "Pass " + (currentPass + 1) + " error: " + err.message);
+            if (callbacks.onError) callbacks.onError("NCNN pass error: " + err.message);
             _cleanupTempDir();
-            return;
-          }
+          });
+          passProc.stderr.on("data", function (data) {
+            var text = data.toString().trim();
+            if (text) dbg("debug", "NCNN-DEBUG", "Pass " + (currentPass + 1) + " stderr: " + text);
+            if (callbacks.onLog) callbacks.onLog(text);
+          });
         }
-        tempPngDir = passOutput;
-        dbg("info", "NCNN-DEBUG", "All passes done, final output dir: " + tempPngDir + " (" + (fs.existsSync(tempPngDir) ? fs.readdirSync(tempPngDir).length : 0) + " frames)");
-        finished = false;
-        self.activeProcess = null;
-        finalize(true);
+
+        if (callbacks.onStart) callbacks.onStart();
+        runNextPass();
         return;
       } else {
         dbg("info", "NCNN-DEBUG", "No FFmpeg, direct file mode: " + inputPath + " -> " + finalOutputPath);
