@@ -1323,24 +1323,28 @@
     },
 
     _applyModelVisibility: function () {
-      var interpSelect = document.getElementById("interpolationModel");
-      var upscaleSelect = document.getElementById("upscaleModel");
-      var version = this.settings.flowframesVersion || "1.36.0";
-      if (interpSelect) filterSelect(interpSelect, "anismooth_model_interp_");
-      if (upscaleSelect) filterSelect(upscaleSelect, "anismooth_model_upscale_");
-      var ffAiSelect = document.getElementById("flowframesAi");
-      var ffModelSelect = document.getElementById("flowframesModel");
-      var ffFormatSelect = document.getElementById("flowframesFormat");
-      var ffEncSelect = document.getElementById("flowframesEncoder");
-      var ffPixFmtSelect = document.getElementById("flowframesPixFmt");
-      if (ffAiSelect) filterSelect(ffAiSelect, "anismooth_ff_ai_");
-      if (ffModelSelect) filterSelect(ffModelSelect, "anismooth_ff_model_");
-      if (ffFormatSelect) filterSelect(ffFormatSelect, "anismooth_ff_format_");
-      if (ffEncSelect) filterSelect(ffEncSelect, "anismooth_ff_enc_");
-      if (ffPixFmtSelect) filterSelect(ffPixFmtSelect, "anismooth_ff_pixfmt_");
+      try {
+        var interpSelect = document.getElementById("interpolationModel");
+        var upscaleSelect = document.getElementById("upscaleModel");
+        var version = this.settings.flowframesVersion || "1.36.0";
+        if (interpSelect) try { filterSelect(interpSelect, "anismooth_model_interp_"); } catch (e) {}
+        if (upscaleSelect) try { filterSelect(upscaleSelect, "anismooth_model_upscale_"); } catch (e) {}
+        var ffAiSelect = document.getElementById("flowframesAi");
+        var ffModelSelect = document.getElementById("flowframesModel");
+        var ffFormatSelect = document.getElementById("flowframesFormat");
+        var ffEncSelect = document.getElementById("flowframesEncoder");
+        var ffPixFmtSelect = document.getElementById("flowframesPixFmt");
+        if (ffAiSelect) try { filterSelect(ffAiSelect, "anismooth_ff_ai_"); } catch (e) {}
+        if (ffModelSelect) try { filterSelect(ffModelSelect, "anismooth_ff_model_"); } catch (e) {}
+        if (ffFormatSelect) try { filterSelect(ffFormatSelect, "anismooth_ff_format_"); } catch (e) {}
+        if (ffEncSelect) try { filterSelect(ffEncSelect, "anismooth_ff_enc_"); } catch (e) {}
+        if (ffPixFmtSelect) try { filterSelect(ffPixFmtSelect, "anismooth_ff_pixfmt_"); } catch (e) {}
+      } catch (e) {}
 
       function filterSelect(select, prefix) {
-        var children = select.querySelectorAll(".select-options")[0].children;
+        var optsContainer = select.querySelectorAll(".select-options")[0];
+        if (!optsContainer) return;
+        var children = optsContainer.children;
         var anyVisible = false;
         var firstVisible = null;
         var activeFound = false;
