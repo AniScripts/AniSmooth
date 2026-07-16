@@ -101,11 +101,15 @@
       var gpuId = window.StorageManager.getItem("anismooth_ncnn_gpu_id", "0") || "0";
 
       var ncnnInputDir = null;
-      var ncnnOutputDir = tempPngDir;
 
-      if (inputExt === "avi" && ffmpegPath) {
+      function _cleanupTempDir() {
+        if (ncnnInputDir) try { fs.rmdirSync(ncnnInputDir); } catch (e) {}
+        if (tempPngDir) try { fs.rmdirSync(tempPngDir); } catch (e) {}
+      }
+
+      if (ffmpegPath) {
         ncnnInputDir = inputPath.replace(/\.\w+$/, "_ncnn_input");
-        dbg("info", "NCNN-DEBUG", "Converting AVI to PNG frames: " + inputPath + " -> " + ncnnInputDir);
+        dbg("info", "NCNN-DEBUG", "Converting to PNG frames: " + inputPath + " -> " + ncnnInputDir);
         try {
           if (fs.existsSync(ncnnInputDir)) {
             var oldF = fs.readdirSync(ncnnInputDir);
@@ -118,26 +122,84 @@
           ], { windowsHide: true, timeout: 120000 });
           dbg("info", "NCNN-DEBUG", "AVI->PNG exit: " + avi2png.status + " stderr: " + (avi2png.stderr ? avi2png.stderr.toString().slice(0, 300) : ""));
           if (avi2png.status !== 0) {
-            dbg("warn", "NCNN-DEBUG", "AVI->PNG conversion failed, trying direct AVI file");
+            dbg("error", "NCNN-DEBUG", "Input to PNG conversion failed, cannot proceed");
+            if (callbacks.onError) callbacks.onError("Failed to convert input video to frames for NCNN processing.");
             try { fs.rmdirSync(ncnnInputDir); } catch (e) {}
-            ncnnInputDir = null;
+            return;
           }
         } catch (e) {
-          dbg("warn", "NCNN-DEBUG", "AVI->PNG error: " + e.message);
-          ncnnInputDir = null;
+          dbg("error", "NCNN-DEBUG", "Input conversion error: " + e.message);
+          if (callbacks.onError) callbacks.onError("Failed to convert input video: " + e.message);
+          try { if (ncnnInputDir && fs.existsSync(ncnnInputDir)) fs.rmdirSync(ncnnInputDir); } catch (e2) {}
+          return;
         }
+      } else {
+        dbg("error", "NCNN-DEBUG", "FFmpeg not found, cannot process video input");
+        if (callbacks.onError) callbacks.onError("FFmpeg is required for NCNN processing. Install it via Settings -> Tools.");
+        return;
       }
 
-      var args;
       var factor = parseInt(options.factor, 10) || 2;
       var passes = Math.max(1, Math.round(Math.log2(factor)));
       dbg("info", "NCNN-DEBUG", "Factor " + factor + " -> " + passes + " pass(es)");
 
-      if (ncnnInputDir) {
-        this._cancelled = false;
-        var passInput = ncnnInputDir;
-        var passOutput = tempPngDir;
-        var currentPass = 0;
+      var passInput = ncnnInputDir;
+      var passOutput = tempPngDir;
+      var currentPass = 0;
+      var finished = false;
+
+      var finalize = function (ok, message) {
+          if (finished) return;
+          finished = true;
+          self.activeProcess = null;
+          if (self._cancelled) { self._cancelled = false; _cleanupTempDir(); return; }
+          if (ok) {
+            if (passOutput && ffmpegPath && fs.existsSync(passOutput)) {
+              var frames = [];
+              try { var af = fs.readdirSync(passOutput); for (var fi = 0; fi < af.length; fi++) { if (/\.png$/i.test(af[fi])) frames.push(af[fi]); } } catch (e) {}
+              dbg("info", "NCNN-DEBUG", "Output PNG frames: " + frames.length);
+              if (frames.length > 0) {
+                frames.sort();
+                var concatPath = p.join(passOutput, "_concat.txt");
+                var concatContent = "";
+                for (var fi2 = 0; fi2 < frames.length; fi2++) {
+                  concatContent += "file '" + frames[fi2] + "'\n";
+                }
+                fs.writeFileSync(concatPath, concatContent);
+                var fpsEstimate = factor * 24;
+                dbg("info", "NCNN-DEBUG", "Encoding " + frames.length + " frames -> MP4 at " + fpsEstimate + "fps");
+                try {
+                  var encResult = cp.spawnSync(ffmpegPath, [
+                    "-y", "-f", "concat", "-safe", "0", "-r", String(fpsEstimate), "-i", concatPath,
+                    "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                    "-pix_fmt", "yuv420p", "-an",
+                    finalOutputPath
+                  ], { cwd: passOutput, windowsHide: true, timeout: 300000 });
+                  dbg("info", "NCNN-DEBUG", "FFmpeg encode exit: " + encResult.status);
+                  if (encResult.status === 0 && fs.existsSync(finalOutputPath)) {
+                    dbg("info", "NCNN-DEBUG", "Final MP4: " + finalOutputPath + " (" + fs.statSync(finalOutputPath).size + " bytes)");
+                    _cleanupTempDir();
+                    dbg("success", "NCNN", "Completed: " + finalOutputPath);
+                    if (callbacks.onComplete) callbacks.onComplete(finalOutputPath);
+                    return;
+                  }
+                } catch (e) { dbg("error", "NCNN-DEBUG", "FFmpeg encode error: " + e.message); }
+              }
+            }
+            _cleanupTempDir();
+            if (fs.existsSync(finalOutputPath)) {
+              dbg("success", "NCNN", "Completed: " + finalOutputPath);
+              if (callbacks.onComplete) callbacks.onComplete(finalOutputPath);
+            } else {
+              dbg("error", "NCNN", "Output file not found: " + finalOutputPath);
+              if (callbacks.onError) callbacks.onError("NCNN completed but no output file was produced.");
+            }
+          } else {
+            _cleanupTempDir();
+            dbg("error", "NCNN", message);
+            if (callbacks.onError) callbacks.onError(message);
+          }
+        };
 
         var envAsync = {};
         for (var key in process.env) {
@@ -207,217 +269,6 @@
         if (callbacks.onStart) callbacks.onStart();
         runNextPass();
         return;
-      } else {
-        dbg("info", "NCNN-DEBUG", "No FFmpeg, direct file mode: " + inputPath + " -> " + finalOutputPath);
-        args = ["-i", inputPath, "-o", finalOutputPath, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
-        if (factor > 0) args.push("-x", String(factor));
-      }
-
-      if (options.factor) args.push("-x", String(options.factor));
-      if (options.scale) args.push("-s", String(options.scale));
-      if (options.ttafnm) args.push("-f", options.ttafnm);
-      if (options.tta) args.push("-x");
-      if (options.uhdMode) args.push("-u");
-
-      this._cancelled = false;
-
-      dbg("info", "NCNN-DEBUG", "--- DLL Pre-flight ---");
-      var sysDir = process.env.SystemRoot ? p.join(process.env.SystemRoot, "System32") : "C:\\Windows\\System32";
-      var vulkanPath = p.join(sysDir, "vulkan-1.dll");
-      var vcrPath = p.join(sysDir, "vcruntime140.dll");
-      var vulkanExists = fs.existsSync(vulkanPath);
-      var vcrExists = fs.existsSync(vcrPath);
-      dbg("info", "NCNN-DEBUG", "vulkan-1.dll: " + vulkanPath + " (exists: " + vulkanExists + ")");
-      dbg("info", "NCNN-DEBUG", "vcruntime140.dll: " + vcrPath + " (exists: " + vcrExists + ")");
-
-      if (!vulkanExists || !vcrExists) {
-        var missing = [];
-        if (!vulkanExists) missing.push("Vulkan runtime (vulkan-1.dll)");
-        if (!vcrExists) missing.push("VC++ Redistributable (vcruntime140.dll)");
-        dbg("error", "NCNN-DEBUG", "Missing DLLs: " + missing.join(", "));
-        if (callbacks.onError) callbacks.onError(
-          "Missing system libraries: " + missing.join(", ") + ". " +
-          "Install Vulkan drivers from your GPU vendor and download VC++ Redistributable from https://aka.ms/vs/17/release/vc_redist.x64.exe"
-        );
-        return;
-      }
-      dbg("info", "NCNN-DEBUG", "DLL check passed");
-
-      var fullCmd = exe + " " + args.map(function(a) { return a.indexOf(" ") >= 0 ? '"' + a + '"' : a; }).join(" ");
-      dbg("info", "NCNN-DEBUG", "Spawn cmd: " + fullCmd);
-      dbg("info", "NCNN-DEBUG", "CWD: " + exeDir);
-      dbg("info", "NCNN-DEBUG", "GPU ID: " + gpuId);
-
-      var env = {};
-      var envKeys = 0;
-      for (var key in process.env) {
-        if (process.env.hasOwnProperty(key)) { env[key] = process.env[key]; envKeys++; }
-      }
-      if (!env.PATH) env.PATH = "";
-      env.PATH = exeDir + ";" + (ffmpegDir ? ffmpegDir + ";" : "") + env.PATH;
-      dbg("info", "NCNN-DEBUG", "Env keys: " + envKeys + ", PATH prefix: " + exeDir + (ffmpegDir ? ";" + ffmpegDir : ""));
-
-      var proc;
-      try {
-        proc = cp.spawn(exe, args, { env: env, cwd: exeDir, windowsHide: true });
-      } catch (e) {
-        dbg("error", "NCNN-DEBUG", "Spawn exception: " + e.message);
-        if (callbacks.onError) callbacks.onError("Failed to launch " + exeName + ": " + e.message);
-        return;
-      }
-      dbg("info", "NCNN-DEBUG", "Process spawned, PID: " + (proc.pid || "unknown"));
-      self.activeProcess = proc;
-      if (callbacks.onStart) callbacks.onStart();
-
-      var lastProgress = -1;
-      var finished = false;
-      var gotProgress = false;
-      var stderrLines = [];
-      var allStderr = "";
-
-      var finalize = function (ok, message) {
-        if (finished) return;
-        finished = true;
-        dbg("info", "NCNN-DEBUG", "Finalizing: ok=" + ok + " msg=" + (message || ""));
-        dbg("info", "NCNN-DEBUG", "All stderr (" + stderrLines.length + " lines): " + allStderr.slice(0, 2000));
-        self.activeProcess = null;
-        if (self._cancelled) { dbg("info", "NCNN-DEBUG", "Cancelled, aborting"); self._cancelled = false; _cleanupTempDir(); return; }
-        if (ok) {
-          if (tempPngDir && ffmpegPath && fs.existsSync(tempPngDir)) {
-            var frames = [];
-            try { var allFiles = fs.readdirSync(tempPngDir); for (var fi = 0; fi < allFiles.length; fi++) { if (/\.png$/i.test(allFiles[fi])) frames.push(allFiles[fi]); } } catch (e) {}
-            dbg("info", "NCNN-DEBUG", "PNG frames found: " + frames.length);
-            if (frames.length > 0) {
-              frames.sort();
-              var concatPath = p.join(tempPngDir, "_concat.txt");
-              var concatContent = "";
-              for (var fi = 0; fi < frames.length; fi++) {
-                concatContent += "file '" + frames[fi] + "'\n";
-              }
-              fs.writeFileSync(concatPath, concatContent);
-              var fpsEstimate = options.factor ? (parseFloat(options.factor) * 24) : 24;
-              dbg("info", "NCNN-DEBUG", "Encoding " + frames.length + " PNG frames -> MP4 at " + fpsEstimate + "fps");
-              try {
-                var encResult = cp.spawnSync(ffmpegPath, [
-                  "-y", "-f", "concat", "-safe", "0", "-r", String(fpsEstimate), "-i", concatPath,
-                  "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-                  "-pix_fmt", "yuv420p", "-an",
-                  finalOutputPath
-                ], { cwd: tempPngDir, windowsHide: true, timeout: 300000 });
-                dbg("info", "NCNN-DEBUG", "FFmpeg encode exit: " + encResult.status);
-                if (encResult.status === 0 && fs.existsSync(finalOutputPath)) {
-                  dbg("info", "NCNN-DEBUG", "Final MP4: " + finalOutputPath + " (" + fs.statSync(finalOutputPath).size + " bytes)");
-                  _cleanupTempDir();
-                  dbg("success", "NCNN", "Completed: " + finalOutputPath);
-                  if (callbacks.onComplete) callbacks.onComplete(finalOutputPath);
-                  return;
-                }
-              } catch (e) { dbg("error", "NCNN-DEBUG", "FFmpeg encode error: " + e.message); }
-            }
-          }
-          _cleanupTempDir();
-          if (fs.existsSync(finalOutputPath)) {
-            dbg("info", "NCNN-DEBUG", "Output exists: " + finalOutputPath + " (size: " + fs.statSync(finalOutputPath).size + ")");
-            dbg("success", "NCNN", "Completed: " + finalOutputPath);
-            if (callbacks.onComplete) callbacks.onComplete(finalOutputPath);
-          } else {
-            dbg("error", "NCNN-DEBUG", "Output missing: " + finalOutputPath);
-            dbg("error", "NCNN", "Output file not found: " + finalOutputPath);
-            if (callbacks.onError) callbacks.onError("NCNN completed but no output file was produced.");
-          }
-        } else {
-          _cleanupTempDir();
-          dbg("error", "NCNN-DEBUG", "Error: " + message);
-          dbg("error", "NCNN", message);
-          if (callbacks.onError) callbacks.onError(message);
-        }
-      };
-
-      function _cleanupTempDir() {
-        if (tempPngDir) {
-          try {
-            if (fs.existsSync(tempPngDir)) {
-              var files = fs.readdirSync(tempPngDir);
-              for (var fi = 0; fi < files.length; fi++) fs.unlinkSync(p.join(tempPngDir, files[fi]));
-              fs.rmdirSync(tempPngDir);
-            }
-          } catch (e) {}
-        }
-        if (ncnnInputDir) {
-          try {
-            if (fs.existsSync(ncnnInputDir)) {
-              var files2 = fs.readdirSync(ncnnInputDir);
-              for (var fi = 0; fi < files2.length; fi++) fs.unlinkSync(p.join(ncnnInputDir, files2[fi]));
-              fs.rmdirSync(ncnnInputDir);
-            }
-          } catch (e) {}
-        }
-      }
-
-      var stderrBuf = "";
-      proc.stderr.on("data", function (data) {
-        var chunk = data.toString();
-        allStderr += chunk;
-        stderrBuf += chunk;
-        var lines = stderrBuf.split("\n");
-        stderrBuf = lines.pop();
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i].trim();
-          if (!line) continue;
-          dbg("debug", "NCNN-DEBUG", "stderr: " + line);
-          if (callbacks.onLog) callbacks.onLog(line);
-          var pct = _parseProgress(line);
-          if (pct >= 0 && pct !== lastProgress) {
-            lastProgress = pct;
-            gotProgress = true;
-            if (callbacks.onProgress) callbacks.onProgress(pct);
-          }
-          stderrLines.push(line);
-          if (/error|cannot|failed/i.test(line)) {
-            dbg("warn", "NCNN-DEBUG", "Error line: " + line);
-            if (/could not open|cannot read|no such file/i.test(line)) {
-              finalize(false, line);
-            }
-          }
-        }
-      });
-
-      proc.stdout.on("data", function (data) {
-        var chunk = data.toString().trim();
-        if (chunk) dbg("debug", "NCNN-DEBUG", "stdout: " + chunk.slice(0, 500));
-      });
-
-      proc.on("close", function (code, signal) {
-        dbg("info", "NCNN-DEBUG", "Process closed: code=" + code + " signal=" + (signal || "none") + " gotProgress=" + gotProgress + " stderrLines=" + stderrLines.length);
-        if (finished) return;
-        if (code === 0) {
-          dbg("info", "NCNN-DEBUG", "Exit code 0, checking output in 500ms...");
-          setTimeout(function () {
-            finalize(true);
-          }, 500);
-        } else if (!gotProgress && code !== 0) {
-          var joined = (allStderr || "").toLowerCase();
-          dbg("warn", "NCNN-DEBUG", "No progress emitted, crash analysis. stderr dump: " + (allStderr || "(empty)"));
-          if (/vulkan-1\.dll|vulkan/i.test(joined)) {
-            finalize(false, "Vulkan runtime not found. Update your GPU drivers from AMD/NVIDIA website.");
-          } else if (/vcruntime|msvcp|visual c\+\+|\.dll was not found/i.test(joined)) {
-            finalize(false, "Microsoft Visual C++ Redistributable missing. Download from https://aka.ms/vs/17/release/vc_redist.x64.exe");
-          } else if (/cuda|driver/i.test(joined)) {
-            finalize(false, "GPU driver or CUDA error. Update your GPU drivers. Full error: " + allStderr.slice(0, 200));
-          } else {
-            finalize(false, "NCNN process exited immediately (code " + code + "). " +
-              "Possible causes: missing Vulkan driver, missing VC++ Redistributable, or incompatible GPU. " +
-              "Check console for more details.");
-          }
-        } else {
-          finalize(false, "NCNN process exited with code " + code + ". Last stderr: " + (stderrLines.length > 0 ? stderrLines[stderrLines.length - 1] : "(none)"));
-        }
-      });
-
-      proc.on("error", function (err) {
-        dbg("error", "NCNN-DEBUG", "Process error event: " + err.message + " (code: " + (err.code || "none") + ")");
-        finalize(false, "NCNN process error: " + err.message);
-      });
     },
 
     cancel: function () {
