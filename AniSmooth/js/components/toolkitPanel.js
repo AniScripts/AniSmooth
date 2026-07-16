@@ -61,7 +61,7 @@
         var enabled = window.StorageManager.getItem(key, "0") === "1";
 
         if (!enabled) {
-          subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '" style="display:none;"><div class="info-card" style="text-align:center;padding:20px 12px;"><i class="fa-solid ' + tool.icon + '" style="font-size:24px;color:var(--text-3);display:block;margin-bottom:8px;"></i><span class="meta-strip meta-strip-sm">' + tool.label + ' is disabled.</span><br><span class="form-hint" style="margin-top:4px;">Enable it in Settings &gt; Interface &gt; Toolkit Tools.</span></div></div>';
+          subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '" style="display:none;"><div class="tk-disabled-placeholder"><i class="fa-solid ' + tool.icon + '"></i><p>' + tool.label + ' is disabled.</p><span>Enable in Settings &gt; Interface &gt; Toolkit Tools.</span></div></div>';
           continue;
         }
 
@@ -79,7 +79,7 @@
         if (html) {
           subContent.innerHTML += html;
         } else {
-          subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '" style="display:none;"><div class="info-card"><span class="meta-strip meta-strip-sm"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load: ' + tool.label + '</span></div></div>';
+          subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '" style="display:none;"><div class="tk-disabled-placeholder"><i class="fa-solid fa-triangle-exclamation"></i><p>Failed to load ' + tool.label + '</p></div></div>';
         }
       }
 

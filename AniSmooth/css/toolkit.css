@@ -3,26 +3,28 @@
 .tk-inner-nav {
   display: flex;
   gap: 2px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
 
 .tk-inner-tab {
-  padding: 3px 8px;
+  padding: 2px 10px;
   border: none;
   background: transparent;
   color: var(--text-2);
   font-family: inherit;
   font-size: 9px;
+  font-weight: 500;
   border-radius: 3px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: opacity 0.15s, background 0.15s;
+  opacity: 0.6;
 }
 
-.tk-inner-tab:hover { background: var(--hover-overlay); color: var(--text-strong); }
-.tk-inner-tab.active { background: var(--accent-bg); color: var(--accent); }
+.tk-inner-tab:hover { opacity: 0.85; background: var(--hover-overlay); }
+.tk-inner-tab.active { opacity: 1; background: var(--active-overlay); color: var(--text); }
 
 .tk-qt-panel, .tk-cf-panel { display: none; }
 .tk-qt-panel.active, .tk-cf-panel.active { display: block; }
@@ -31,21 +33,21 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .tk-align-btn {
-  padding: 6px 0;
+  padding: 8px 0;
   border: 1px solid var(--border);
   background: var(--inset);
   color: var(--text-2);
   border-radius: 3px;
   cursor: pointer;
   font-size: 10px;
-  transition: background 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
-.tk-align-btn:hover { background: var(--accent-bg); color: var(--accent); }
+.tk-align-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--hover-overlay); }
 
 .tk-rotate-row {
   display: flex;
@@ -56,8 +58,8 @@
 .tk-rotate-row select {
   background: var(--inset);
   border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-strong);
+  border-radius: 4px;
+  color: var(--text);
   padding: 4px 6px;
   font-family: inherit;
   font-size: 9px;
@@ -74,7 +76,7 @@
 .tk-check-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 4px 8px;
   margin-bottom: 4px;
 }
 
@@ -87,9 +89,7 @@
   cursor: pointer;
 }
 
-.tk-check-item input[type="checkbox"] {
-  accent-color: var(--accent);
-}
+.tk-check-item input[type="checkbox"] { accent-color: var(--accent); }
 
 .tk-sequence-row {
   display: flex;
@@ -100,12 +100,37 @@
 .tk-sequence-row input {
   background: var(--inset);
   border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-strong);
+  border-radius: 4px;
+  color: var(--text);
   padding: 4px 6px;
   font-family: inherit;
   font-size: 9px;
   width: 60px;
+}
+
+.tk-disabled-placeholder {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text-faint);
+}
+
+.tk-disabled-placeholder i {
+  font-size: 22px;
+  display: block;
+  margin-bottom: 6px;
+  opacity: 0.25;
+}
+
+.tk-disabled-placeholder p {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.tk-disabled-placeholder span {
+  font-size: 8px;
+  color: var(--text-faint);
 }
 
 /* ── ColorFlow ──────────────────────────────────────────────── */
@@ -120,7 +145,7 @@
   width: 32px;
   height: 28px;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
   padding: 0;
   cursor: pointer;
   background: transparent;
@@ -129,10 +154,10 @@
 .tk-color-picker input[type="text"] {
   background: var(--inset);
   border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-strong);
+  border-radius: 4px;
+  color: var(--text);
   padding: 4px 6px;
-  font-family: monospace;
+  font-family: 'Consolas','Courier New',monospace;
   font-size: 10px;
 }
 
@@ -151,7 +176,7 @@
   transition: transform 0.1s, box-shadow 0.1s;
 }
 
-.tk-cf-swatch:hover { transform: scale(1.15); box-shadow: 0 0 6px rgba(0,0,0,0.3); z-index: 1; }
+.tk-cf-swatch:hover { transform: scale(1.15); box-shadow: 0 0 6px rgba(0,0,0,0.35); z-index: 1; }
 
 .tk-cf-hswatch {
   width: 32px;
@@ -181,7 +206,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 4px;
+  padding: 3px 6px;
   border-radius: 3px;
   transition: background 0.15s;
 }
@@ -210,10 +235,10 @@
   font-size: 9px;
   color: var(--text-3);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px 5px;
   border-radius: 3px;
   transition: color 0.15s, background 0.15s;
 }
 
-.tk-label-action:hover { color: var(--text-strong); background: var(--hover-overlay); }
+.tk-label-action:hover { color: var(--text); background: var(--hover-overlay); }
 .tk-label-action.active { color: var(--accent); }
