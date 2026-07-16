@@ -31,7 +31,7 @@ Root `package.json` is a thin shim; real scripts live in `tools/package.json`:
 - No test framework. No lint/typecheck.
 - Build pipeline (`tools/build.js`): strip comments (`remove_comments.py`) → obfuscate JS → compile JSXBIN → patch manifest per target → sign ZXP. Installer EXE via Inno Setup (`tools/installer.iss`).
 - CI: `.github/workflows/build.yml`.
-- **`jsx/host.jsx` is compiled to JSXBIN at build** (source edits need a rebuild before they take effect in AE).
+- **`jsx/host.jsx` and `jsx/toolkit.jsx` are compiled to JSXBIN at build** (source edits need a rebuild before they take effect in AE). Host handles render/import/layer-info; Toolkit handles ~40 AE automation functions for the Toolkit tab.
 
 ## Tech Stack
 
@@ -39,7 +39,7 @@ Root `package.json` is a thin shim; real scripts live in `tools/package.json`:
 |---|---|
 | Extension | Adobe CEP 6.0–10.0, CSXS |
 | UI | Vanilla JS (no framework), HTML, CSS custom properties |
-| AE bridge | CEP CSInterface.js + ExtendScript (`jsx/host.jsx`) |
+| AE bridge | CEP CSInterface.js + ExtendScript (`jsx/host.jsx`, `jsx/toolkit.jsx`) |
 | Node.js | CEF `--enable-nodejs --mixed-context` → `require('fs')`, `child_process` |
 | Backend | Python 3.10–3.13 CLI (`python/main.py`) via `child_process.spawn` |
 | ML | PyTorch CUDA, spandrel 0.3.4, TensorRT (optional) |
@@ -61,10 +61,27 @@ Repo root holds build tooling; the CEP extension itself lives in `AniSmooth/`.
 └── AniSmooth/                 # ← the extension (everything below)
 ├── CSXS/manifest.xml          # CEP manifest (patched per AE target at build)
 ├── index.html                 # SPA shell: topbar nav + tab containers
-├── css/style.css              # Dark/light theme, ~860 lines
-├── css/toolsSetup.css         # First-run wizard styles
-├── tabs/*.html                # Tab fragments: interpolation, upscale, flowframes,
-│                              #   deadframes, queue, sysmon, console, settings, stopwatch (tabLoader.js)
+├── css/                        # Split into 8 modular files imported by style.css
+│   ├── style.css               # @import hub
+│   ├── base.css                # Fonts, tokens, reset, scrollbar
+│   ├── layout.css              # Topbar, nav, panels, forms, buttons, toggles, sub-nav
+│   ├── console.css             # Console entries
+│   ├── queue.css               # Queue rows
+│   ├── components.css          # GPU, meta, env, presets, models, toast, factors, dropdown, modal, layers
+│   ├── theme-light.css         # Light theme overrides
+│   ├── settings.css            # Collapsible settings panels
+│   ├── toolkit.css             # Toolkit: quicktools, colorflow, labels
+│   └── toolsSetup.css          # First-run wizard styles
+├── tabs/
+│   ├── *.html                  # Tab fragments: interpolation, upscale, flowframes,
+│   │                           #   deadframes, queue, console, settings, toolkit
+│   └── toolkit/                # Toolkit sub-tab HTML fragments
+│       ├── quicktools.html
+│       ├── projecthelper.html
+│       ├── colorflow.html
+│       ├── search.html
+│       ├── sysmon.html
+│       └── stopwatch.html
 ├── js/
 │   ├── CSInterface.js         # Adobe boilerplate (NOT obfuscated)
 │   ├── console.js             # dbg(level, source, msg) global logger
