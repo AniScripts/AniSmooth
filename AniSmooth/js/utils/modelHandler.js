@@ -332,6 +332,9 @@
       if (opts.keepCamera) {
         args.push("--keep-camera");
       }
+      if (opts.parallax) {
+        args.push("--parallax");
+      }
       if (opts.smallMovements !== undefined && opts.smallMovements !== null) {
         args.push("--small-movements", String(opts.smallMovements));
       }

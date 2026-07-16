@@ -546,6 +546,8 @@ def run_dedupe(
 ):
     log("info", "Starting Deadframe Removal. Input: " + input_path)
 
+    auto_mode = auto or keep_talking or keep_camera
+
     from duplicate_frame_remover.processor import run_deadframes
     import sys
     from pathlib import Path
@@ -584,7 +586,7 @@ def run_dedupe(
             flow_threshold=flow_threshold,
             motion_area_fraction=motion_area_fraction,
             cadence=cadence,
-            auto=auto,
+            auto=auto_mode,
             keep_talking=keep_talking,
             keep_camera=keep_camera,
             parallax_mode=parallax_mode,

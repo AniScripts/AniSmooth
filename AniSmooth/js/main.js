@@ -330,7 +330,8 @@
       var self = this;
       var autoSaveInputs = [
         "interpolationModel", "upscaleModel", "upscaleScale",
-        "deadframeFlowThreshold", "deadframeMotionAreaFraction", "deadframeCadence", "deadframeDetectScale", "pythonPathInput", "interpolationFactor",
+        "deadframeFlowThreshold", "deadframeMotionAreaFraction", "deadframeCadence", "deadframeDetectScale",
+        "deadframeSmallMovements", "pythonPathInput", "interpolationFactor",
         "flowframesAi", "flowframesModel", "flowframesFormat", "flowframesEncoder", "flowframesPixFmt", "flowframesFactor"
       ];
       for (var ai = 0; ai < autoSaveInputs.length; ai++) {
@@ -1557,6 +1558,8 @@
       var dedupAuto = document.getElementById("deadframeAuto");
       var dedupKeepTalking = document.getElementById("deadframeKeepTalking");
       var dedupKeepCamera = document.getElementById("deadframeKeepCamera");
+      var dedupParallax = document.getElementById("deadframeParallax");
+      var dedupSmallMovements = document.getElementById("deadframeSmallMovements");
       var factorBtns = document.getElementById("interpolationFactor");
       var factorCustom = document.getElementById("interpFactorCustom");
       var factor = 2;
@@ -1602,7 +1605,9 @@
           detectScale: dedupDetectScale ? parseFloat(dedupDetectScale.value) : 1.0,
           auto: dedupAuto ? !!dedupAuto.checked : false,
           keepTalking: dedupKeepTalking ? !!dedupKeepTalking.checked : false,
-          keepCamera: dedupKeepCamera ? !!dedupKeepCamera.checked : false
+          keepCamera: dedupKeepCamera ? !!dedupKeepCamera.checked : false,
+          parallax: dedupParallax ? !!dedupParallax.checked : false,
+          smallMovements: dedupSmallMovements ? (dedupSmallMovements.value.trim() !== "" ? parseFloat(dedupSmallMovements.value) : null) : null
         },
         output: {
           prefix: this.settings.outputPrefix,
@@ -1686,6 +1691,10 @@
         if (dkt) dkt.checked = !!state.deadframes.keepTalking;
         var dkc = document.getElementById("deadframeKeepCamera");
         if (dkc) dkc.checked = !!state.deadframes.keepCamera;
+        var dp = document.getElementById("deadframeParallax");
+        if (dp) dp.checked = !!state.deadframes.parallax;
+        var dsm = document.getElementById("deadframeSmallMovements");
+        if (dsm) dsm.value = state.deadframes.smallMovements !== undefined && state.deadframes.smallMovements !== null ? state.deadframes.smallMovements : "";
       }
       if (state.output) {
         this.settings.outputPrefix = state.output.prefix || "AniSmooth";

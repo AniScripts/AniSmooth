@@ -10,6 +10,8 @@
       this.autoCheck = document.getElementById("deadframeAuto");
       this.keepTalkingCheck = document.getElementById("deadframeKeepTalking");
       this.keepCameraCheck = document.getElementById("deadframeKeepCamera");
+      this.parallaxCheck = document.getElementById("deadframeParallax");
+      this.smallMovementsInput = document.getElementById("deadframeSmallMovements");
       this.removeBtn = document.getElementById("removeDeadframesBtn");
       this._sourceInfo = null;
       this.bindEvents();
@@ -43,15 +45,20 @@
       var auto = this.autoCheck ? !!this.autoCheck.checked : false;
       var keepTalking = this.keepTalkingCheck ? !!this.keepTalkingCheck.checked : false;
       var keepCamera = this.keepCameraCheck ? !!this.keepCameraCheck.checked : false;
+      var parallax = this.parallaxCheck ? !!this.parallaxCheck.checked : false;
+      var smallMovementsVal = this.smallMovementsInput ? this.smallMovementsInput.value.trim() : "";
+      var smallMovements = smallMovementsVal !== "" ? parseFloat(smallMovementsVal) : null;
 
       var options = {
         flowThreshold: this.flowThresholdInput ? parseFloat(this.flowThresholdInput.value) || 0.5 : 0.5,
         motionAreaFraction: this.motionAreaInput ? parseFloat(this.motionAreaInput.value) || 0.15 : 0.15,
         cadence: this.cadenceInput ? parseInt(this.cadenceInput.value, 10) || 3 : 3,
         detectScale: this.detectScaleInput ? parseFloat(this.detectScaleInput.value) || 1.0 : 1.0,
-        auto: auto,
+        auto: auto || keepTalking || keepCamera,
         keepTalking: keepTalking,
-        keepCamera: keepCamera
+        keepCamera: keepCamera,
+        parallax: parallax,
+        smallMovements: smallMovements
       };
 
       window.QueueManager.add({
