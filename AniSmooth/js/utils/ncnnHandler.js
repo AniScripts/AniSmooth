@@ -223,15 +223,22 @@
             try { var allFiles = fs.readdirSync(tempPngDir); for (var fi = 0; fi < allFiles.length; fi++) { if (/\.png$/i.test(allFiles[fi])) frames.push(allFiles[fi]); } } catch (e) {}
             dbg("info", "NCNN-DEBUG", "PNG frames found: " + frames.length);
             if (frames.length > 0) {
+              frames.sort();
+              var concatPath = p.join(tempPngDir, "_concat.txt");
+              var concatContent = "";
+              for (var fi = 0; fi < frames.length; fi++) {
+                concatContent += "file '" + frames[fi] + "'\n";
+              }
+              fs.writeFileSync(concatPath, concatContent);
               var fpsEstimate = options.factor ? (parseFloat(options.factor) * 24) : 24;
-              dbg("info", "NCNN-DEBUG", "Encoding PNG sequence -> MP4 at " + fpsEstimate + "fps via FFmpeg");
+              dbg("info", "NCNN-DEBUG", "Encoding " + frames.length + " PNG frames -> MP4 at " + fpsEstimate + "fps");
               try {
                 var encResult = cp.spawnSync(ffmpegPath, [
-                  "-y", "-framerate", String(fpsEstimate), "-pattern_type", "glob", "-i", p.join(tempPngDir, "*.png"),
+                  "-y", "-f", "concat", "-safe", "0", "-r", String(fpsEstimate), "-i", concatPath,
                   "-c:v", "libx264", "-preset", "medium", "-crf", "18",
                   "-pix_fmt", "yuv420p", "-an",
                   finalOutputPath
-                ], { windowsHide: true, timeout: 300000 });
+                ], { cwd: tempPngDir, windowsHide: true, timeout: 300000 });
                 dbg("info", "NCNN-DEBUG", "FFmpeg encode exit: " + encResult.status);
                 if (encResult.status === 0 && fs.existsSync(finalOutputPath)) {
                   dbg("info", "NCNN-DEBUG", "Final MP4: " + finalOutputPath + " (" + fs.statSync(finalOutputPath).size + " bytes)");
