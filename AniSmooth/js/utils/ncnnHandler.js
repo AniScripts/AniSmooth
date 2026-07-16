@@ -101,13 +101,55 @@
 
       var exeDir = p.dirname(exe);
       var gpuId = window.StorageManager.getItem("anismooth_ncnn_gpu_id", "0") || "0";
-      var args = [
-        "-i", inputPath,
-        "-o", pngOutputPath,
-        "-g", gpuId,
-        "-m", options.model || "rife-v4.26",
-        "-j", String(options.threadCount || "4:4:4")
-      ];
+
+      var ncnnInputDir = null;
+      var ncnnOutputDir = tempPngDir;
+
+      if (inputExt === "avi" && ffmpegPath) {
+        ncnnInputDir = inputPath.replace(/\.\w+$/, "_ncnn_input");
+        dbg("info", "NCNN-DEBUG", "Converting AVI to PNG frames: " + inputPath + " -> " + ncnnInputDir);
+        try {
+          if (fs.existsSync(ncnnInputDir)) {
+            var oldF = fs.readdirSync(ncnnInputDir);
+            for (var oi = 0; oi < oldF.length; oi++) fs.unlinkSync(p.join(ncnnInputDir, oldF[oi]));
+          } else { fs.mkdirSync(ncnnInputDir); }
+          var avi2png = cp.spawnSync(ffmpegPath, [
+            "-y", "-i", inputPath,
+            "-fps_mode", "cfr",
+            p.join(ncnnInputDir, "frame_%08d.png")
+          ], { windowsHide: true, timeout: 120000 });
+          dbg("info", "NCNN-DEBUG", "AVI->PNG exit: " + avi2png.status + " stderr: " + (avi2png.stderr ? avi2png.stderr.toString().slice(0, 300) : ""));
+          if (avi2png.status !== 0) {
+            dbg("warn", "NCNN-DEBUG", "AVI->PNG conversion failed, falling back to file mode");
+            try { fs.rmdirSync(ncnnInputDir); } catch (e) {}
+            ncnnInputDir = null;
+          }
+        } catch (e) {
+          dbg("warn", "NCNN-DEBUG", "AVI->PNG error: " + e.message);
+          ncnnInputDir = null;
+        }
+      }
+
+      var args;
+      if (ncnnInputDir) {
+        dbg("info", "NCNN-DEBUG", "Directory mode: input=" + ncnnInputDir + " output=" + ncnnOutputDir);
+        args = [
+          "-i", ncnnInputDir,
+          "-o", ncnnOutputDir,
+          "-g", gpuId,
+          "-m", options.model || "rife-v4.26",
+          "-j", String(options.threadCount || "4:4:4")
+        ];
+      } else {
+        dbg("info", "NCNN-DEBUG", "File mode: input=" + inputPath + " output=" + finalOutputPath);
+        args = [
+          "-i", inputPath,
+          "-o", finalOutputPath,
+          "-g", gpuId,
+          "-m", options.model || "rife-v4.26",
+          "-j", String(options.threadCount || "4:4:4")
+        ];
+      }
       if (options.factor) args.push("-x", String(options.factor));
       if (options.scale) args.push("-s", String(options.scale));
       if (options.ttafnm) args.push("-f", options.ttafnm);
@@ -228,6 +270,15 @@
               var files = fs.readdirSync(tempPngDir);
               for (var fi = 0; fi < files.length; fi++) fs.unlinkSync(p.join(tempPngDir, files[fi]));
               fs.rmdirSync(tempPngDir);
+            }
+          } catch (e) {}
+        }
+        if (ncnnInputDir) {
+          try {
+            if (fs.existsSync(ncnnInputDir)) {
+              var files2 = fs.readdirSync(ncnnInputDir);
+              for (var fi = 0; fi < files2.length; fi++) fs.unlinkSync(p.join(ncnnInputDir, files2[fi]));
+              fs.rmdirSync(ncnnInputDir);
             }
           } catch (e) {}
         }
