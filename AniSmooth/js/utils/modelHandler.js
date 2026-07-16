@@ -237,6 +237,7 @@
     interpolateClip: function (inputPath, outputPath, modelKey, options, callbacks) {
       var vendor = (window.App && window.App._gpuVendor) || "unknown";
       if (vendor === "amd" && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
+        outputPath = outputPath.replace(/\.\w+$/, ".mp4");
         var ncnnOpts = {
           model: modelKey || "rife-v4.26",
           factor: options.fpsFactor || "2",
@@ -282,6 +283,7 @@
     upscaleClip: function (inputPath, outputPath, modelKey, options, callbacks) {
       var vendor = (window.App && window.App._gpuVendor) || "unknown";
       if (vendor === "amd" && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
+        outputPath = outputPath.replace(/\.\w+$/, ".mp4");
         var ncnnOpts = {
           model: modelKey || "realesr-animevideov3",
           scale: options.scale || "2",
