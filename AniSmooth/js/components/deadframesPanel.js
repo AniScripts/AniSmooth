@@ -22,6 +22,29 @@
       if (this.removeBtn) {
         this.removeBtn.addEventListener("click", function () { self.addToQueue(); });
       }
+
+      var labels = this.view.querySelectorAll(".collapse-label");
+      for (var i = 0; i < labels.length; i++) {
+        (function (label) {
+          var group = label.parentElement;
+          var keyName = label.getAttribute("data-df-group");
+          if (!keyName) return;
+
+          if (window.StorageManager.getItem("anismooth_df_collapse_" + keyName) === "1") {
+            group.classList.add("collapsed");
+          }
+
+          label.addEventListener("click", function () {
+            var collapsed = !group.classList.contains("collapsed");
+            if (collapsed) {
+              group.classList.add("collapsed");
+            } else {
+              group.classList.remove("collapsed");
+            }
+            window.StorageManager.setItem("anismooth_df_collapse_" + keyName, collapsed ? "1" : "0");
+          });
+        })(labels[i]);
+      }
     },
 
     refreshLayerInfo: function () {

@@ -4,63 +4,76 @@
             <i class="fa-solid fa-film panel-head-icon"></i>
             <span class="panel-title">Remove Duplicate Deadframes</span>
           </div>
-          <div class="form-group">
-            <label for="deadframeFlowThreshold">Flow Sensitivity (Lower = Removes More)</label>
-            <input type="number" id="deadframeFlowThreshold" value="0.5" min="0.05" max="5.0" step="0.05">
-            <span class="form-hint">Optical flow magnitude threshold. 0.05 = keep only large motion, 5.0 = keep everything.</span>
+
+          <div class="form-group" id="dfGroupDetection">
+            <label class="collapse-label" data-df-group="detection"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Detection Settings</label>
+            <div class="collapse-body">
+              <div class="form-group">
+                <label for="deadframeFlowThreshold">Flow Sensitivity (Lower = Removes More)</label>
+                <input type="number" id="deadframeFlowThreshold" value="0.5" min="0.05" max="5.0" step="0.05">
+                <span class="form-hint">Optical flow magnitude threshold. 0.05 = keep only large motion, 5.0 = keep everything.</span>
+              </div>
+              <div class="form-group">
+                <label for="deadframeMotionAreaFraction">Min Motion Area</label>
+                <input type="number" id="deadframeMotionAreaFraction" value="0.15" min="0.01" max="0.50" step="0.01">
+                <span class="form-hint">Min fraction of frame area with motion to consider it unique. 0.01 = aggressive, 0.50 = safe.</span>
+              </div>
+              <div class="form-group">
+                <label for="deadframeCadence">Cadence (Min Consecutive Dead Frames)</label>
+                <input type="number" id="deadframeCadence" value="3" min="0" max="10" step="1">
+                <span class="form-hint">Drop only when N+ consecutive frames are dead. Preserves animation holds on 2s/3s.</span>
+              </div>
+              <div class="form-group">
+                <label for="deadframeDetectScale">Detection Resolution Scale</label>
+                <input type="number" id="deadframeDetectScale" value="1.0" min="0.1" max="1.0" step="0.1">
+                <span class="form-hint">Downscale before detection. 0.5 = half resolution (faster), 1.0 = full resolution.</span>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="toggle-row" style="padding:0;margin-bottom:4px;">
+                  <span class="toggle-label" style="flex:1;">Auto-Calibrate Thresholds</span>
+                  <input type="checkbox" class="toggle-input" id="deadframeAuto">
+                  <span class="toggle-switch"></span>
+                </label>
+                <span class="form-hint">Auto-adjust flow + area thresholds from frame-pair stats. Overrides manual values.</span>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="deadframeMotionAreaFraction">Min Motion Area</label>
-            <input type="number" id="deadframeMotionAreaFraction" value="0.15" min="0.01" max="0.50" step="0.01">
-            <span class="form-hint">Min fraction of frame area with motion to consider it unique. 0.01 = aggressive, 0.50 = safe.</span>
+
+          <div class="form-group" id="dfGroupAdvanced">
+            <label class="collapse-label" data-df-group="advanced"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Advanced Preservation</label>
+            <div class="collapse-body">
+              <div class="form-group">
+                <label class="toggle-row" style="padding:0;margin-bottom:4px;">
+                  <span class="toggle-label" style="flex:1;">Keep Dialogue / Mouth Motion</span>
+                  <input type="checkbox" class="toggle-input" id="deadframeKeepTalking">
+                  <span class="toggle-switch"></span>
+                </label>
+                <span class="form-hint">Preserve subtle lip/mouth movement. For romance, talking heads, dialogue scenes.</span>
+              </div>
+              <div class="form-group">
+                <label class="toggle-row" style="padding:0;margin-bottom:4px;">
+                  <span class="toggle-label" style="flex:1;">Keep Camera Movement</span>
+                  <input type="checkbox" class="toggle-input" id="deadframeKeepCamera">
+                  <span class="toggle-switch"></span>
+                </label>
+                <span class="form-hint">Preserve pans, zooms, and handheld shake. Keeps frames with only camera motion.</span>
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label class="toggle-row" style="padding:0;margin-bottom:4px;">
+                  <span class="toggle-label" style="flex:1;">Parallax Mode</span>
+                  <input type="checkbox" class="toggle-input" id="deadframeParallax">
+                  <span class="toggle-switch"></span>
+                </label>
+                <span class="form-hint">Invert camera motion rule for parallax shots (foreground moves differently from background).</span>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="deadframeSmallMovements">Small Movements Threshold (Optional)</label>
+                <input type="number" id="deadframeSmallMovements" value="" min="0" max="5.0" step="0.01" placeholder="Leave empty for auto">
+                <span class="form-hint">Custom flow threshold override. 0 = keep all motion, 0.5 = default. Leave empty for auto-detection.</span>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="deadframeCadence">Cadence (Min Consecutive Dead Frames)</label>
-            <input type="number" id="deadframeCadence" value="3" min="0" max="10" step="1">
-            <span class="form-hint">Drop only when N+ consecutive frames are dead. Preserves animation holds on 2s/3s.</span>
-          </div>
-          <div class="form-group">
-            <label for="deadframeDetectScale">Detection Resolution Scale</label>
-            <input type="number" id="deadframeDetectScale" value="1.0" min="0.1" max="1.0" step="0.1">
-            <span class="form-hint">Downscale before detection. 0.5 = half resolution (faster), 1.0 = full resolution.</span>
-          </div>
-          <div class="form-group">
-            <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-              <span class="toggle-label" style="flex:1;">Auto-Calibrate Thresholds</span>
-              <input type="checkbox" class="toggle-input" id="deadframeAuto">
-              <span class="toggle-switch"></span>
-            </label>
-            <span class="form-hint">Auto-adjust flow + area thresholds from frame-pair stats. Overrides manual values.</span>
-          </div>
-          <div class="form-group">
-            <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-              <span class="toggle-label" style="flex:1;">Keep Dialogue / Mouth Motion</span>
-              <input type="checkbox" class="toggle-input" id="deadframeKeepTalking">
-              <span class="toggle-switch"></span>
-            </label>
-            <span class="form-hint">Preserve subtle lip/mouth movement. For romance, talking heads, dialogue scenes.</span>
-          </div>
-          <div class="form-group" style="margin-bottom: 12px;">
-            <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-              <span class="toggle-label" style="flex:1;">Keep Camera Movement</span>
-              <input type="checkbox" class="toggle-input" id="deadframeKeepCamera">
-              <span class="toggle-switch"></span>
-            </label>
-            <span class="form-hint">Preserve pans, zooms, and handheld shake. Keeps frames with only camera motion.</span>
-          </div>
-          <div class="form-group">
-            <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-              <span class="toggle-label" style="flex:1;">Parallax Mode</span>
-              <input type="checkbox" class="toggle-input" id="deadframeParallax">
-              <span class="toggle-switch"></span>
-            </label>
-            <span class="form-hint">Invert camera motion rule for parallax shots (foreground moves differently from background).</span>
-          </div>
-          <div class="form-group">
-            <label for="deadframeSmallMovements">Small Movements Threshold (Optional)</label>
-            <input type="number" id="deadframeSmallMovements" value="" min="0" max="5.0" step="0.01" placeholder="Leave empty for auto">
-            <span class="form-hint">Custom flow threshold override. 0 = keep all motion, 0.5 = default. Leave empty for auto-detection.</span>
-          </div>
+
           <button id="removeDeadframesBtn" class="btn">
             <i class="fa-solid fa-scissors"></i> Remove Deadframes
           </button>
