@@ -5,7 +5,9 @@
       { id: "quicktools", label: "Quick Tools", icon: "fa-toolbox", html: "tabs/toolkit/quicktools.html" },
       { id: "projecthelper", label: "Project Helper", icon: "fa-folder-tree", html: "tabs/toolkit/projecthelper.html" },
       { id: "colorflow", label: "ColorFlow", icon: "fa-palette", html: "tabs/toolkit/colorflow.html" },
-      { id: "search", label: "Search", icon: "fa-magnifying-glass", html: "tabs/toolkit/search.html" }
+      { id: "search", label: "Search", icon: "fa-magnifying-glass", html: "tabs/toolkit/search.html" },
+      { id: "sysmon", label: "System Monitor", icon: "fa-chart-line", html: "tabs/toolkit/sysmon.html" },
+      { id: "stopwatch", label: "Stopwatch", icon: "fa-stopwatch", html: "tabs/toolkit/stopwatch.html" }
     ],
 
     init: function (app) {
@@ -28,6 +30,12 @@
       }
       if (!anyEnabled) {
         window.StorageManager.setItem("anismooth_toolkit_quicktools", "1");
+      }
+      if (window.StorageManager.getItem("anismooth_toolkit_sysmon", null) === null) {
+        window.StorageManager.setItem("anismooth_toolkit_sysmon", "1");
+      }
+      if (window.StorageManager.getItem("anismooth_toolkit_stopwatch", null) === null) {
+        window.StorageManager.setItem("anismooth_toolkit_stopwatch", "1");
       }
     },
 
@@ -107,20 +115,6 @@
       this._showSubTool(toolId);
     },
 
-    _showSubTool: function (toolId) {
-      var panels = this.subContent.querySelectorAll(".toolkit-subtab");
-      for (var i = 0; i < panels.length; i++) {
-        panels[i].style.display = "none";
-      }
-      var target = document.getElementById("tk-" + toolId);
-      if (target) target.style.display = "";
-
-      if (toolId === "colorflow") this._initColorFlow();
-    },
-
-    refreshFromSettings: function () {
-      if (this.subNav) this._loadToolHTMLs();
-    },
 
     _bindActions: function () {
       var self = this;
@@ -764,8 +758,219 @@
           window.__adobe_cep__.evalScript("MoongetsuToolkit.soloLabelColorLayers(" + idx2 + "," + (!isActive) + ")");
         }
       });
+    },
+
+    _sysmonTimer: null,
+    _sysmonActive: false,
+
+    _startSysmon: function () {
+      if (this._sysmonActive) return;
+      this._sysmonActive = true;
+      this._refreshSysmon();
+      var self = this;
+      if (this._sysmonTimer) clearInterval(this._sysmonTimer);
+      this._sysmonTimer = setInterval(function () {
+        if (self._sysmonActive) self._refreshSysmon();
+      }, 3000);
+    },
+
+    _stopSysmon: function () {
+      this._sysmonActive = false;
+      if (this._sysmonTimer) { clearInterval(this._sysmonTimer); this._sysmonTimer = null; }
+    },
+
+    _refreshSysmon: function () {
+      var el = document.getElementById("tk-sysmon-details");
+      if (!el) return;
+
+      var pythonCmd = this.app.settings.pythonPath || "python";
+      var extPath = "";
+      try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
+
+      var scriptPath = (window.FileSystem.path && extPath)
+        ? window.FileSystem.path.join(extPath, "python", "main.py")
+        : "main.py";
+
+      var self = this;
+      try {
+        var proc = window.FileSystem.childProcess.spawn(pythonCmd, [scriptPath, "--mode", "sys-metrics"]);
+        var stdout = "";
+        proc.stdout.on("data", function (data) { stdout += data.toString(); });
+        proc.on("close", function (code) {
+          if (code === 0) {
+            var lines = stdout.split("\n");
+            for (var i = 0; i < lines.length; i++) {
+              var line = lines[i].trim();
+              if (!line) continue;
+              try {
+                var entry = JSON.parse(line);
+                if (entry.type === "sys_metrics") {
+                  var raw = JSON.parse(entry.msg);
+                  self._renderSysmon(raw);
+                }
+              } catch (_) {}
+            }
+          } else {
+            if (el) el.innerHTML = '<div class="env-row"><i class="fa-solid fa-circle-exclamation"></i> <span>Python exited with code ' + code + '</span></div>';
+          }
+        });
+        proc.on("error", function (err) {
+          if (el) el.innerHTML = '<div class="env-row"><i class="fa-solid fa-circle-exclamation"></i> <span>Failed to fetch: ' + (err.message || "unknown") + '</span></div>';
+        });
+      } catch (e) {
+        if (el) el.innerHTML = '<div class="env-row"><i class="fa-solid fa-circle-exclamation"></i> <span>' + (e.message || "error") + '</span></div>';
+      }
+    },
+
+    _renderSysmon: function (data) {
+      var el = document.getElementById("tk-sysmon-details");
+      if (!el) return;
+
+      var rows = [
+        { label: "CPU Usage", value: data.cpu_percent.toFixed(1) + "%", valPct: data.cpu_percent },
+        { label: "RAM Usage", value: data.ram_used_gb.toFixed(1) + " GB / " + data.ram_total_gb.toFixed(1) + " GB (" + data.ram_percent.toFixed(1) + "%)", valPct: data.ram_percent },
+        { label: "GPU Model", value: data.gpu_name },
+        { label: "GPU Load", value: data.gpu_util.toFixed(1) + "%", valPct: data.gpu_util },
+        { label: "GPU Temp", value: data.gpu_temp.toFixed(1) + " Â°C" },
+        { label: "GPU VRAM", value: (data.gpu_mem_used_mb / 1024).toFixed(1) + " GB / " + (data.gpu_mem_total_mb / 1024).toFixed(1) + " GB (" + data.gpu_mem_percent.toFixed(1) + "%)", valPct: data.gpu_mem_percent }
+      ];
+
+      var html = "";
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        html += '<div class="env-row" style="margin-bottom: 8px; align-items: center; display: flex;">';
+        html += '  <span class="env-label" style="font-weight:600; min-width: 100px;">' + escHtml(r.label) + '</span>';
+        html += '  <span class="env-value" style="margin-left: 12px; flex: 1;">' + escHtml(r.value) + '</span>';
+        if (r.valPct !== undefined) {
+          html += '  <div class="gpu-vram-bar-wrap" style="width: 120px; margin-left: 12px; height: 6px;">';
+          html += '    <div class="gpu-vram-bar" style="height: 6px;">';
+          html += '      <div class="gpu-vram-fill" style="width: ' + r.valPct + '%; height: 6px;"></div>';
+          html += '    </div>';
+          html += '  </div>';
+        }
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    },
+
+    _swElapsed: 0,
+    _swRunning: false,
+    _swStartTs: 0,
+    _swTimer: null,
+
+    _initStopwatch: function () {
+      this._swElapsed = parseFloat(window.StorageManager.getItem("anismooth_stopwatch_elapsed", "0")) || 0;
+      var autoStart = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
+      this._swRender();
+      this._swBindEvents();
+      if (autoStart) this._swStart();
+    },
+
+    _swBindEvents: function () {
+      var self = this;
+      var toggle = document.getElementById("tk-stopwatch-toggle");
+      var reset = document.getElementById("tk-stopwatch-reset");
+      var autostart = document.getElementById("tk-stopwatch-autostart");
+      if (toggle) {
+        toggle._tkSwBound = true;
+        toggle.addEventListener("click", function () { self._swToggle(); });
+      }
+      if (reset) {
+        reset._tkSwBound = true;
+        reset.addEventListener("click", function () { self._swReset(); });
+      }
+      if (autostart && !autostart._tkSwBound) {
+        autostart._tkSwBound = true;
+        autostart.checked = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
+        autostart.addEventListener("change", function () {
+          window.StorageManager.setItem("anismooth_stopwatch_autostart", this.checked ? "1" : "0");
+        });
+      }
+    },
+
+    _swToggle: function () {
+      if (this._swRunning) this._swStop();
+      else this._swStart();
+    },
+
+    _swStart: function () {
+      if (this._swRunning) return;
+      this._swRunning = true;
+      this._swStartTs = Date.now() - this._swElapsed;
+      var self = this;
+      var btn = document.getElementById("tk-stopwatch-toggle");
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+      if (this._swTimer) clearInterval(this._swTimer);
+      this._swTimer = setInterval(function () { self._swTick(); }, 100);
+    },
+
+    _swStop: function () {
+      if (!this._swRunning) return;
+      this._swRunning = false;
+      if (this._swTimer) { clearInterval(this._swTimer); this._swTimer = null; }
+      this._swElapsed = Date.now() - this._swStartTs;
+      this._swSave();
+      var btn = document.getElementById("tk-stopwatch-toggle");
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Start';
+      this._swRender();
+    },
+
+    _swReset: function () {
+      this._swElapsed = 0;
+      if (this._swRunning) this._swStartTs = Date.now();
+      this._swSave();
+      this._swRender();
+    },
+
+    _swTick: function () {
+      if (!this._swRunning) return;
+      this._swElapsed = Date.now() - this._swStartTs;
+      this._swRender();
+    },
+
+    _swRender: function () {
+      var el = document.getElementById("tk-stopwatch-time");
+      if (!el) return;
+      var ms = Math.max(0, this._swElapsed);
+      var h = Math.floor(ms / 3600000);
+      var m = Math.floor((ms % 3600000) / 60000);
+      var s = Math.floor((ms % 60000) / 1000);
+      el.textContent = (h < 10 ? "0" + h : "" + h) + ":" + (m < 10 ? "0" + m : "" + m) + ":" + (s < 10 ? "0" + s : "" + s);
+    },
+
+    _swSave: function () {
+      window.StorageManager.setItem("anismooth_stopwatch_elapsed", String(this._swElapsed));
+    },
+
+    _showSubTool: function (toolId) {
+      var panels = this.subContent.querySelectorAll(".toolkit-subtab");
+      for (var i = 0; i < panels.length; i++) {
+        panels[i].style.display = "none";
+      }
+      var target = document.getElementById("tk-" + toolId);
+      if (target) target.style.display = "";
+
+      if (toolId === "sysmon") this._startSysmon();
+      else this._stopSysmon();
+
+      if (toolId === "colorflow") this._initColorFlow();
+      if (toolId === "stopwatch") this._initStopwatch();
+    },
+
+    refreshFromSettings: function () {
+      this._stopSysmon();
+      if (this._swTimer) { clearInterval(this._swTimer); this._swTimer = null; }
+      this._swRunning = false;
+      if (this.subNav) this._loadToolHTMLs();
     }
   };
 
+  function escHtml(t) {
+    var d = document.createElement("div");
+    d.appendChild(document.createTextNode(t || ""));
+    return d.innerHTML;
+  }
+
   window.ToolkitPanel = ToolkitPanel;
 })();
+

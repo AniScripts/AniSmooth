@@ -1,5 +1,5 @@
 (function () {
-  var TABS = ["deadframes", "interpolation", "upscale", "flowframes", "console", "queue", "stopwatch", "sysmon", "settings"];
+  var TABS = ["deadframes", "interpolation", "upscale", "flowframes", "toolkit", "console", "queue", "settings"];
   var html = {};
   for (var i = 0; i < TABS.length; i++) {
     try {

@@ -87,7 +87,6 @@
       window.FlowframesPanel.init(this);
       window.ConsolePanel.init(this);
       window.QueuePanel.init(this);
-      window.SysmonPanel.init(this);
       window.ToolkitPanel.init(this);
       if (window.StorageManager.getItem("anismooth_tab_toolkit", null) === null) {
         window.StorageManager.setItem("anismooth_tab_toolkit", "0");
@@ -140,12 +139,6 @@
       });
       document.getElementById("queueTabBtn").addEventListener("click", function () {
         self.switchTab("queue");
-      });
-      document.getElementById("stopwatchTabBtn").addEventListener("click", function () {
-        self.switchTab("stopwatch");
-      });
-      document.getElementById("sysmonTabBtn").addEventListener("click", function () {
-        self.switchTab("sysmon");
       });
       document.getElementById("toolkitTabBtn").addEventListener("click", function () {
         self.switchTab("toolkit");
@@ -244,7 +237,7 @@
     },
 
     switchTab: function (tab) {
-      var tabs = ["deadframes", "interpolation", "upscale", "flowframes", "toolkit", "console", "queue", "stopwatch", "sysmon", "settings"];
+      var tabs = ["deadframes", "interpolation", "upscale", "flowframes", "toolkit", "console", "queue", "settings"];
       dbg('info', 'Nav', 'Switched to tab: ' + tab);
 
       for (var i = 0; i < tabs.length; i++) {
@@ -272,12 +265,6 @@
         window.ConsolePanel.renderLogContent();
       } else {
         window.ConsolePanel.active = false;
-      }
-
-      if (tab === "sysmon") {
-        window.SysmonPanel.startPolling();
-      } else {
-        window.SysmonPanel.stopPolling();
       }
 
       
@@ -1024,9 +1011,7 @@
       { id: "flowframes", icon: "fa-wand-magic-sparkles", label: "Flowframes" },
       { id: "toolkit", icon: "fa-toolbox", label: "Toolkit" },
       { id: "console", icon: "fa-terminal", label: "Console" },
-      { id: "queue", icon: "fa-list-check", label: "Queue" },
-      { id: "stopwatch", icon: "fa-stopwatch", label: "Stopwatch" },
-      { id: "sysmon", icon: "fa-chart-line", label: "System Monitor" }
+      { id: "queue", icon: "fa-list-check", label: "Queue" }
     ],
 
     _makeSettingsCollapsible: function () {
@@ -1129,7 +1114,9 @@
         { id: "quicktools", label: "Quick Tools", desc: "Align, rotate, flip, effects, expressions, timeline" },
         { id: "projecthelper", label: "Project Helper", desc: "Rename layers, organize project, scan dependencies" },
         { id: "colorflow", label: "ColorFlow", desc: "Color picker, harmonies, AE label manager" },
-        { id: "search", label: "Frame Search", desc: "Find anime source from screenshot (trace.moe/SauceNAO)" }
+        { id: "search", label: "Frame Search", desc: "Find anime source from screenshot (trace.moe/SauceNAO)" },
+        { id: "sysmon", label: "System Monitor", desc: "Live CPU, RAM, GPU telemetry via Python" },
+        { id: "stopwatch", label: "Stopwatch", desc: "Simple session timer with auto-start option" }
       ];
 
       var html = "";
@@ -2508,100 +2495,9 @@
     }
   };
 
-  var Stopwatch = {
-    elapsed: 0,
-    running: false,
-    _startTs: 0,
-    _timer: null,
-
-    init: function () {
-      this.elapsed = parseFloat(window.StorageManager.getItem("anismooth_stopwatch_elapsed", "0")) || 0;
-      var autoStart = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
-      this.render();
-      if (autoStart) this.start();
-      this.bindEvents();
-    },
-
-    bindEvents: function () {
-      var self = this;
-      var toggle = document.getElementById("stopwatchToggle");
-      var reset = document.getElementById("stopwatchReset");
-      var autostart = document.getElementById("stopwatchAutostart");
-      if (toggle) toggle.addEventListener("click", function () { self.toggle(); });
-      if (reset) reset.addEventListener("click", function () { self.reset(); });
-      if (autostart) {
-        autostart.checked = window.StorageManager.getItem("anismooth_stopwatch_autostart", "0") === "1";
-        autostart.addEventListener("change", function () {
-          window.StorageManager.setItem("anismooth_stopwatch_autostart", this.checked ? "1" : "0");
-        });
-      }
-    },
-
-    toggle: function () {
-      if (this.running) this.stop();
-      else this.start();
-    },
-
-    start: function () {
-      if (this.running) return;
-      this.running = true;
-      this._startTs = Date.now() - this.elapsed;
-      var self = this;
-      var view = document.getElementById("stopwatchView");
-      var btn = document.getElementById("stopwatchToggle");
-      if (view) view.classList.add("stopwatch-view", "running");
-      if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
-      this._timer = setInterval(function () { self.tick(); }, 100);
-    },
-
-    stop: function () {
-      if (!this.running) return;
-      this.running = false;
-      if (this._timer) { clearInterval(this._timer); this._timer = null; }
-      this.elapsed = Date.now() - this._startTs;
-      this.save();
-      var view = document.getElementById("stopwatchView");
-      var btn = document.getElementById("stopwatchToggle");
-      if (view) view.classList.remove("running");
-      if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Start';
-      this.render();
-    },
-
-    reset: function () {
-      this.elapsed = 0;
-      if (this.running) this._startTs = Date.now();
-      this.save();
-      this.render();
-    },
-
-    tick: function () {
-      if (!this.running) return;
-      this.elapsed = Date.now() - this._startTs;
-      this.render();
-    },
-
-    render: function () {
-      var el = document.getElementById("stopwatchTime");
-      if (!el) return;
-      var ms = Math.max(0, this.elapsed);
-      var h = Math.floor(ms / 3600000);
-      var m = Math.floor((ms % 3600000) / 60000);
-      var s = Math.floor((ms % 60000) / 1000);
-      el.textContent = pad2(h) + ":" + pad2(m) + ":" + pad2(s);
-    },
-
-    save: function () {
-      window.StorageManager.setItem("anismooth_stopwatch_elapsed", String(this.elapsed));
-    }
-  };
-
-  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
-
-  window.Stopwatch = Stopwatch;
 
   window.addEventListener("DOMContentLoaded", function () {
     App.init();
     window.App = App;
-    if (window.Stopwatch) window.Stopwatch.init();
   });
 })();
