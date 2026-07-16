@@ -55,10 +55,11 @@
       }
 
       var exeDir = path.dirname(exe);
+      var gpuId = window.StorageManager.getItem("anismooth_ncnn_gpu_id", "0") || "0";
       var args = [
         "-i", inputPath,
         "-o", outputPath,
-        "-g", "0",
+        "-g", gpuId,
         "-m", options.model || "rife-v4.26",
         "-j", String(options.threadCount || "4:4:4")
       ];
@@ -90,6 +91,8 @@
 
       var lastProgress = -1;
       var finished = false;
+      var gotProgress = false;
+      var stderrLines = [];
 
       var finalize = function (ok, message) {
         if (finished) return;
@@ -122,8 +125,10 @@
           var pct = _parseProgress(line);
           if (pct >= 0 && pct !== lastProgress) {
             lastProgress = pct;
+            gotProgress = true;
             if (callbacks.onProgress) callbacks.onProgress(pct);
           }
+          stderrLines.push(line);
           if (/error|cannot|failed/i.test(line)) {
             dbg("warn", "NCNN", line);
             if (/could not open|cannot read|no such file/i.test(line)) {
@@ -139,6 +144,15 @@
           setTimeout(function () {
             finalize(true);
           }, 500);
+        } else if (!gotProgress && code !== 0) {
+          var joined = stderrLines.join(" ").toLowerCase();
+          if (/vulkan-1\.dll|vulkan/i.test(joined)) {
+            finalize(false, "Vulkan runtime not found. Update your GPU drivers from AMD/NVIDIA website.");
+          } else if (/vcruntime|msvcp|visual c\+\+|\.dll was not found/i.test(joined)) {
+            finalize(false, "Microsoft Visual C++ Redistributable missing. Download from https://aka.ms/vs/17/release/vc_redist.x64.exe");
+          } else {
+            finalize(false, "NCNN process exited immediately (code " + code + "). Update GPU drivers and install VC++ Redistributable.");
+          }
         } else {
           finalize(false, "NCNN process exited with code " + code);
         }
