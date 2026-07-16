@@ -29,12 +29,12 @@
                 <i class="fa-solid fa-chevron-down select-arrow"></i>
               </div>
               <div class="select-options">
-                <div class="select-option active" data-value="RifeNcnn" data-label="RIFE (NCNN)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-microchip"></i> <b>RIFE (NCNN)</b><br><small>Vulkan/NCNN Implementation of RIFE</small></div>
-                <div class="select-option" data-value="RifeCuda" data-label="RIFE (CUDA)" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>RIFE (CUDA)</b><br><small>CUDA/PyTorch Implementation of RIFE - NVIDIA Only</small></div>
-                <div class="select-option" data-value="FlavrCuda" data-label="FLAVR" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>FLAVR</b><br><small>Experimental PyTorch Implementation of FLAVR - NVIDIA Only</small></div>
-                <div class="select-option" data-value="DainNcnn" data-label="DAIN (NCNN)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-microchip"></i> <b>DAIN (NCNN)</b><br><small>Vulkan/NCNN Implementation of DAIN</small></div>
-                <div class="select-option" data-value="XvfiCuda" data-label="XVFI" data-ff-version="1.36.0"><i class="fa-solid fa-microchip"></i> <b>XVFI</b><br><small>CUDA/PyTorch Implementation of XVFI - NVIDIA Only</small></div>
-                <div class="select-option" data-value="RifeNcnnVs" data-label="RIFE (NCNN/VS)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-microchip"></i> <b>RIFE (NCNN/VS)</b><br><small>Vulkan/NCNN/VapourSynth Implementation of RIFE</small></div>
+                <div class="select-option active" data-value="RifeNcnn" data-label="RIFE (NCNN)" data-ff-version="1.36.0 1.42.0" data-backend="vulkan"><i class="fa-solid fa-microchip"></i> <b>RIFE (NCNN)</b><br><small>Vulkan/NCNN Implementation of RIFE</small></div>
+                <div class="select-option" data-value="RifeCuda" data-label="RIFE (CUDA)" data-ff-version="1.36.0" data-backend="cuda"><i class="fa-solid fa-microchip"></i> <b>RIFE (CUDA)</b><br><small>CUDA/PyTorch Implementation of RIFE - NVIDIA Only</small></div>
+                <div class="select-option" data-value="FlavrCuda" data-label="FLAVR" data-ff-version="1.36.0" data-backend="cuda"><i class="fa-solid fa-microchip"></i> <b>FLAVR</b><br><small>Experimental PyTorch Implementation of FLAVR - NVIDIA Only</small></div>
+                <div class="select-option" data-value="DainNcnn" data-label="DAIN (NCNN)" data-ff-version="1.36.0 1.42.0" data-backend="vulkan"><i class="fa-solid fa-microchip"></i> <b>DAIN (NCNN)</b><br><small>Vulkan/NCNN Implementation of DAIN</small></div>
+                <div class="select-option" data-value="XvfiCuda" data-label="XVFI" data-ff-version="1.36.0" data-backend="cuda"><i class="fa-solid fa-microchip"></i> <b>XVFI</b><br><small>CUDA/PyTorch Implementation of XVFI - NVIDIA Only</small></div>
+                <div class="select-option" data-value="RifeNcnnVs" data-label="RIFE (NCNN/VS)" data-ff-version="1.36.0 1.42.0" data-backend="vulkan"><i class="fa-solid fa-microchip"></i> <b>RIFE (NCNN/VS)</b><br><small>Vulkan/NCNN/VapourSynth Implementation of RIFE</small></div>
               </div>
             </div>
             </div>
@@ -122,11 +122,11 @@
                 <div class="select-option active" data-value="X264" data-label="h264 (x264)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>h264</b><br><small>x264 - software encoder</small></div>
                 <div class="select-option" data-value="X265" data-label="h265 (x265)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>h265</b><br><small>x265 - software encoder</small></div>
                 <div class="select-option" data-value="SvtAv1" data-label="AV1 (SVT)" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-film"></i> <b>AV1</b><br><small>SVT-AV1 - software encoder</small></div>
-                <div class="select-option" data-value="Nvenc264" data-label="h264 NVENC" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>h264 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
-                <div class="select-option" data-value="Nvenc265" data-label="h265 NVENC" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>h265 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
-                <div class="select-option" data-value="NvencAv1" data-label="AV1 NVENC" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>AV1 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
-                <div class="select-option" data-value="Amf264" data-label="h264 AMF" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>h264 AMF</b><br><small>AMD hardware encoder</small></div>
-                <div class="select-option" data-value="Amf265" data-label="h265 AMF" data-ff-version="1.36.0 1.42.0"><i class="fa-solid fa-bolt"></i> <b>h265 AMF</b><br><small>AMD hardware encoder</small></div>
+                <div class="select-option" data-value="Nvenc264" data-label="h264 NVENC" data-ff-version="1.36.0 1.42.0" data-backend="cuda"><i class="fa-solid fa-bolt"></i> <b>h264 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
+                <div class="select-option" data-value="Nvenc265" data-label="h265 NVENC" data-ff-version="1.36.0 1.42.0" data-backend="cuda"><i class="fa-solid fa-bolt"></i> <b>h265 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
+                <div class="select-option" data-value="NvencAv1" data-label="AV1 NVENC" data-ff-version="1.36.0 1.42.0" data-backend="cuda"><i class="fa-solid fa-bolt"></i> <b>AV1 NVENC</b><br><small>NVIDIA hardware encoder</small></div>
+                <div class="select-option" data-value="Amf264" data-label="h264 AMF" data-ff-version="1.36.0 1.42.0" data-backend="vulkan"><i class="fa-solid fa-bolt"></i> <b>h264 AMF</b><br><small>AMD hardware encoder</small></div>
+                <div class="select-option" data-value="Amf265" data-label="h265 AMF" data-ff-version="1.36.0 1.42.0" data-backend="vulkan"><i class="fa-solid fa-bolt"></i> <b>h265 AMF</b><br><small>AMD hardware encoder</small></div>
                 <div class="select-option" data-value="VpxVp9" data-label="VP9" data-ff-version="1.36.0"><i class="fa-solid fa-film"></i> <b>VP9</b><br><small>Google VP9 codec</small></div>
                 <div class="select-option" data-value="Qsv264" data-label="h264 QSV" data-ff-version="1.36.0"><i class="fa-solid fa-bolt"></i> <b>h264 QSV</b><br><small>Intel Quick Sync</small></div>
                 <div class="select-option" data-value="Qsv265" data-label="h265 QSV" data-ff-version="1.36.0"><i class="fa-solid fa-bolt"></i> <b>h265 QSV</b><br><small>Intel Quick Sync</small></div>

@@ -1141,14 +1141,14 @@
       var self = this;
 
       var interpModels = [
-        { value: "rife4.25-heavy", label: "RIFE 4.25 HEAVY Cuda", icon: "fa-microchip" },
-        { value: "rife4.25", label: "RIFE 4.25 Cuda", icon: "fa-microchip" },
-        { value: "rife4.25-heavy-tensorrt", label: "RIFE 4.25 HEAVY TensorRT", icon: "fa-bolt" },
-        { value: "rife4.25-tensorrt", label: "RIFE 4.25 TensorRT", icon: "fa-bolt" }
+        { value: "rife4.25-heavy", label: "RIFE 4.25 HEAVY", icon: "fa-microchip", backend: "cuda" },
+        { value: "rife4.25", label: "RIFE 4.25", icon: "fa-microchip", backend: "cuda" },
+        { value: "rife4.25-heavy-tensorrt", label: "RIFE 4.25 HEAVY TensorRT", icon: "fa-bolt", backend: "cuda" },
+        { value: "rife4.25-tensorrt", label: "RIFE 4.25 TensorRT", icon: "fa-bolt", backend: "cuda" }
       ];
       var upscaleModels = [
-        { value: "adore", label: "Adore Cuda", icon: "fa-microchip" },
-        { value: "fallin_soft", label: "Fallin Soft Cuda", icon: "fa-microchip" }
+        { value: "adore", label: "Adore", icon: "fa-microchip", backend: "cuda" },
+        { value: "fallin_soft", label: "Fallin Soft", icon: "fa-microchip", backend: "cuda" }
       ];
 
       if (interpEl) interpEl.innerHTML = this._buildToggleGroup(interpModels, "anismooth_model_interp_");
@@ -1161,12 +1161,12 @@
       var ffPixFmtEl = document.getElementById("ffPixFmtToggles");
 
       var ffAi = [
-        { value: "RifeNcnn", label: "RIFE (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0" },
-        { value: "RifeCuda", label: "RIFE (CUDA)", icon: "fa-microchip", ver: "1.36.0" },
-        { value: "FlavrCuda", label: "FLAVR", icon: "fa-microchip", ver: "1.36.0" },
-        { value: "DainNcnn", label: "DAIN (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0" },
-        { value: "XvfiCuda", label: "XVFI", icon: "fa-microchip", ver: "1.36.0" },
-        { value: "RifeNcnnVs", label: "RIFE (NCNN/VS)", icon: "fa-microchip", ver: "1.36.0 1.42.0" }
+        { value: "RifeNcnn", label: "RIFE (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0", backend: "vulkan" },
+        { value: "RifeCuda", label: "RIFE (CUDA)", icon: "fa-microchip", ver: "1.36.0", backend: "cuda" },
+        { value: "FlavrCuda", label: "FLAVR", icon: "fa-microchip", ver: "1.36.0", backend: "cuda" },
+        { value: "DainNcnn", label: "DAIN (NCNN)", icon: "fa-microchip", ver: "1.36.0 1.42.0", backend: "vulkan" },
+        { value: "XvfiCuda", label: "XVFI", icon: "fa-microchip", ver: "1.36.0", backend: "cuda" },
+        { value: "RifeNcnnVs", label: "RIFE (NCNN/VS)", icon: "fa-microchip", ver: "1.36.0 1.42.0", backend: "vulkan" }
       ];
       var ffModels = [
         { value: "RIFE 4.0", label: "RIFE 4.0", icon: "fa-cube", ver: "1.36.0" },
@@ -1204,11 +1204,11 @@
         { value: "X264", label: "h264 (x264)", icon: "fa-film", ver: "1.36.0 1.42.0" },
         { value: "X265", label: "h265 (x265)", icon: "fa-film", ver: "1.36.0 1.42.0" },
         { value: "SvtAv1", label: "AV1 (SVT)", icon: "fa-film", ver: "1.36.0 1.42.0" },
-        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
-        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
-        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
-        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
-        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0" },
+        { value: "Nvenc264", label: "h264 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
+        { value: "Nvenc265", label: "h265 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
+        { value: "NvencAv1", label: "AV1 NVENC", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "cuda" },
+        { value: "Amf264", label: "h264 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "vulkan" },
+        { value: "Amf265", label: "h265 AMF", icon: "fa-bolt", ver: "1.36.0 1.42.0", backend: "vulkan" },
         { value: "VpxVp9", label: "VP9", icon: "fa-film", ver: "1.36.0" },
         { value: "Qsv264", label: "h264 QSV", icon: "fa-bolt", ver: "1.36.0" },
         { value: "Qsv265", label: "h265 QSV", icon: "fa-bolt", ver: "1.36.0" },
@@ -1248,6 +1248,26 @@
           }
         });
       }
+
+      this._applyBackendFilter();
+    },
+
+    _applyBackendFilter: function () {
+      var vendor = this._gpuVendor || "unknown";
+      var allToggles = document.querySelectorAll(".toggle-row[data-backend]");
+      for (var i = 0; i < allToggles.length; i++) {
+        var row = allToggles[i];
+        var backend = row.getAttribute("data-backend");
+        var checkbox = row.querySelector(".model-vis-toggle");
+        if (backend === "cuda" && vendor !== "nvidia") {
+          row.classList.add("toggle-disabled");
+          if (checkbox) { checkbox.disabled = true; checkbox.checked = false; }
+        } else if (backend === "vulkan" && vendor === "nvidia") {
+          row.classList.remove("toggle-disabled");
+        } else if (backend === "vulkan") {
+          row.classList.remove("toggle-disabled");
+        }
+      }
     },
 
     _buildToggleGroup: function (models, prefix) {
@@ -1257,8 +1277,9 @@
         var key = prefix + m.value;
         var visible = window.StorageManager.getItem(key, "1") !== "0";
         var verAttr = m.ver ? ' data-ff-version-label="' + escTxt(m.ver) + '"' : '';
+        var backendAttr = m.backend ? ' data-backend="' + escTxt(m.backend) + '"' : '';
         html +=
-          '<label class="toggle-row" style="padding:0;margin-bottom:3px;"' + verAttr + '>' +
+          '<label class="toggle-row" style="padding:0;margin-bottom:3px;"' + verAttr + backendAttr + '>' +
             '<i class="fa-solid ' + m.icon + ' toggle-icon"></i>' +
             '<span class="toggle-label">' + escTxt(m.label) + '</span>' +
             '<input type="checkbox" class="toggle-input model-vis-toggle" data-value="' + escTxt(m.value) + '" data-prefix="' + escTxt(prefix) + '"' + (visible ? " checked" : "") + '>' +
@@ -1290,17 +1311,19 @@
         var anyVisible = false;
         var firstVisible = null;
         var activeFound = false;
+        var vendor = self._gpuVendor || "unknown";
 
-        
         for (var i = 0; i < children.length; i++) {
           var child = children[i];
           if (child.classList.contains("select-sep")) continue;
           var val = child.getAttribute("data-value");
           if (!val) continue;
           var optVer = child.getAttribute('data-ff-version') || '';
+          var optBackend = child.getAttribute('data-backend') || '';
           var versionMatch = version === "both" || !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
           var toggled = window.StorageManager.getItem(prefix + val, "1") !== "0";
-          var visible = versionMatch && toggled;
+          var vendorMatch = !optBackend || optBackend !== "cuda" || vendor === "nvidia";
+          var visible = versionMatch && toggled && vendorMatch;
           child._visible = visible;
           if (visible) {
             if (!firstVisible) firstVisible = child;

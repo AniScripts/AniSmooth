@@ -17,6 +17,7 @@
       this.initVersionToggle();
       this.applyVersion();
       this.applyAiFilter();
+      this.applyVendorFilter();
       this.checkAvailability();
       this.renderFactorInfo();
     },
@@ -165,6 +166,30 @@
           afterSep = true;
         }
       }
+    },
+
+    applyVendorFilter: function () {
+      var vendor = (window.App && window.App._gpuVendor) || "unknown";
+      var selects = ['flowframesAi', 'flowframesEncoder'];
+      for (var s = 0; s < selects.length; s++) {
+        var el = document.getElementById(selects[s]);
+        if (!el) continue;
+        var options = el.querySelectorAll('.select-option');
+        var firstVisible = null;
+        var currentVal = el.value;
+        var currentVisible = false;
+        for (var j = 0; j < options.length; j++) {
+          var optBackend = options[j].getAttribute('data-backend') || '';
+          var optVal = options[j].getAttribute('data-value') || '';
+          var hide = false;
+          if (optBackend === 'cuda' && vendor !== 'nvidia') hide = true;
+          options[j].style.display = hide ? 'none' : '';
+          if (!hide && !firstVisible) firstVisible = options[j];
+          if (!hide && optVal === currentVal) currentVisible = true;
+        }
+        if (!currentVisible && firstVisible) el.value = firstVisible.getAttribute('data-value');
+      }
+      this.applyAiFilter();
     },
 
     checkAvailability: function () {
