@@ -367,6 +367,13 @@ def run_gpu_info():
     from utils import get_gpu_info, check_tensorrt
 
     info = get_gpu_info()
+    info["gpu_vendor"] = info.get("gpu_vendor", "unknown")
+    info["device_type"] = info.get("device_type", "cpu")
+    info["dml_available"] = info.get("dml_available", False)
+    info["amd_gpu_detected"] = info.get("amd_gpu_detected", False)
+    info["amd_name"] = info.get("amd_name")
+    info["amd_driver"] = info.get("amd_driver")
+    info["amd_vram_mb"] = info.get("amd_vram_mb", 0)
     info["tensorrt_available"] = check_tensorrt()
     info["torch_version"] = torch.__version__
     info["python_version"] = sys.version
@@ -496,11 +503,11 @@ def run_sys_metrics():
                 log("warn", "RAM metrics polling failed", trace=traceback.format_exc())
 
     
+    smi_path = None
     try:
         import shutil
         smi_path = shutil.which("nvidia-smi")
         if not smi_path:
-            
             common_paths = [
                 r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
                 r"C:\Program Files (x86)\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
@@ -528,6 +535,23 @@ def run_sys_metrics():
                     metrics["gpu_mem_total_mb"] = float(parts[5].strip())
     except Exception:
         log("warn", "GPU metrics polling failed", trace=traceback.format_exc())
+
+    if not smi_path:
+        try:
+            ps_cmd = (
+                'powershell -NoProfile -Command "'
+                '$gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1;'
+                'Write-Output ($gpu.Name + ''|'' + $gpu.AdapterRAM)"'
+            )
+            result = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=10, shell=True)
+            if result.returncode == 0 and result.stdout.strip():
+                parts = result.stdout.strip().split("|")
+                if len(parts) >= 1:
+                    metrics["gpu_name"] = parts[0].strip()
+                if len(parts) >= 2 and parts[1].isdigit():
+                    metrics["gpu_mem_total_mb"] = float(parts[1].strip()) / (1024 * 1024)
+        except Exception:
+            pass
 
     log("sys_metrics", json.dumps(metrics))
 
