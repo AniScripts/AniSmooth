@@ -74,8 +74,28 @@
       case 'complete': html += renderCompleteStep(); break;
     }
     gate.innerHTML = html;
+    if (_step === 'gpuchoice') _bindGpuChoiceClicks();
     if (_step === 'autoinstall' && !_installRunning) {
       setTimeout(function () { startAutoInstall(); }, 400);
+    }
+  }
+
+  function _bindGpuChoiceClicks() {
+    var gate = document.getElementById('tools-setup-gate');
+    if (!gate) return;
+    var cards = gate.querySelectorAll('.ts-gpu-option');
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      if (card._bound) continue;
+      card._bound = true;
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', function () {
+        var onclick = this.getAttribute('onclick');
+        if (onclick) {
+          var fn = new Function(onclick);
+          fn();
+        }
+      });
     }
   }
 
