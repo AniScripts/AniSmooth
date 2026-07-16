@@ -330,7 +330,7 @@
       var self = this;
       var autoSaveInputs = [
         "interpolationModel", "upscaleModel", "upscaleScale",
-        "deadframeThreshold", "pythonPathInput", "interpolationFactor",
+        "deadframeFlowThreshold", "deadframeMotionAreaFraction", "deadframeCadence", "deadframeDetectScale", "pythonPathInput", "interpolationFactor",
         "flowframesAi", "flowframesModel", "flowframesFormat", "flowframesEncoder", "flowframesPixFmt", "flowframesFactor"
       ];
       for (var ai = 0; ai < autoSaveInputs.length; ai++) {
@@ -1550,7 +1550,13 @@
       var modelInt = document.getElementById("interpolationModel");
       var modelUps = document.getElementById("upscaleModel");
       var scaleUps = document.getElementById("upscaleScale");
-      var dedupThreshold = document.getElementById("deadframeThreshold");
+      var dedupFlowThreshold = document.getElementById("deadframeFlowThreshold");
+      var dedupMotionArea = document.getElementById("deadframeMotionAreaFraction");
+      var dedupCadence = document.getElementById("deadframeCadence");
+      var dedupDetectScale = document.getElementById("deadframeDetectScale");
+      var dedupAuto = document.getElementById("deadframeAuto");
+      var dedupKeepTalking = document.getElementById("deadframeKeepTalking");
+      var dedupKeepCamera = document.getElementById("deadframeKeepCamera");
       var factorBtns = document.getElementById("interpolationFactor");
       var factorCustom = document.getElementById("interpFactorCustom");
       var factor = 2;
@@ -1590,7 +1596,13 @@
           scale: parseInt(scaleUps ? scaleUps.value : "2", 10)
         },
         deadframes: {
-          threshold: dedupThreshold ? parseFloat(dedupThreshold.value) : 0.05
+          flowThreshold: dedupFlowThreshold ? parseFloat(dedupFlowThreshold.value) : 0.5,
+          motionAreaFraction: dedupMotionArea ? parseFloat(dedupMotionArea.value) : 0.15,
+          cadence: dedupCadence ? parseInt(dedupCadence.value, 10) : 3,
+          detectScale: dedupDetectScale ? parseFloat(dedupDetectScale.value) : 1.0,
+          auto: dedupAuto ? !!dedupAuto.checked : false,
+          keepTalking: dedupKeepTalking ? !!dedupKeepTalking.checked : false,
+          keepCamera: dedupKeepCamera ? !!dedupKeepCamera.checked : false
         },
         output: {
           prefix: this.settings.outputPrefix,
@@ -1660,8 +1672,20 @@
         if (window.UpscalePanel) window.UpscalePanel._renderSafe("modelInfo");
       }
       if (state.deadframes) {
-        var dt = document.getElementById("deadframeThreshold");
-        if (dt) dt.value = state.deadframes.threshold || 0.05;
+        var dft = document.getElementById("deadframeFlowThreshold");
+        if (dft) dft.value = state.deadframes.flowThreshold !== undefined ? state.deadframes.flowThreshold : 0.5;
+        var dma = document.getElementById("deadframeMotionAreaFraction");
+        if (dma) dma.value = state.deadframes.motionAreaFraction !== undefined ? state.deadframes.motionAreaFraction : 0.15;
+        var dc = document.getElementById("deadframeCadence");
+        if (dc) dc.value = state.deadframes.cadence !== undefined ? state.deadframes.cadence : 3;
+        var dds = document.getElementById("deadframeDetectScale");
+        if (dds) dds.value = state.deadframes.detectScale !== undefined ? state.deadframes.detectScale : 1.0;
+        var da = document.getElementById("deadframeAuto");
+        if (da) da.checked = !!state.deadframes.auto;
+        var dkt = document.getElementById("deadframeKeepTalking");
+        if (dkt) dkt.checked = !!state.deadframes.keepTalking;
+        var dkc = document.getElementById("deadframeKeepCamera");
+        if (dkc) dkc.checked = !!state.deadframes.keepCamera;
       }
       if (state.output) {
         this.settings.outputPrefix = state.output.prefix || "AniSmooth";
