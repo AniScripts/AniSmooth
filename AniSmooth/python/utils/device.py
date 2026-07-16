@@ -13,50 +13,23 @@ def log(msg_type, msg, **kw):
 def get_device():
     if torch.cuda.is_available():
         return torch.device("cuda")
-    try:
-        import torch_directml
-        return torch_directml.device()
-    except ImportError:
-        pass
     return torch.device("cpu")
 
 def get_device_type():
     if torch.cuda.is_available():
         return "cuda"
-    try:
-        import torch_directml
-        return "dml"
-    except ImportError:
-        pass
     return "cpu"
 
 def get_gpu_vendor():
-    dev_type = get_device_type()
-    if dev_type == "cuda":
-        return "nvidia"
-    if dev_type == "dml":
-        return _detect_dml_vendor()
     if _find_nvidia_smi() is not None:
         return "nvidia"
-    amd = _run_amd_gpu_query()
-    if amd is not None:
+    if _run_amd_gpu_query() is not None:
         return "amd"
-    return _detect_gpu_vendor_wmi()
-
-def _detect_dml_vendor():
-    try:
-        import torch_directml
-        dev = torch_directml.device()
-        name = str(dev)
-        name_lower = name.lower()
-        if "nvidia" in name_lower or "geforce" in name_lower or "rtx" in name_lower or "gtx" in name_lower or "quadro" in name_lower:
-            return "nvidia"
-        if "amd" in name_lower or "radeon" in name_lower or "rx" in name_lower:
-            return "amd"
-        if "intel" in name_lower or "arc" in name_lower or "uhd" in name_lower or "iris" in name_lower:
-            return "intel"
-    except Exception:
-        pass
+    vendor = _detect_gpu_vendor_wmi()
+    if vendor != "unknown":
+        return vendor
+    if torch.cuda.is_available():
+        return "nvidia"
     return "unknown"
 
 def _detect_gpu_vendor_wmi():
@@ -185,12 +158,6 @@ def get_gpu_info():
     amd = _run_amd_gpu_query() if not nvidia else None
     torch_cuda = torch.cuda.is_available()
     torch_has_cuda_build = _pytorch_has_cuda()
-    dml_available = False
-    try:
-        import torch_directml
-        dml_available = True
-    except ImportError:
-        pass
 
     vendor = get_gpu_vendor()
     dev_type = get_device_type()
@@ -207,16 +174,6 @@ def get_gpu_info():
             gpu_mem_free = free_bytes // (1024 * 1024)
         except Exception:
             pass
-    elif dml_available:
-        try:
-            import torch_directml
-            dev = torch_directml.device()
-            gpu_name = str(dev)
-        except Exception:
-            pass
-        if amd:
-            gpu_name = amd["name"]
-            gpu_mem_total = amd["memory_total_mb"]
     elif nvidia:
         gpu_name = nvidia["name"]
         gpu_mem_total = nvidia["memory_total_mb"]
@@ -228,14 +185,14 @@ def get_gpu_info():
         "gpu_vendor": vendor,
         "device_type": dev_type,
         "cuda_available": torch_cuda,
-        "dml_available": dml_available,
+        "dml_available": False,
         "device": dev_type,
         "gpu_name": gpu_name,
         "gpu_memory_total_mb": gpu_mem_total,
         "gpu_memory_free_mb": gpu_mem_free,
         "cuda_version": torch.version.cuda if torch_cuda else None,
         "gpu_count": torch.cuda.device_count() if torch_cuda else (1 if (nvidia or amd) else 0),
-        "pytorch_variant": "cuda" if torch_has_cuda_build else ("dml" if dml_available else "cpu"),
+        "pytorch_variant": "cuda" if torch_has_cuda_build else "cpu",
         "nvidia_gpu_detected": vendor == "nvidia",
         "amd_gpu_detected": vendor == "amd",
         "nvidia_name": nvidia["name"] if nvidia else None,
@@ -272,7 +229,6 @@ def print_gpu_info():
     log("info", "Device type: " + str(info["device_type"]))
     log("info", "PyTorch variant: " + info["pytorch_variant"])
     log("info", "CUDA available to PyTorch: " + str(info["cuda_available"]))
-    log("info", "DirectML available: " + str(info["dml_available"]))
 
     if info["cuda_available"]:
         log("info", "NVIDIA GPU: " + str(info["gpu_name"]))
@@ -281,7 +237,6 @@ def print_gpu_info():
         log("info", "TensorRT: " + str(check_tensorrt()))
     elif info["amd_gpu_detected"]:
         log("info", "AMD GPU: " + str(info["gpu_name"]))
-        log("info", "DirectML: " + ("available" if info["dml_available"] else "not installed"))
         log("info", "VRAM: " + str(info["amd_vram_mb"]) + " MB")
     else:
         log("warn", "No supported GPU detected. Models run on CPU (slow).")
