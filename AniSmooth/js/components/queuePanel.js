@@ -95,7 +95,7 @@
 
         var taskIcon = item.mode === "upscale" ? "fa-maximize" : (item.mode === "dedupe" ? "fa-scissors" : (item.mode === "flowframes" ? "fa-wand-magic-sparkles" : "fa-forward"));
         var taskLabel = item.mode === "upscale" ? "Upscale" : (item.mode === "dedupe" ? "Dedupe" : (item.mode === "flowframes" ? "Flowframes" : "Interpolation"));
-        var scaleLabel = item.mode === "upscale" ? (item.scale + "×") : (item.mode === "dedupe" ? ("t=" + (item.threshold || 0.05)) : (item.factor + "×"));
+        var scaleLabel = item.mode === "upscale" ? (item.scale + "×") : (item.mode === "dedupe" ? ("c" + (item.options && item.options.cadence ? item.options.cadence : 3)) : (item.factor + "×"));
 
         var progressHtml = "";
         if (item.status === "processing" && typeof item.progress === "number") {

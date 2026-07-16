@@ -300,7 +300,7 @@
     },
 
     
-    dedupeClip: function (inputPath, outputPath, threshold, options, callbacks) {
+    dedupeClip: function (inputPath, outputPath, options, callbacks) {
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
 
       var extPath = "";
@@ -311,27 +311,29 @@
 
       var scriptPath = (window.FileSystem.path && extPath) ? window.FileSystem.path.join(extPath, 'python', 'main.py') : 'main.py';
 
+      var opts = options || {};
       var args = [
         scriptPath,
         "--mode", "dedupe",
         "--input", inputPath,
         "--output", outputPath,
-        "--threshold", String(threshold)
+        "--flow-threshold", String(opts.flowThreshold !== undefined ? opts.flowThreshold : 0.5),
+        "--motion-area-fraction", String(opts.motionAreaFraction !== undefined ? opts.motionAreaFraction : 0.15),
+        "--cadence", String(opts.cadence !== undefined ? opts.cadence : 3),
+        "--detect-scale", String(opts.detectScale !== undefined ? opts.detectScale : 1.0)
       ];
 
-      if (options) {
-        if (options.regionSensitivity !== undefined) {
-          args.push("--region-sensitivity", String(options.regionSensitivity));
-        }
-        if (options.useOpticalFlow === false) {
-          args.push("--no-optical-flow");
-        }
-        if (options.cameraCompensation === false) {
-          args.push("--no-camera-comp");
-        }
-        if (options.removeStaticSubject === false) {
-          args.push("--no-static-subject");
-        }
+      if (opts.auto) {
+        args.push("--auto");
+      }
+      if (opts.keepTalking) {
+        args.push("--keep-talking");
+      }
+      if (opts.keepCamera) {
+        args.push("--keep-camera");
+      }
+      if (opts.smallMovements !== undefined && opts.smallMovements !== null) {
+        args.push("--small-movements", String(opts.smallMovements));
       }
 
       this.executeModel(pythonCmd, args, callbacks);
