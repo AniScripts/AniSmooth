@@ -2,12 +2,12 @@
   var ToolkitPanel = {
     _subtabs: {},
     _tools: [
-      { id: "quicktools", label: "Quick Tools", icon: "fa-toolbox", html: "tabs/toolkit/quicktools.html" },
-      { id: "projecthelper", label: "Project Helper", icon: "fa-folder-tree", html: "tabs/toolkit/projecthelper.html" },
-      { id: "colorflow", label: "ColorFlow", icon: "fa-palette", html: "tabs/toolkit/colorflow.html" },
-      { id: "search", label: "Search", icon: "fa-magnifying-glass", html: "tabs/toolkit/search.html" },
-      { id: "sysmon", label: "System Monitor", icon: "fa-chart-line", html: "tabs/toolkit/sysmon.html" },
-      { id: "stopwatch", label: "Stopwatch", icon: "fa-stopwatch", html: "tabs/toolkit/stopwatch.html" }
+      { id: "quicktools", label: "Quick Tools", icon: "fa-toolbox", html: "./tabs/toolkit/quicktools.html" },
+      { id: "projecthelper", label: "Project Helper", icon: "fa-folder-tree", html: "./tabs/toolkit/projecthelper.html" },
+      { id: "colorflow", label: "ColorFlow", icon: "fa-palette", html: "./tabs/toolkit/colorflow.html" },
+      { id: "search", label: "Search", icon: "fa-magnifying-glass", html: "./tabs/toolkit/search.html" },
+      { id: "sysmon", label: "System Monitor", icon: "fa-chart-line", html: "./tabs/toolkit/sysmon.html" },
+      { id: "stopwatch", label: "Stopwatch", icon: "fa-stopwatch", html: "./tabs/toolkit/stopwatch.html" }
     ],
 
     init: function (app) {
@@ -55,52 +55,37 @@
       var subContent = this.subContent;
       subContent.innerHTML = "";
 
-      var loadedCount = 0;
-      var totalCount = allTools.length;
-
       for (var i = 0; i < allTools.length; i++) {
-        (function (tool, idx) {
-          var key = "anismooth_toolkit_" + tool.id;
-          var enabled = window.StorageManager.getItem(key, "0") === "1";
+        var tool = allTools[i];
+        var key = "anismooth_toolkit_" + tool.id;
+        var enabled = window.StorageManager.getItem(key, "0") === "1";
 
-          if (!enabled) {
-            subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '"><div class="info-card" style="text-align:center;padding:20px 12px;"><i class="fa-solid ' + tool.icon + '" style="font-size:24px;color:var(--text-3);display:block;margin-bottom:8px;"></i><span class="meta-strip meta-strip-sm">' + tool.label + ' is disabled.</span><br><span class="form-hint" style="margin-top:4px;">Enable it in Settings &gt; Interface &gt; Toolkit Tools.</span></div></div>';
-            loadedCount++;
-            if (loadedCount >= totalCount) {
-              self._buildNav(allTools);
-              self._bindActions();
-            }
-            return;
-          }
+        if (!enabled) {
+          subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '" style="display:none;"><div class="info-card" style="text-align:center;padding:20px 12px;"><i class="fa-solid ' + tool.icon + '" style="font-size:24px;color:var(--text-3);display:block;margin-bottom:8px;"></i><span class="meta-strip meta-strip-sm">' + tool.label + ' is disabled.</span><br><span class="form-hint" style="margin-top:4px;">Enable it in Settings &gt; Interface &gt; Toolkit Tools.</span></div></div>';
+          continue;
+        }
 
+        var html = "";
+        try {
           var xhr = new XMLHttpRequest();
-          xhr.open("GET", tool.html, true);
-          xhr.onload = function () {
-            loadedCount++;
-            if (xhr.status >= 200 && xhr.status < 400) {
-              subContent.innerHTML += xhr.responseText;
-              self._subtabs[tool.id] = true;
-            } else {
-              subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '"><div class="info-card"><span class="meta-strip meta-strip-sm"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load: ' + tool.label + '</span></div></div>';
-            }
-            if (loadedCount >= totalCount) {
-              self._buildNav(allTools);
-              self._bindActions();
-              self._initColorFlow();
-            }
-          };
-          xhr.onerror = function () {
-            loadedCount++;
-            subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '"><div class="info-card"><span class="meta-strip meta-strip-sm"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load: ' + tool.label + '</span></div></div>';
-            if (loadedCount >= totalCount) {
-              self._buildNav(allTools);
-              self._bindActions();
-              self._initColorFlow();
-            }
-          };
-          xhr.send();
-        })(allTools[i], i);
+          xhr.open("GET", tool.html, false);
+          xhr.send(null);
+          if (xhr.status === 0 || xhr.status === 200) {
+            html = xhr.responseText;
+            self._subtabs[tool.id] = true;
+          }
+        } catch (e) {}
+
+        if (html) {
+          subContent.innerHTML += html;
+        } else {
+          subContent.innerHTML += '<div class="toolkit-subtab" id="tk-' + tool.id + '" style="display:none;"><div class="info-card"><span class="meta-strip meta-strip-sm"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load: ' + tool.label + '</span></div></div>';
+        }
       }
+
+      this._buildNav(allTools);
+      this._bindActions();
+      this._initColorFlow();
     },
 
     _buildNav: function (allTools) {
