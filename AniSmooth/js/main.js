@@ -549,20 +549,28 @@
       if (!info) return;
       this._gpuInfoCache = info;
 
+      var vendor = info.gpu_vendor || (info.nvidia_gpu_detected ? "nvidia" : (info.amd_gpu_detected ? "amd" : "unknown"));
       var cuda = info.cuda_available;
-      var nvidiaGpu = info.nvidia_gpu_detected;
-      var gpuCount = info.gpu_count || (nvidiaGpu ? 1 : 0);
-      var gpuName = info.gpu_name || info.nvidia_name || "Unknown";
+      var nvidiaGpu = info.nvidia_gpu_detected || (vendor === "nvidia");
+      var amdGpu = info.amd_gpu_detected || (vendor === "amd");
+      var dml = info.dml_available;
+      var gpuCount = info.gpu_count || ((nvidiaGpu || amdGpu) ? 1 : 0);
+      var gpuName = info.gpu_name || info.nvidia_name || info.amd_name || "Unknown";
       var cudaVer = info.cuda_version || "";
       var torchVer = info.torch_version || "";
-      var totalMb = info.gpu_memory_total_mb || info.nvidia_vram_mb || 0;
+      var totalMb = info.gpu_memory_total_mb || info.nvidia_vram_mb || info.amd_vram_mb || 0;
       var freeMb = info.gpu_memory_free_mb || 0;
       var usedMb = totalMb > 0 ? Math.max(0, totalMb - freeMb) : 0;
       var trt = info.tensorrt_available;
       var ptVariant = info.pytorch_variant || "cpu";
-      var driverVer = info.nvidia_driver || "";
+      var driverVer = info.nvidia_driver || info.amd_driver || "";
       var spandrelVersion = info.spandrel_version || "";
       var spandrelAvailable = info.spandrel_available;
+
+      this._gpuVendor = vendor;
+      this._gpuCuda = cuda;
+      this._gpuAmd = amdGpu;
+      this._gpuDml = dml;
 
       
       var indicator = document.getElementById("gpuIndicator");
@@ -570,7 +578,10 @@
         if (cuda) {
           indicator.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
           indicator.className = "gpu-indicator gpu-ok";
-        } else if (nvidiaGpu) {
+        } else if (dml) {
+          indicator.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+          indicator.className = "gpu-indicator gpu-ok";
+        } else if (nvidiaGpu || amdGpu) {
           indicator.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
           indicator.className = "gpu-indicator gpu-warn";
         } else {
@@ -579,28 +590,29 @@
         }
       }
 
-      
       var nameEl = document.getElementById("gpuName");
       if (nameEl) {
-        if (cuda) {
+        if (cuda || dml) {
           nameEl.textContent = gpuName;
-        } else if (nvidiaGpu) {
+        } else if (nvidiaGpu || amdGpu) {
           nameEl.textContent = gpuName + " (not usable)";
         } else {
-          nameEl.textContent = "No NVIDIA GPU detected";
+          nameEl.textContent = "No supported GPU detected";
         }
       }
 
-      
       var metaEl = document.getElementById("gpuMeta");
       if (metaEl) {
         var parts = [];
         if (driverVer) parts.push("Driver " + driverVer);
         if (cudaVer) parts.push("CUDA " + cudaVer);
         if (torchVer) parts.push("Torch " + torchVer);
-        if (nvidiaGpu && !cuda) {
+        if (dml) parts.push("DirectML");
+        if (nvidiaGpu && !cuda && !dml) {
           parts.push("PyTorch is CPU-only");
-        } else if (!cuda) {
+        } else if (amdGpu && !dml) {
+          parts.push("torch-directml not installed");
+        } else if (!cuda && !dml) {
           parts.push("CPU mode only");
         }
         metaEl.textContent = parts.join("  |  ");
@@ -610,42 +622,53 @@
       var fill = document.getElementById("gpuVramFill");
       var text = document.getElementById("gpuVramText");
       if (fill && text && totalMb > 0) {
-        if (cuda && freeMb > 0) {
+        if ((cuda || dml) && freeMb > 0) {
           var pct = Math.round((usedMb / totalMb) * 100);
           fill.style.width = pct + "%";
           text.textContent = formatMb(usedMb) + " / " + formatMb(totalMb);
-        } else if (nvidiaGpu) {
+        } else if (nvidiaGpu || amdGpu) {
           fill.style.width = "0%";
-          text.textContent = formatMb(totalMb) + " (unavailable to PyTorch)";
+          text.textContent = formatMb(totalMb) + " (unavailable)";
         }
       } else if (text) {
         fill.style.width = "0%";
-        text.textContent = cuda ? "VRAM: N/A" : (nvidiaGpu ? "VRAM: N/A" : "N/A");
+        text.textContent = (cuda || dml) ? "VRAM: N/A" : ((nvidiaGpu || amdGpu) ? "VRAM: N/A" : "N/A");
       }
 
-      
       var badgesEl = document.getElementById("gpuBadges");
       if (badgesEl) {
         badgesEl.innerHTML = "";
 
-        var nvBadge = document.createElement("span");
-        nvBadge.className = "gpu-badge " + (nvidiaGpu ? "badge-ok" : "badge-err");
-        nvBadge.innerHTML = '<i class="fa-brands fa-nvidia"></i> NVIDIA';
-        badgesEl.appendChild(nvBadge);
+        if (vendor === "nvidia") {
+          var nvBadge = document.createElement("span");
+          nvBadge.className = "gpu-badge " + (cuda ? "badge-ok" : "badge-warn");
+          nvBadge.innerHTML = '<i class="fa-brands fa-nvidia"></i> NVIDIA';
+          badgesEl.appendChild(nvBadge);
 
-        var cudaBadge = document.createElement("span");
-        cudaBadge.className = "gpu-badge " + (cuda ? "badge-ok" : (nvidiaGpu ? "badge-warn" : "badge-err"));
-        cudaBadge.innerHTML = '<i class="fa-solid fa-' + (cuda ? 'check' : (nvidiaGpu ? 'exclamation' : 'xmark')) + '"></i> CUDA';
-        badgesEl.appendChild(cudaBadge);
+          var cudaBadge = document.createElement("span");
+          cudaBadge.className = "gpu-badge " + (cuda ? "badge-ok" : "badge-warn");
+          cudaBadge.innerHTML = '<i class="fa-solid fa-' + (cuda ? 'check' : 'exclamation') + '"></i> CUDA';
+          badgesEl.appendChild(cudaBadge);
 
-        var trtBadge = document.createElement("span");
-        trtBadge.className = "gpu-badge " + (trt ? "badge-ok" : "badge-err");
-        trtBadge.innerHTML = '<i class="fa-solid fa-' + (trt ? 'check' : 'xmark') + '"></i> TensorRT';
-        badgesEl.appendChild(trtBadge);
+          var trtBadge = document.createElement("span");
+          trtBadge.className = "gpu-badge " + (trt ? "badge-ok" : "badge-err");
+          trtBadge.innerHTML = '<i class="fa-solid fa-' + (trt ? 'check' : 'xmark') + '"></i> TensorRT';
+          badgesEl.appendChild(trtBadge);
+        } else if (vendor === "amd") {
+          var amdBadge = document.createElement("span");
+          amdBadge.className = "gpu-badge " + (dml ? "badge-ok" : "badge-warn");
+          amdBadge.innerHTML = '<i class="fa-brands fa-amd"></i> AMD';
+          badgesEl.appendChild(amdBadge);
+
+          var dmlBadge = document.createElement("span");
+          dmlBadge.className = "gpu-badge " + (dml ? "badge-ok" : "badge-warn");
+          dmlBadge.innerHTML = '<i class="fa-solid fa-' + (dml ? 'check' : 'exclamation') + '"></i> DirectML';
+          badgesEl.appendChild(dmlBadge);
+        }
 
         var ptBadge = document.createElement("span");
-        ptBadge.className = "gpu-badge " + (ptVariant === "cuda" ? "badge-ok" : "badge-warn");
-        ptBadge.innerHTML = '<i class="fa-solid fa-' + (ptVariant === "cuda" ? 'check' : 'exclamation') + '"></i> PyTorch ' + ptVariant.toUpperCase();
+        ptBadge.className = "gpu-badge " + (ptVariant === "cuda" || ptVariant === "dml" ? "badge-ok" : "badge-warn");
+        ptBadge.innerHTML = '<i class="fa-solid fa-' + (ptVariant === "cuda" || ptVariant === "dml" ? 'check' : 'exclamation') + '"></i> PyTorch ' + ptVariant.toUpperCase();
         badgesEl.appendChild(ptBadge);
 
         var srBadge = document.createElement("span");
@@ -660,12 +683,10 @@
       }
 
       
-      this._buildCudaInfo(cuda, nvidiaGpu, cudaVer, torchVer, ptVariant, info.nvidia_cuda_ver, info.nvidia_driver);
+      this._buildCudaInfo(cuda, nvidiaGpu, cudaVer, torchVer, ptVariant, info.nvidia_cuda_ver, info.nvidia_driver, amdGpu, dml);
 
-      
       this._buildSysInfo(info);
 
-      
       var actionsEl = document.getElementById("gpuActions");
       if (actionsEl) {
         if (nvidiaGpu && !cuda) {
@@ -675,7 +696,14 @@
               '<i class="fa-solid fa-download"></i> Install CUDA PyTorch' +
             '</button>' +
             '<span class="form-hint" style="margin-top:3px;">Reinstalls PyTorch with GPU acceleration. Takes a few minutes.</span>';
-        } else if (cuda) {
+        } else if (amdGpu && !dml) {
+          actionsEl.style.display = "";
+          actionsEl.innerHTML =
+            '<button class="btn-sm" onclick="window.App.installDmlPytorch()" style="width:100%;">' +
+              '<i class="fa-solid fa-download"></i> Install DirectML PyTorch' +
+            '</button>' +
+            '<span class="form-hint" style="margin-top:3px;">Installs torch-directml for AMD GPU acceleration.</span>';
+        } else if (cuda || dml) {
           actionsEl.style.display = "";
           actionsEl.innerHTML = '<span class="form-hint" style="color:var(--ok-text);"><i class="fa-solid fa-check"></i> GPU acceleration active</span>';
         } else {
@@ -770,6 +798,72 @@
               var ok = code === 0;
               self._gpuInstallDone(ok, ok ? "CUDA PyTorch installed! Restart the panel." : "Install failed (code " + code + ").");
               dbg(ok ? "success" : "error", "GPU", "CUDA PyTorch install " + (ok ? "succeeded" : "failed"));
+              setTimeout(function () { self.refreshGpuInfo(); }, 2500);
+            });
+            proc.on("error", function (e) {
+              self._gpuInstallDone(false, "Error: " + e.message);
+              dbg("error", "GPU", "Install error: " + e.message);
+            });
+          } catch (e) {
+            self._gpuInstallDone(false, "Error: " + e.message);
+          }
+        }
+      );
+    },
+
+    installDmlPytorch: function () {
+      var self = this;
+      window.showConfirm(
+        "Install torch-directml for AMD GPU acceleration? This will download the DirectML PyTorch package (~200 MB).",
+        function () {
+          var actionsEl = document.getElementById("gpuActions");
+          var logEl = document.getElementById("gpuInstallLog");
+
+          if (actionsEl) {
+            actionsEl.style.display = "";
+            actionsEl.innerHTML =
+              '<div class="gpu-install-status"><i class="fa-solid fa-spinner fa-spin"></i> Installing DirectML PyTorch...</div>' +
+              '<div class="progress-track" style="margin-top:6px;">' +
+                '<div id="gpuInstallBar" class="progress-fill" style="width:0%"></div>' +
+              '</div>';
+          }
+          if (logEl) {
+            logEl.style.display = "";
+            logEl.innerHTML = '<div class="gpu-install-log" id="gpuInstallLogInner">Starting pip install...</div>';
+          }
+
+          var pythonCmd = self._resolvePythonCmd();
+          var extPath = "";
+          try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
+          var scriptPath = (window.FileSystem.path && extPath)
+            ? window.FileSystem.path.join(extPath, "python", "setup.py")
+            : "setup.py";
+
+          try {
+            var proc = window.FileSystem.childProcess.spawn(pythonCmd, [scriptPath, "--force-dml"]);
+            var buf = "";
+            var lineCount = 0;
+
+            proc.stdout.on("data", function (d) {
+              buf += d.toString();
+              var lines = buf.split("\n");
+              buf = lines.pop();
+              for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (!line) continue;
+                lineCount++;
+                dbg("info", "DML-install", line);
+                self._gpuInstallLog(line, lineCount);
+              }
+            });
+            proc.stderr.on("data", function (d) {
+              var err = d.toString().trim();
+              if (err) { dbg("warn", "DML-install", err); self._gpuInstallLog("[WARN] " + err, -1); }
+            });
+            proc.on("close", function (code) {
+              var ok = code === 0;
+              self._gpuInstallDone(ok, ok ? "DirectML PyTorch installed! Restart the panel." : "Install failed (code " + code + ").");
+              dbg(ok ? "success" : "error", "GPU", "DirectML install " + (ok ? "succeeded" : "failed"));
               setTimeout(function () { self.refreshGpuInfo(); }, 2500);
             });
             proc.on("error", function (e) {
@@ -1323,18 +1417,25 @@
       }
     },
 
-    _buildCudaInfo: function (cuda, nvidiaGpu, cudaVer, torchVer, ptVariant, driverCUDA, driverVer) {
+    _buildCudaInfo: function (cuda, nvidiaGpu, cudaVer, torchVer, ptVariant, driverCUDA, driverVer, amdGpu, dml) {
       var el = document.getElementById("cudaInfo");
       if (!el) return;
 
-      var rows = [
-        { label: "NVIDIA GPU", value: nvidiaGpu ? "Detected" : "Not found", ok: nvidiaGpu },
-        { label: "CUDA Ready", value: cuda ? "Yes (" + (cudaVer || "") + ")" : (nvidiaGpu ? "CPU PyTorch" : "N/A"), ok: cuda },
-        { label: "Driver CUDA", value: driverCUDA || (nvidiaGpu ? "Unknown" : "N/A"), ok: !!driverCUDA },
-        { label: "Driver Ver", value: driverVer || (nvidiaGpu ? "Unknown" : "N/A"), ok: !!driverVer },
-        { label: "PyTorch", value: torchVer || "Not installed", ok: !!torchVer },
-        { label: "Variant", value: ptVariant === "cuda" ? "CUDA" : "CPU-only", ok: ptVariant === "cuda" }
-      ];
+      var rows = [];
+      if (nvidiaGpu) {
+        rows.push({ label: "NVIDIA GPU", value: "Detected", ok: true });
+        rows.push({ label: "CUDA Ready", value: cuda ? "Yes (" + (cudaVer || "") + ")" : "CPU PyTorch", ok: cuda });
+        rows.push({ label: "Driver CUDA", value: driverCUDA || "Unknown", ok: !!driverCUDA });
+        rows.push({ label: "Driver Ver", value: driverVer || "Unknown", ok: !!driverVer });
+      } else if (amdGpu) {
+        rows.push({ label: "AMD GPU", value: "Detected", ok: true });
+        rows.push({ label: "DirectML Ready", value: dml ? "Yes" : "Not installed", ok: dml });
+        rows.push({ label: "Driver Ver", value: driverVer || "Unknown", ok: !!driverVer });
+      } else {
+        rows.push({ label: "GPU", value: "Not found", ok: false });
+      }
+      rows.push({ label: "PyTorch", value: torchVer || "Not installed", ok: !!torchVer });
+      rows.push({ label: "Variant", value: ptVariant === "cuda" ? "CUDA" : (ptVariant === "dml" ? "DirectML" : "CPU-only"), ok: ptVariant === "cuda" || ptVariant === "dml" });
 
       var html = "";
       for (var i = 0; i < rows.length; i++) {
