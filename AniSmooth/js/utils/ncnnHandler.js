@@ -102,52 +102,41 @@
 
       var ncnnInputDir = null;
       var ncnnOutputDir = tempPngDir;
+      var ncnnInputFile = inputPath;
 
       if (inputExt === "avi" && ffmpegPath) {
-        ncnnInputDir = inputPath.replace(/\.\w+$/, "_ncnn_input");
-        dbg("info", "NCNN-DEBUG", "Converting AVI to PNG frames: " + inputPath + " -> " + ncnnInputDir);
+        var mp4Input = inputPath.replace(/\.\w+$/, "_ncnn_input.mp4");
+        dbg("info", "NCNN-DEBUG", "Converting AVI to MP4 for file mode: " + inputPath + " -> " + mp4Input);
         try {
-          if (fs.existsSync(ncnnInputDir)) {
-            var oldF = fs.readdirSync(ncnnInputDir);
-            for (var oi = 0; oi < oldF.length; oi++) fs.unlinkSync(p.join(ncnnInputDir, oldF[oi]));
-          } else { fs.mkdirSync(ncnnInputDir); }
-          var avi2png = cp.spawnSync(ffmpegPath, [
+          var avi2mp4 = cp.spawnSync(ffmpegPath, [
             "-y", "-i", inputPath,
-            "-fps_mode", "cfr",
-            p.join(ncnnInputDir, "frame_%08d.png")
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "0",
+            "-pix_fmt", "yuv420p", "-an",
+            mp4Input
           ], { windowsHide: true, timeout: 120000 });
-          dbg("info", "NCNN-DEBUG", "AVI->PNG exit: " + avi2png.status + " stderr: " + (avi2png.stderr ? avi2png.stderr.toString().slice(0, 300) : ""));
-          if (avi2png.status !== 0) {
-            dbg("warn", "NCNN-DEBUG", "AVI->PNG conversion failed, falling back to file mode");
-            try { fs.rmdirSync(ncnnInputDir); } catch (e) {}
-            ncnnInputDir = null;
+          dbg("info", "NCNN-DEBUG", "AVI->MP4 exit: " + avi2mp4.status);
+          if (avi2mp4.status === 0 && fs.existsSync(mp4Input)) {
+            ncnnInputFile = mp4Input;
+            dbg("info", "NCNN-DEBUG", "Using file input: " + mp4Input + " (" + fs.statSync(mp4Input).size + " bytes)");
+          } else {
+            dbg("warn", "NCNN-DEBUG", "AVI->MP4 failed, using original AVI");
+            try { if (fs.existsSync(mp4Input)) fs.unlinkSync(mp4Input); } catch (e) {}
           }
         } catch (e) {
-          dbg("warn", "NCNN-DEBUG", "AVI->PNG error: " + e.message);
-          ncnnInputDir = null;
+          dbg("warn", "NCNN-DEBUG", "AVI->MP4 error: " + e.message);
         }
       }
+      ncnnOutputDir = tempPngDir;
 
       var args;
-      if (ncnnInputDir) {
-        dbg("info", "NCNN-DEBUG", "Directory mode: input=" + ncnnInputDir + " output=" + ncnnOutputDir);
-        args = [
-          "-i", ncnnInputDir,
-          "-o", ncnnOutputDir,
-          "-g", gpuId,
-          "-m", options.model || "rife-v4.6",
-          "-j", String(options.threadCount || "4:4:4")
-        ];
-      } else {
-        dbg("info", "NCNN-DEBUG", "File mode: input=" + inputPath + " output=" + finalOutputPath);
-        args = [
-          "-i", inputPath,
-          "-o", finalOutputPath,
-          "-g", gpuId,
-          "-m", options.model || "rife-v4.6",
-          "-j", String(options.threadCount || "4:4:4")
-        ];
-      }
+      args = [
+        "-i", ncnnInputFile,
+        "-o", ncnnOutputDir,
+        "-g", gpuId,
+        "-m", options.model || "rife-v4.6",
+        "-j", String(options.threadCount || "4:4:4")
+      ];
+      dbg("info", "NCNN-DEBUG", "File input + dir output mode: " + ncnnInputFile + " -> " + ncnnOutputDir);
       if (options.factor) args.push("-x", String(options.factor));
       if (options.scale) args.push("-s", String(options.scale));
       if (options.ttafnm) args.push("-f", options.ttafnm);
@@ -278,14 +267,8 @@
             }
           } catch (e) {}
         }
-        if (ncnnInputDir) {
-          try {
-            if (fs.existsSync(ncnnInputDir)) {
-              var files2 = fs.readdirSync(ncnnInputDir);
-              for (var fi = 0; fi < files2.length; fi++) fs.unlinkSync(p.join(ncnnInputDir, files2[fi]));
-              fs.rmdirSync(ncnnInputDir);
-            }
-          } catch (e) {}
+        if (ncnnInputFile !== inputPath) {
+          try { if (fs.existsSync(ncnnInputFile)) fs.unlinkSync(ncnnInputFile); } catch (e) {}
         }
       }
 
