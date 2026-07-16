@@ -1,0 +1,91 @@
+<div class="toolkit-subtab" id="tk-colorflow">
+  <nav class="tk-inner-nav" id="tkCfNav">
+    <button class="tk-inner-tab active" data-tk-cf="palette">Palette</button>
+    <button class="tk-inner-tab" data-tk-cf="harmonies">Harmonies</button>
+    <button class="tk-inner-tab" data-tk-cf="labels">Labels</button>
+    <button class="tk-inner-tab" data-tk-cf="utils">Utils</button>
+  </nav>
+
+  <div class="tk-cf-panel active" data-tk-cf="palette">
+    <div class="form-group">
+      <label>Color Picker</label>
+      <div class="tk-color-picker">
+        <input type="color" id="tk-cf-color-picker" value="#8b5cf6">
+        <input type="text" id="tk-cf-hex-input" value="#8B5CF6" maxlength="7" style="flex:1;">
+      </div>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="btn" data-tk-action="cfApplyColor"><i class="fa-solid fa-paintbrush"></i> Apply to Layer</button>
+        <button class="btn" data-tk-action="cfSaveColor"><i class="fa-solid fa-plus"></i> Save to Palette</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Active Palette</label>
+      <div id="tk-cf-swatches" class="tk-cf-swatches"></div>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="btn" data-tk-action="cfClearPalette" style="flex:0.4;"><i class="fa-solid fa-trash"></i> Clear</button>
+        <button class="btn" data-tk-action="cfGenerateSolids"><i class="fa-solid fa-square"></i> Generate Solids</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Import / Export</label>
+      <div class="folder-row">
+        <input type="text" id="tk-cf-import" placeholder="Paste hex colors or Coolors URL" style="flex:1;">
+        <button class="btn-sm" data-tk-action="cfImport"><i class="fa-solid fa-file-import"></i></button>
+      </div>
+      <div class="folder-row" style="margin-top:4px;">
+        <input type="text" id="tk-cf-save-name" placeholder="Palette name" style="flex:1;">
+        <button class="btn-sm" data-tk-action="cfSavePalette"><i class="fa-solid fa-floppy-disk"></i></button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Saved Palettes</label>
+      <select id="tk-cf-presets">
+        <option value="">-- Built-in --</option>
+        <optgroup label="Anime">
+          <option value="vaporwave">Vaporwave (5)</option>
+          <option value="sunset">Sunset (5)</option>
+          <option value="cherry">Cherry Blossom (5)</option>
+          <option value="ocean">Ocean (5)</option>
+          <option value="forest">Forest (5)</option>
+        </optgroup>
+        <optgroup label="Monochrome">
+          <option value="grayscale">Grayscale (5)</option>
+        </optgroup>
+      </select>
+      <button class="btn" data-tk-action="cfLoadPreset" style="margin-top:4px;"><i class="fa-solid fa-download"></i> Load Preset</button>
+    </div>
+  </div>
+
+  <div class="tk-cf-panel" data-tk-cf="harmonies">
+    <div class="form-group">
+      <label>Base Color</label>
+      <div class="tk-color-picker">
+        <input type="color" id="tk-cf-hbase" value="#8b5cf6">
+        <span id="tk-cf-hbase-hex" style="font-size:9px;color:var(--text-2);">#8B5CF6</span>
+      </div>
+    </div>
+    <div id="tk-cf-harmonies"></div>
+    <span class="form-hint">Click a harmony swatch to set it as base. Shift+click to save to palette.</span>
+  </div>
+
+  <div class="tk-cf-panel" data-tk-cf="labels">
+    <div class="form-group">
+      <label>AE Label Colors</label>
+      <span class="form-hint">Click color to apply label. Icons: select group, toggle visibility, solo.</span>
+    </div>
+    <div id="tk-cf-labels" class="tk-cf-labels"></div>
+  </div>
+
+  <div class="tk-cf-panel" data-tk-cf="utils">
+    <div class="form-group">
+      <label>Color Utilities</label>
+      <div class="tk-btn-stack">
+        <button class="btn" data-tk-action="cfAutoLabel"><i class="fa-solid fa-tag"></i> Auto-Label Active Comp</button>
+        <button class="btn" data-tk-action="cfRandomize"><i class="fa-solid fa-shuffle"></i> Randomize Selection Colors</button>
+      </div>
+    </div>
+  </div>
+</div>

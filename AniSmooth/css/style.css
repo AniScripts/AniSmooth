@@ -910,3 +910,223 @@ html[data-theme="light"] {
 .settings-cat .panel.collapsed > .form-hint {
   margin-top: 6px;
 }
+
+/* ── Toolkit ────────────────────────────────────────────────── */
+
+.tk-inner-nav {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.tk-inner-tab {
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 9px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tk-inner-tab:hover { background: var(--hover-overlay); color: var(--text-strong); }
+.tk-inner-tab.active { background: var(--accent-bg); color: var(--accent); }
+
+.tk-qt-panel, .tk-cf-panel { display: none; }
+.tk-qt-panel.active, .tk-cf-panel.active { display: block; }
+
+.tk-align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.tk-align-btn {
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  background: var(--inset);
+  color: var(--text-2);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tk-align-btn:hover { background: var(--accent-bg); color: var(--accent); }
+
+.tk-rotate-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.tk-rotate-row select {
+  background: var(--inset);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-strong);
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.tk-btn-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tk-btn-stack .btn { width: 100%; }
+
+.tk-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.tk-check-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.tk-check-item input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.tk-sequence-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tk-sequence-row input {
+  background: var(--inset);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-strong);
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 9px;
+  width: 60px;
+}
+
+/* ── ColorFlow ──────────────────────────────────────────────── */
+
+.tk-color-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tk-color-picker input[type="color"] {
+  width: 32px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+.tk-color-picker input[type="text"] {
+  background: var(--inset);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-strong);
+  padding: 4px 6px;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+.tk-cf-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.tk-cf-swatch {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.tk-cf-swatch:hover { transform: scale(1.15); box-shadow: 0 0 6px rgba(0,0,0,0.3); z-index: 1; }
+
+.tk-cf-hswatch {
+  width: 32px;
+  height: 32px;
+  aspect-ratio: auto;
+}
+
+.tk-harmony-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.tk-harmony-swatches {
+  display: flex;
+  gap: 3px;
+}
+
+.tk-cf-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tk-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.tk-label-row:hover { background: var(--hover-overlay); }
+
+.tk-label-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s;
+}
+
+.tk-label-swatch:hover { transform: scale(1.2); }
+
+.tk-label-name {
+  flex: 1;
+  font-size: 9px;
+  color: var(--text);
+}
+
+.tk-label-action {
+  font-size: 9px;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tk-label-action:hover { color: var(--text-strong); background: var(--hover-overlay); }
+.tk-label-action.active { color: var(--accent); }

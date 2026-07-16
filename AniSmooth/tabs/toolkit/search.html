@@ -1,0 +1,27 @@
+<div class="toolkit-subtab" id="tk-search">
+  <div class="form-group">
+    <label>Anime Frame Search</label>
+    <span class="form-hint">Find the anime source of a screenshot using trace.moe or SauceNAO.</span>
+  </div>
+
+  <div class="form-group">
+    <label>Image</label>
+    <div class="folder-row">
+      <input type="text" id="tk-search-image" readonly placeholder="No file selected..." style="flex:1;">
+      <button class="btn-sm" data-tk-action="browseImage"><i class="fa-solid fa-folder"></i></button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Search Source</label>
+    <select id="tk-search-source">
+      <option value="all">All Sources</option>
+      <option value="tracemoe">trace.moe</option>
+      <option value="saucenao">SauceNAO</option>
+    </select>
+  </div>
+
+  <button class="btn" data-tk-action="searchFrame"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+
+  <div id="tk-search-result" style="display:none;margin-top:8px;"></div>
+</div>

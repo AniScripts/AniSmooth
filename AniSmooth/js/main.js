@@ -88,6 +88,10 @@
       window.ConsolePanel.init(this);
       window.QueuePanel.init(this);
       window.SysmonPanel.init(this);
+      window.ToolkitPanel.init(this);
+      if (window.StorageManager.getItem("anismooth_tab_toolkit", null) === null) {
+        window.StorageManager.setItem("anismooth_tab_toolkit", "0");
+      }
       this.initSettingsPanel();
 
       this.bindGlobalEvents();
@@ -142,6 +146,9 @@
       });
       document.getElementById("sysmonTabBtn").addEventListener("click", function () {
         self.switchTab("sysmon");
+      });
+      document.getElementById("toolkitTabBtn").addEventListener("click", function () {
+        self.switchTab("toolkit");
       });
       document.getElementById("settingsTabBtn").addEventListener("click", function () {
         self.switchTab("settings");
@@ -237,7 +244,7 @@
     },
 
     switchTab: function (tab) {
-      var tabs = ["deadframes", "interpolation", "upscale", "flowframes", "console", "queue", "stopwatch", "sysmon", "settings"];
+      var tabs = ["deadframes", "interpolation", "upscale", "flowframes", "toolkit", "console", "queue", "stopwatch", "sysmon", "settings"];
       dbg('info', 'Nav', 'Switched to tab: ' + tab);
 
       for (var i = 0; i < tabs.length; i++) {
@@ -308,6 +315,7 @@
 
       this._makeSettingsCollapsible();
       this._buildInterfaceToggles();
+      this._buildToolkitToggles();
       this._applyTabVisibility();
       this._buildModelToggles();
       this._applyModelVisibility();
@@ -1014,6 +1022,7 @@
       { id: "interpolation", icon: "fa-forward", label: "Interpolation" },
       { id: "upscale", icon: "fa-expand", label: "Upscale" },
       { id: "flowframes", icon: "fa-wand-magic-sparkles", label: "Flowframes" },
+      { id: "toolkit", icon: "fa-toolbox", label: "Toolkit" },
       { id: "console", icon: "fa-terminal", label: "Console" },
       { id: "queue", icon: "fa-list-check", label: "Queue" },
       { id: "stopwatch", icon: "fa-stopwatch", label: "Stopwatch" },
@@ -1109,6 +1118,45 @@
             break;
           }
         }
+      }
+    },
+
+    _buildToolkitToggles: function () {
+      var container = document.getElementById("toolkitToggles");
+      if (!container) return;
+      var self = this;
+      var tools = [
+        { id: "quicktools", label: "Quick Tools", desc: "Align, rotate, flip, effects, expressions, timeline" },
+        { id: "projecthelper", label: "Project Helper", desc: "Rename layers, organize project, scan dependencies" },
+        { id: "colorflow", label: "ColorFlow", desc: "Color picker, harmonies, AE label manager" },
+        { id: "search", label: "Frame Search", desc: "Find anime source from screenshot (trace.moe/SauceNAO)" }
+      ];
+
+      var html = "";
+      for (var i = 0; i < tools.length; i++) {
+        var tool = tools[i];
+        var key = "anismooth_toolkit_" + tool.id;
+        var enabled = window.StorageManager.getItem(key, "0") === "1";
+        html += '<label class="toggle-row">' +
+          '<i class="fa-solid fa-wrench toggle-icon"></i>' +
+          '<span class="toggle-label">' + tool.label + '</span>' +
+          '<span style="font-size:8px;color:var(--text-3);margin-right:8px;">' + tool.desc + '</span>' +
+          '<input type="checkbox" class="toggle-input" data-toolkit="' + tool.id + '"' + (enabled ? " checked" : "") + '>' +
+          '<span class="toggle-switch"></span>' +
+        '</label>';
+      }
+      container.innerHTML = html;
+
+      var inputs = container.querySelectorAll(".toggle-input");
+      for (var j = 0; j < inputs.length; j++) {
+        inputs[j].addEventListener("change", function () {
+          var toolId = this.getAttribute("data-toolkit");
+          var checked = this.checked;
+          window.StorageManager.setItem("anismooth_toolkit_" + toolId, checked ? "1" : "0");
+          if (window.ToolkitPanel && window.ToolkitPanel.refreshFromSettings) {
+            window.ToolkitPanel.refreshFromSettings();
+          }
+        });
       }
     },
 

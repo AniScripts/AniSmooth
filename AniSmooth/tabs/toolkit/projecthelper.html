@@ -1,0 +1,48 @@
+<div class="toolkit-subtab" id="tk-projecthelper">
+  <div class="form-group">
+    <label>Project Name</label>
+    <div class="folder-row">
+      <input type="text" id="tk-proj-name" readonly style="flex:1;">
+      <button class="btn-sm" data-tk-action="refreshProjName"><i class="fa-solid fa-arrows-rotate"></i></button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Rename Layers &amp; Comps</label>
+    <div class="tk-check-grid">
+      <label class="tk-check-item"><input type="checkbox" id="tk-helper-adj"> Adjustments (by effect)</label>
+      <label class="tk-check-item"><input type="checkbox" id="tk-helper-null"> Nulls</label>
+      <label class="tk-check-item"><input type="checkbox" id="tk-helper-solid"> Solids</label>
+      <label class="tk-check-item"><input type="checkbox" id="tk-helper-comp"> Comps</label>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Project Organization</label>
+    <div class="tk-check-grid">
+      <label class="tk-check-item"><input type="checkbox" id="tk-helper-organize"> Organize files into folders</label>
+      <label class="tk-check-item"><input type="checkbox" id="tk-helper-reduce"> Purge unused media</label>
+    </div>
+    <button class="btn" data-tk-action="runHelper" style="margin-top:4px;"><i class="fa-solid fa-wrench"></i> Run Project Helper</button>
+  </div>
+
+  <div style="border-top:1px solid var(--border);margin:8px 0;"></div>
+
+  <div class="form-group">
+    <label>Payhip Packaging</label>
+    <span class="form-hint">Copy project and relink dependencies for distribution.</span>
+    <button class="btn" data-tk-action="packagePayhip" style="margin-top:4px;"><i class="fa-solid fa-box-archive"></i> Package for Payhip</button>
+  </div>
+
+  <div style="border-top:1px solid var(--border);margin:8px 0;"></div>
+
+  <div class="form-group">
+    <label>Project Scan</label>
+    <span class="form-hint">Scan for third-party plugins, fonts, and expressions.</span>
+    <button class="btn" data-tk-action="scanProject"><i class="fa-solid fa-magnifying-glass"></i> Scan Project</button>
+    <div id="tk-scan-result-box" style="display:none;margin-top:6px;">
+      <textarea id="tk-scan-report" readonly style="width:100%;height:160px;background:var(--inset);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:monospace;font-size:9px;resize:vertical;"></textarea>
+      <button class="btn" data-tk-action="copyReport" style="margin-top:4px;"><i class="fa-solid fa-copy"></i> Copy Report</button>
+    </div>
+  </div>
+</div>

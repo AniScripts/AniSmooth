@@ -1,0 +1,165 @@
+<div class="toolkit-subtab" id="tk-quicktools">
+  <nav class="tk-inner-nav" id="tkQtNav">
+    <button class="tk-inner-tab active" data-tk-qt="transform">Transform</button>
+    <button class="tk-inner-tab" data-tk-qt="layerops">Layer Ops</button>
+    <button class="tk-inner-tab" data-tk-qt="effects">FX &amp; Ease</button>
+    <button class="tk-inner-tab" data-tk-qt="expressions">Expressions</button>
+    <button class="tk-inner-tab" data-tk-qt="timeline">Timeline &amp; RAM</button>
+  </nav>
+
+  <div class="tk-qt-panel active" data-tk-qt="transform">
+    <div class="form-group">
+      <label>Align &amp; Position</label>
+      <div class="tk-align-grid">
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="0" title="Top-Left"><i class="fa-solid fa-arrow-up-left"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="1" title="Top-Center"><i class="fa-solid fa-arrow-up"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="2" title="Top-Right"><i class="fa-solid fa-arrow-up-right"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="3" title="Mid-Left"><i class="fa-solid fa-arrow-left"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="4" title="Center"><i class="fa-solid fa-circle"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="5" title="Mid-Right"><i class="fa-solid fa-arrow-right"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="6" title="Bot-Left"><i class="fa-solid fa-arrow-down-left"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="7" title="Bot-Center"><i class="fa-solid fa-arrow-down"></i></button>
+        <button class="tk-align-btn" data-tk-action="align" data-tk-arg="8" title="Bot-Right"><i class="fa-solid fa-arrow-down-right"></i></button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" data-tk-action="fitToComp"><i class="fa-solid fa-maximize"></i> Fit to Comp</button>
+      <button class="btn" data-tk-action="centerAnchor"><i class="fa-solid fa-crosshairs"></i> Center Anchor</button>
+    </div>
+    <div class="form-group">
+      <label>Flip</label>
+      <div class="btn-row">
+        <button class="btn" data-tk-action="flip" data-tk-arg="x"><i class="fa-solid fa-arrows-left-right"></i> Flip X</button>
+        <button class="btn" data-tk-action="flip" data-tk-arg="y"><i class="fa-solid fa-arrows-up-down"></i> Flip Y</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Rotate</label>
+      <div class="tk-rotate-row">
+        <select id="tk-rot-angle" style="flex:1;">
+          <option value="45">45</option>
+          <option value="90" selected>90</option>
+          <option value="180">180</option>
+        </select>
+        <button class="btn" data-tk-action="rotate" data-tk-arg="-1"><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="btn" data-tk-action="rotate" data-tk-arg="1"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tk-qt-panel" data-tk-qt="layerops">
+    <div class="form-group">
+      <label>Layer Actions</label>
+      <div class="tk-btn-stack">
+        <button class="btn" data-tk-action="precompose"><i class="fa-solid fa-cubes"></i> Pre-Compose Selected</button>
+        <button class="btn" data-tk-action="createNull"><i class="fa-solid fa-circle"></i> Create Parent Null</button>
+        <button class="btn" data-tk-action="createAdj"><i class="fa-solid fa-circle-half-stroke"></i> Adjustment Layer</button>
+        <button class="btn" data-tk-action="createSolid"><i class="fa-solid fa-square"></i> Create Black Solid</button>
+        <button class="btn" data-tk-action="selectNoPrecomp"><i class="fa-solid fa-list-check"></i> Select All (No Pre-Comps)</button>
+        <button class="btn" data-tk-action="fixPrecompDuration"><i class="fa-solid fa-plus"></i> Fix Precomp Duration (+1 Frame)</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Create Folder Structure</label>
+      <input type="text" id="tk-folder-main" placeholder="Main folder name">
+      <input type="text" id="tk-folder-subs" placeholder="Sub-folders (comma-separated)" style="margin-top:4px;">
+      <button class="btn" data-tk-action="createFolders" style="margin-top:4px;"><i class="fa-solid fa-folder-plus"></i> Create Folders</button>
+    </div>
+    <div class="form-group">
+      <label>Reset Layer Properties</label>
+      <div class="tk-check-grid">
+        <label class="tk-check-item"><input type="checkbox" checked data-tk-reset="transform"> Transform</label>
+        <label class="tk-check-item"><input type="checkbox" checked data-tk-reset="effects"> Effects</label>
+        <label class="tk-check-item"><input type="checkbox" data-tk-reset="masks"> Masks</label>
+        <label class="tk-check-item"><input type="checkbox" data-tk-reset="expressions"> Expressions</label>
+      </div>
+      <button class="btn" data-tk-action="resetProps" style="margin-top:4px;"><i class="fa-solid fa-undo"></i> Reset Selected</button>
+    </div>
+  </div>
+
+  <div class="tk-qt-panel" data-tk-qt="effects">
+    <div class="form-group">
+      <label>Keyframe Easing</label>
+      <div class="btn-row">
+        <button class="btn" data-tk-action="easyEase" data-tk-arg="all"><i class="fa-solid fa-wave-square"></i> Easy Ease</button>
+        <button class="btn" data-tk-action="easyEase" data-tk-arg="in"><i class="fa-solid fa-arrow-right-to-bracket"></i> Ease In</button>
+        <button class="btn" data-tk-action="easyEase" data-tk-arg="out"><i class="fa-solid fa-arrow-right-from-bracket"></i> Ease Out</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Velocity Curves</label>
+      <div class="tk-btn-stack">
+        <button class="btn" data-tk-action="easeCurve" data-tk-arg="smooth"><i class="fa-solid fa-chart-line"></i> Smooth</button>
+        <button class="btn" data-tk-action="easeCurve" data-tk-arg="fastIn"><i class="fa-solid fa-arrow-trend-down"></i> Fast In</button>
+        <button class="btn" data-tk-action="easeCurve" data-tk-arg="fastOut"><i class="fa-solid fa-arrow-trend-up"></i> Fast Out</button>
+        <button class="btn" data-tk-action="easeCurve" data-tk-arg="linear"><i class="fa-solid fa-minus"></i> Linear</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Quick Effects</label>
+      <div class="tk-btn-stack">
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="tint"><i class="fa-solid fa-droplet"></i> Tint</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="fill"><i class="fa-solid fa-fill-drip"></i> Fill (Black)</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="blur"><i class="fa-solid fa-blender"></i> Fast Blur</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="sharpen"><i class="fa-solid fa-bolt"></i> Sharpen</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="mirror"><i class="fa-solid fa-mirror"></i> Mirror</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="curves"><i class="fa-solid fa-chart-simple"></i> Curves</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="lumetri"><i class="fa-solid fa-sliders"></i> Lumetri Color</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="huesat"><i class="fa-solid fa-palette"></i> Hue/Saturation</button>
+        <button class="btn" data-tk-action="addEffect" data-tk-arg="blinds"><i class="fa-solid fa-venetian-blind"></i> Venetian Blinds</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Camera &amp; Frame</label>
+      <div class="btn-row">
+        <button class="btn" data-tk-action="createCamera"><i class="fa-solid fa-camera"></i> Create Camera</button>
+        <button class="btn" data-tk-action="saveFrame"><i class="fa-solid fa-image"></i> Save Frame As</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tk-qt-panel" data-tk-qt="expressions">
+    <div class="form-group">
+      <label>Inject Expression</label>
+      <select id="tk-expr-select">
+        <option value="wiggle">Wiggle (2,50)</option>
+        <option value="loopOutCycle">Loop Out - Cycle</option>
+        <option value="loopOutPingPong">Loop Out - PingPong</option>
+        <option value="elasticBounce">Elastic Bounce</option>
+      </select>
+      <button class="btn" data-tk-action="injectExpr" style="margin-top:4px;"><i class="fa-solid fa-code"></i> Inject to Selected</button>
+    </div>
+  </div>
+
+  <div class="tk-qt-panel" data-tk-qt="timeline">
+    <div class="form-group">
+      <label>Frame Actions</label>
+      <div class="btn-row">
+        <button class="btn" data-tk-action="freezeFrame"><i class="fa-solid fa-pause"></i> Freeze Frame</button>
+        <button class="btn" data-tk-action="trimOut"><i class="fa-solid fa-scissors"></i> Trim to CTI</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Layer Order</label>
+      <div class="btn-row">
+        <button class="btn" data-tk-action="moveLayer" data-tk-arg="up"><i class="fa-solid fa-arrow-up"></i> Move Up</button>
+        <button class="btn" data-tk-action="moveLayer" data-tk-arg="down"><i class="fa-solid fa-arrow-down"></i> Move Down</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Sequence Layers</label>
+      <div class="tk-sequence-row">
+        <input type="number" id="tk-shift-frames" value="5" min="1" style="flex:1;">
+        <span style="font-size:8px;color:var(--text-3);">frames offset</span>
+      </div>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="btn" data-tk-action="shiftLayer" data-tk-arg="-1"><i class="fa-solid fa-arrow-left"></i> Shift Left</button>
+        <button class="btn" data-tk-action="shiftLayer" data-tk-arg="1"><i class="fa-solid fa-arrow-right"></i> Shift Right</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Memory</label>
+      <button class="btn" data-tk-action="purgeRAM"><i class="fa-solid fa-broom"></i> Purge RAM Cache</button>
+    </div>
+  </div>
+</div>
