@@ -534,65 +534,69 @@ def run_sys_metrics():
 def run_dedupe(
     input_path,
     output_path,
-    threshold,
-    region_sensitivity=1,
-    use_optical_flow=True,
-    camera_compensation=True,
-    remove_static_subject=True
+    flow_threshold=0.5,
+    motion_area_fraction=0.15,
+    cadence=3,
+    auto=False,
+    keep_talking=False,
+    keep_camera=False,
+    parallax_mode=False,
+    detect_scale=1.0,
+    small_movements=None,
 ):
-    log("info", f"Starting Duplicate Frame Removal. Input: {input_path}")
+    log("info", "Starting Deadframe Removal. Input: " + input_path)
 
-    from duplicate_frame_remover.processor import process_single_video
-    from utils import get_gpu_info
+    from duplicate_frame_remover.processor import run_deadframes
     import sys
     from pathlib import Path
 
-    
-    ffmpeg_exe = None
     script_dir = Path(__file__).parent
+    ffmpeg_exe = None
+    ffprobe_exe = None
     local_ffmpeg = script_dir / "ffmpeg.exe"
+    local_ffprobe = script_dir / "ffprobe.exe"
     if local_ffmpeg.exists():
         ffmpeg_exe = str(local_ffmpeg)
     else:
         import shutil
         ffmpeg_exe = shutil.which("ffmpeg")
+    if local_ffprobe.exists():
+        ffprobe_exe = str(local_ffprobe)
+    else:
+        import shutil
+        ffprobe_exe = shutil.which("ffprobe")
 
-    gpu_info = get_gpu_info()
-    use_gpu = gpu_info.get("cuda_available", False)
+    if not ffmpeg_exe:
+        log("error", "FFmpeg not found.")
+        sys.exit(1)
+    if not ffprobe_exe:
+        ffprobe_exe = "ffprobe"
 
-    
-    similarity_threshold = 1.0 - threshold
-
-    def progress_cb(current, total, unique, dupes):
-        pct = min(100, int((current / max(total, 1)) * 100))
-        log("progress", f"Processed frames... {current}/{total} (Unique: {unique}, Duplicate: {dupes})", pct=pct)
+    def progress_cb(pct, msg):
+        log("progress", msg, pct=pct)
 
     try:
-        stats = process_single_video(
-            input_path=Path(input_path),
-            output_path=Path(output_path),
+        stats = run_deadframes(
+            input_path=str(input_path),
+            output_path=str(output_path),
             ffmpeg_path=ffmpeg_exe,
-            similarity_threshold=similarity_threshold,
-            use_optical_flow=use_optical_flow,
-            region_sensitivity=region_sensitivity,
-            camera_motion_compensation=camera_compensation,
-            remove_static_subject=remove_static_subject,
-            verbose=False,
-            use_gpu=use_gpu,
-            progress_callback=progress_cb
+            ffprobe_path=ffprobe_exe,
+            flow_threshold=flow_threshold,
+            motion_area_fraction=motion_area_fraction,
+            cadence=cadence,
+            auto=auto,
+            keep_talking=keep_talking,
+            keep_camera=keep_camera,
+            parallax_mode=parallax_mode,
+            detect_scale=detect_scale,
+            small_movements=small_movements,
+            progress_cb=progress_cb,
         )
-        log("info", f"Deduplication report: Total={stats['total_frames']}, Unique={stats['unique_frames']}, Duplicate={stats['duplicate_frames']}")
-        # Removing frames shortens the video, so the original full-length audio would
-        # drift out of sync if muxed back on. Only re-attach audio when nothing was
-        # removed; otherwise the user lays the soundtrack over the cut clip in AE.
-        if stats.get('duplicate_frames', 0) > 0:
-            log("warn", "Frames removed - skipping audio mux to avoid A/V desync "
-                        "(add your soundtrack in After Effects).")
-        else:
-            mux_audio(str(output_path), str(input_path))
-        log("success", "Duplicate frame removal completed successfully.")
+        log("info", "Deadframe report: Total={}, Kept={}, Dropped={}".format(
+            stats['total_frames'], stats['kept_frames'], stats['dropped_frames']))
+        log("success", "Deadframe removal completed successfully.")
     except Exception as e:
-        log("error", f"Deduplication failed: {e}")
+        log("error", "Deadframe removal failed: " + str(e))
         sys.exit(1)
 
 def main():
@@ -604,16 +608,24 @@ def main():
     parser.add_argument("--model", type=str, default="", help="Model name selection")
     parser.add_argument("--factor", type=int, default=2,
                         help="Scale or interpolation multiplier factor")
-    parser.add_argument("--threshold", type=float, default=0.05,
-                        help="Deduplication threshold (difference amount, e.g. 0.05)")
-    parser.add_argument("--region-sensitivity", type=int, default=1,
-                        help="Minimum changed regions to consider unique motion")
-    parser.add_argument("--no-optical-flow", action="store_true",
-                        help="Disable optical flow comparison")
-    parser.add_argument("--no-camera-comp", action="store_true",
-                        help="Disable camera motion compensation")
-    parser.add_argument("--no-static-subject", action="store_true",
-                        help="Disable static subject detection")
+    parser.add_argument("--flow-threshold", type=float, default=0.5,
+                        help="Optical flow magnitude threshold (lower = more aggressive, default 0.5)")
+    parser.add_argument("--motion-area-fraction", type=float, default=0.15,
+                        help="Min fraction of frame area with motion to keep (default 0.15)")
+    parser.add_argument("--cadence", type=int, default=3,
+                        help="Min consecutive dead frames to drop (preserves animation holds, default 3)")
+    parser.add_argument("--auto", action="store_true",
+                        help="Auto-calibrate thresholds from frame-pair distribution")
+    parser.add_argument("--keep-talking", action="store_true",
+                        help="Keep subtle dialogue/mouth motion (romance, talking heads)")
+    parser.add_argument("--keep-camera", action="store_true",
+                        help="Keep camera pan/zoom/shake (vlogs, handheld)")
+    parser.add_argument("--parallax", action="store_true",
+                        help="Invert camera motion rule for parallax shots")
+    parser.add_argument("--detect-scale", type=float, default=1.0,
+                        help="Detection resolution scale (0.5 = half size, faster)")
+    parser.add_argument("--small-movements", type=float, default=None,
+                        help="Custom flow threshold for small movements (0=keep all, 0.5=default)")
     parser.add_argument("--target-size-mb", type=float, default=0,
                         help="Target output file size in MB (re-encodes with FFmpeg)")
     parser.add_argument("--preset", type=str, default="high",
@@ -648,14 +660,18 @@ def main():
             run_dedupe(
                 args.input,
                 args.output,
-                args.threshold,
-                region_sensitivity=args.region_sensitivity,
-                use_optical_flow=not args.no_optical_flow,
-                camera_compensation=not args.no_camera_comp,
-                remove_static_subject=not args.no_static_subject
+                flow_threshold=args.flow_threshold,
+                motion_area_fraction=args.motion_area_fraction,
+                cadence=args.cadence,
+                auto=args.auto,
+                keep_talking=args.keep_talking,
+                keep_camera=args.keep_camera,
+                parallax_mode=args.parallax,
+                detect_scale=args.detect_scale,
+                small_movements=args.small_movements,
             )
         except Exception as e:
-            log("error", f"Deduplication failed: {e}")
+            log("error", "Deduplication failed: " + str(e))
             sys.exit(1)
         return
 
