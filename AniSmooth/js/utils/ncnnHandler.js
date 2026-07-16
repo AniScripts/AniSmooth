@@ -67,76 +67,43 @@
       var inputExt = inputPath.replace(/^.*\./, "").toLowerCase();
       dbg("info", "NCNN-DEBUG", "Input ext: " + inputExt + ", Output ext: " + outputExt);
 
+      var finalOutputPath = outputPath;
+      var tempPngDir = null;
+      var pngOutputPath = null;
+
       if (outputExt === "avi") {
-        outputPath = outputPath.replace(/\.\w+$/, ".mkv");
-        dbg("info", "NCNN-DEBUG", "Output AVI forced to MKV: " + outputPath);
+        finalOutputPath = outputPath.replace(/\.\w+$/, ".mp4");
       }
 
-      var actualInput = inputPath;
-      var tempInput = null;
-
+      var appdata = "";
+      try { appdata = process.env.APPDATA || ""; } catch (e) {}
+      if (!appdata && window.FileSystem.os) {
+        appdata = p.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
+      }
+      var backendDir = appdata ? p.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend") : "";
+      var ffmpegPath = backendDir ? p.join(backendDir, "ffmpeg.exe") : "";
       var ffmpegDir = "";
-      if (inputExt === "avi") {
-        dbg("info", "NCNN-DEBUG", "AVI input detected, looking for FFmpeg...");
-        var appdata = "";
-        try { appdata = process.env.APPDATA || ""; } catch (e) {}
-        if (!appdata && window.FileSystem.os) {
-          appdata = p.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
-        }
-        var ffmpegPath = null;
-        if (appdata) {
-          var backendDir = p.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend");
-          ffmpegPath = p.join(backendDir, "ffmpeg.exe");
-          ffmpegDir = backendDir;
-          dbg("info", "NCNN-DEBUG", "Checking FFmpeg at: " + ffmpegPath + " (exists: " + fs.existsSync(ffmpegPath) + ")");
-          if (!fs.existsSync(ffmpegPath)) ffmpegPath = null;
-        }
-        if (!ffmpegPath) {
-          try {
-            ffmpegPath = require("child_process").execSync("where ffmpeg", { encoding: "utf8" }).trim().split("\n")[0];
-            dbg("info", "NCNN-DEBUG", "FFmpeg found via PATH: " + ffmpegPath);
-          } catch (e) {
-            dbg("warn", "NCNN-DEBUG", "FFmpeg not found in PATH: " + e.message);
-          }
-        }
-
-        if (ffmpegPath && fs.existsSync(ffmpegPath)) {
-          tempInput = inputPath.replace(/\.\w+$/, "_ncnn_temp.mp4");
-          dbg("info", "NCNN-DEBUG", "Converting: " + inputPath + " -> " + tempInput);
-          try {
-            var convResult = cp.spawnSync(ffmpegPath, [
-              "-y", "-i", inputPath,
-              "-c:v", "libx264", "-preset", "ultrafast", "-crf", "0",
-              "-pix_fmt", "yuv420p", "-an",
-              tempInput
-            ], { windowsHide: true, timeout: 120000 });
-            dbg("info", "NCNN-DEBUG", "FFmpeg exit code: " + convResult.status);
-            dbg("info", "NCNN-DEBUG", "FFmpeg stderr: " + (convResult.stderr ? convResult.stderr.toString().slice(0, 500) : "(none)"));
-            if (convResult.status === 0 && fs.existsSync(tempInput)) {
-              actualInput = tempInput;
-              dbg("info", "NCNN-DEBUG", "Conversion OK, temp size: " + fs.statSync(tempInput).size);
-            } else {
-              dbg("warn", "NCNN-DEBUG", "FFmpeg conversion failed (status=" + convResult.status + ", tempExists=" + fs.existsSync(tempInput) + ")");
-              try { if (fs.existsSync(tempInput)) fs.unlinkSync(tempInput); } catch (e) {}
-              tempInput = null;
-            }
-          } catch (e) {
-            dbg("error", "NCNN-DEBUG", "FFmpeg spawn exception: " + e.message);
-            try { if (fs.existsSync(tempInput)) fs.unlinkSync(tempInput); } catch (e2) {}
-            tempInput = null;
-          }
-        } else {
-          dbg("warn", "NCNN-DEBUG", "No FFmpeg found, using original AVI input");
-        }
+      if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+        ffmpegDir = backendDir;
+      } else {
+        ffmpegPath = null;
+        try {
+          ffmpegPath = require("child_process").execSync("where ffmpeg", { encoding: "utf8" }).trim().split("\n")[0];
+          if (ffmpegPath) ffmpegDir = p.dirname(ffmpegPath);
+        } catch (e) {}
       }
+      dbg("info", "NCNN-DEBUG", "FFmpeg: " + (ffmpegPath || "NOT FOUND") + " dir: " + (ffmpegDir || "N/A"));
 
-      dbg("info", "NCNN-DEBUG", "Actual input: " + actualInput);
+      tempPngDir = inputPath.replace(/\.\w+$/, "_ncnn_frames");
+      try { if (fs.existsSync(tempPngDir)) { var oldFiles = fs.readdirSync(tempPngDir); for (var fi = 0; fi < oldFiles.length; fi++) fs.unlinkSync(p.join(tempPngDir, oldFiles[fi])); } else { fs.mkdirSync(tempPngDir); } } catch (e) { dbg("warn", "NCNN-DEBUG", "Temp dir error: " + e.message); }
+      pngOutputPath = p.join(tempPngDir, "frame_%08d.png");
+      dbg("info", "NCNN-DEBUG", "PNG output to: " + pngOutputPath);
 
       var exeDir = p.dirname(exe);
       var gpuId = window.StorageManager.getItem("anismooth_ncnn_gpu_id", "0") || "0";
       var args = [
-        "-i", actualInput,
-        "-o", outputPath,
+        "-i", inputPath,
+        "-o", pngOutputPath,
         "-g", gpuId,
         "-m", options.model || "rife-v4.26",
         "-j", String(options.threadCount || "4:4:4")
@@ -209,24 +176,62 @@
         dbg("info", "NCNN-DEBUG", "Finalizing: ok=" + ok + " msg=" + (message || ""));
         dbg("info", "NCNN-DEBUG", "All stderr (" + stderrLines.length + " lines): " + allStderr.slice(0, 2000));
         self.activeProcess = null;
-        if (tempInput) { try { fs.unlinkSync(tempInput); } catch (e) {} }
-        if (self._cancelled) { dbg("info", "NCNN-DEBUG", "Cancelled, aborting"); self._cancelled = false; return; }
+        if (self._cancelled) { dbg("info", "NCNN-DEBUG", "Cancelled, aborting"); self._cancelled = false; _cleanupTempDir(); return; }
         if (ok) {
-          if (fs.existsSync(outputPath)) {
-            dbg("info", "NCNN-DEBUG", "Output exists: " + outputPath + " (size: " + fs.statSync(outputPath).size + ")");
-            dbg("success", "NCNN", "Completed: " + outputPath);
+          if (tempPngDir && ffmpegPath && fs.existsSync(tempPngDir)) {
+            var frames = [];
+            try { var allFiles = fs.readdirSync(tempPngDir); for (var fi = 0; fi < allFiles.length; fi++) { if (/\.png$/i.test(allFiles[fi])) frames.push(allFiles[fi]); } } catch (e) {}
+            dbg("info", "NCNN-DEBUG", "PNG frames found: " + frames.length);
+            if (frames.length > 0) {
+              var fpsEstimate = options.factor ? (parseFloat(options.factor) * 24) : 24;
+              dbg("info", "NCNN-DEBUG", "Encoding PNG sequence -> MP4 at " + fpsEstimate + "fps via FFmpeg");
+              try {
+                var encResult = cp.spawnSync(ffmpegPath, [
+                  "-y", "-framerate", String(fpsEstimate), "-i", p.join(tempPngDir, "frame_%08d.png"),
+                  "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                  "-pix_fmt", "yuv420p", "-an",
+                  finalOutputPath
+                ], { windowsHide: true, timeout: 300000 });
+                dbg("info", "NCNN-DEBUG", "FFmpeg encode exit: " + encResult.status);
+                if (encResult.status === 0 && fs.existsSync(finalOutputPath)) {
+                  dbg("info", "NCNN-DEBUG", "Final MP4: " + finalOutputPath + " (" + fs.statSync(finalOutputPath).size + " bytes)");
+                  _cleanupTempDir();
+                  dbg("success", "NCNN", "Completed: " + finalOutputPath);
+                  if (callbacks.onComplete) callbacks.onComplete();
+                  return;
+                }
+              } catch (e) { dbg("error", "NCNN-DEBUG", "FFmpeg encode error: " + e.message); }
+            }
+          }
+          _cleanupTempDir();
+          if (fs.existsSync(finalOutputPath)) {
+            dbg("info", "NCNN-DEBUG", "Output exists: " + finalOutputPath + " (size: " + fs.statSync(finalOutputPath).size + ")");
+            dbg("success", "NCNN", "Completed: " + finalOutputPath);
             if (callbacks.onComplete) callbacks.onComplete();
           } else {
-            dbg("error", "NCNN-DEBUG", "Output missing: " + outputPath);
-            dbg("error", "NCNN", "Output file not found: " + outputPath);
+            dbg("error", "NCNN-DEBUG", "Output missing: " + finalOutputPath);
+            dbg("error", "NCNN", "Output file not found: " + finalOutputPath);
             if (callbacks.onError) callbacks.onError("NCNN completed but no output file was produced.");
           }
         } else {
+          _cleanupTempDir();
           dbg("error", "NCNN-DEBUG", "Error: " + message);
           dbg("error", "NCNN", message);
           if (callbacks.onError) callbacks.onError(message);
         }
       };
+
+      function _cleanupTempDir() {
+        if (tempPngDir) {
+          try {
+            if (fs.existsSync(tempPngDir)) {
+              var files = fs.readdirSync(tempPngDir);
+              for (var fi = 0; fi < files.length; fi++) fs.unlinkSync(p.join(tempPngDir, files[fi]));
+              fs.rmdirSync(tempPngDir);
+            }
+          } catch (e) {}
+        }
+      }
 
       var stderrBuf = "";
       proc.stderr.on("data", function (data) {
