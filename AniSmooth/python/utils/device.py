@@ -36,6 +36,11 @@ def get_gpu_vendor():
         return "nvidia"
     if dev_type == "dml":
         return _detect_dml_vendor()
+    if _find_nvidia_smi() is not None:
+        return "nvidia"
+    amd = _run_amd_gpu_query()
+    if amd is not None:
+        return "amd"
     return _detect_gpu_vendor_wmi()
 
 def _detect_dml_vendor():
