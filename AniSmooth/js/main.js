@@ -1164,10 +1164,10 @@
         { value: "rife4.25-tensorrt", label: "RIFE 4.25 TensorRT", icon: "fa-bolt", backend: "cuda" }
       ];
       var interpVulkanModels = [
-        { value: "rife-v4.26", label: "RIFE 4.26 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
-        { value: "rife-v4.25", label: "RIFE 4.25 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-v4.22", label: "RIFE 4.22 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
+        { value: "rife-v4.15", label: "RIFE 4.15 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
         { value: "rife-v4.15-lite", label: "RIFE 4.15 Lite (Vulkan)", icon: "fa-fire", backend: "vulkan" },
-        { value: "rife-anime", label: "RIFE Anime (Vulkan)", icon: "fa-fire", backend: "vulkan" }
+        { value: "rife-v4.6", label: "RIFE 4.6 (Vulkan)", icon: "fa-fire", backend: "vulkan" }
       ];
       var upscaleCudaModels = [
         { value: "adore", label: "Adore", icon: "fa-microchip", backend: "cuda" },

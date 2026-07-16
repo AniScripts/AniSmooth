@@ -239,7 +239,7 @@
       if (vendor === "amd" && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
         outputPath = outputPath.replace(/\.\w+$/, ".mp4");
         var ncnnOpts = {
-          model: modelKey || "rife-v4.26",
+          model: modelKey || "rife-v4.22",
           factor: options.fpsFactor || "2",
           threadCount: "4:4:4"
         };
