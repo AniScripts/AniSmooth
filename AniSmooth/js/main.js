@@ -2114,9 +2114,16 @@
       if (!preset) return false;
       var state = preset.settings || preset;
       if (!state) return false;
-      var validInterp = ["rife4.25-heavy", "rife4.25", "rife4.25-heavy-tensorrt", "rife4.25-tensorrt"];
-      var validUpscale = ["adore", "fallin_soft"];
-      var validFfAi = ["RifeNcnn", "RifeNcnnVs", "DainNcnn"];
+      var validInterp = [
+        "rife4.25-heavy", "rife4.25", "rife4.25-heavy-tensorrt", "rife4.25-tensorrt",
+        "rife-v4.6", "rife-v4", "rife-v3.1", "rife-v3.0", "rife-v2.4", "rife-v2.3", "rife-v2",
+        "rife-anime", "rife-HD", "rife-UHD", "rife"
+      ];
+      var validUpscale = [
+        "adore", "fallin_soft",
+        "realesr-animevideov3", "realesrgan-x4plus-anime", "realesrgan-x4plus", "realesrnet-x4plus"
+      ];
+      var validFfAi = ["RifeNcnn", "RifeNcnnVs", "DainNcnn", "RifeCuda", "FlavrCuda", "XvfiCuda"];
       var validFfEnc = ["X264", "Nvenc264", "Amf264", "X265", "Nvenc265", "Amf265", "SvtAv1", "NvencAv1"];
 
       if (state.interpolation && state.interpolation.model) {
@@ -2132,23 +2139,27 @@
       if (state.python && state.python.path) {
         if (!this._validatePythonPath(state.python.path)) return false;
       }
+      if (state.output && state.output.ffmpegPath) {
+        if (!this._validateExecutablePath(state.output.ffmpegPath, "ffmpeg.exe")) return false;
+      }
       return true;
     },
 
     _validatePythonPath: function (pPath) {
       if (!pPath) return false;
       if (pPath === "python" || pPath === "python3") return true;
-      
-      if (pPath.indexOf("\\\\") === 0 || pPath.indexOf("//") === 0) {
-        return false;
-      }
-      
+      if (pPath.indexOf("\\\\") === 0 || pPath.indexOf("//") === 0) return false;
       var lower = pPath.toLowerCase();
       var exeName = lower.split(/[\\\/]/).pop();
-      if (exeName === "python.exe" || exeName === "python3.exe") {
-        return true;
-      }
-      return false;
+      return exeName === "python.exe" || exeName === "python3.exe";
+    },
+
+    _validateExecutablePath: function (pPath, expectedExe) {
+      if (!pPath) return true;
+      if (pPath.indexOf("\\\\") === 0 || pPath.indexOf("//") === 0) return false;
+      var lower = pPath.toLowerCase();
+      var exeName = lower.split(/[\\\/]/).pop();
+      return expectedExe ? exeName === expectedExe.toLowerCase() : /\.exe$/i.test(exeName);
     },
 
     _filterVersionLabels: function () {
