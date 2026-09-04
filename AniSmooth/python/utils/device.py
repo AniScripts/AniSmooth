@@ -200,10 +200,21 @@ def get_gpu_info():
         gpu_name = amd["name"]
         gpu_mem_total = amd["memory_total_mb"]
 
+    vulkan_available = False
+    if os.name == "nt":
+        sys32_vulkan = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "vulkan-1.dll")
+        if os.path.exists(sys32_vulkan):
+            vulkan_available = True
+        elif shutil.which("vulkan-1.dll") is not None or shutil.which("vulkaninfo") is not None:
+            vulkan_available = True
+    else:
+        vulkan_available = shutil.which("vulkaninfo") is not None
+
     info = {
         "gpu_vendor": vendor,
         "device_type": dev_type,
         "cuda_available": torch_cuda,
+        "vulkan_available": vulkan_available,
         "dml_available": False,
         "device": dev_type,
         "gpu_name": gpu_name,

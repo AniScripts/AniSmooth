@@ -78,6 +78,21 @@
       return totalBytes / (1024 * 1024);
     },
 
+    getFreeDiskSpaceMB(dirPath) {
+      if (!childProcess || process.platform !== "win32") return 0;
+      try {
+        var driveLetter = (dirPath && dirPath[0]) ? dirPath[0] : "C";
+        var ps = childProcess.execFileSync("powershell.exe", [
+          "-NoProfile", "-Command",
+          "(Get-PSDrive -Name '" + driveLetter + "').Free"
+        ], { encoding: "utf8", windowsHide: true });
+        var freeBytes = parseInt(ps, 10) || 0;
+        return Math.floor(freeBytes / (1024 * 1024));
+      } catch (e) {
+        return 0;
+      }
+    },
+
     pathToFileUrl(filePath) {
       if (!filePath) return "";
       let pathName = path ? path.resolve(filePath).replace(/\\/g, "/") : filePath.replace(/\\/g, "/");

@@ -257,6 +257,20 @@
     var sourceSetup = (window.FileSystem.path && extPath) ? window.FileSystem.path.join(extPath, 'python', 'setup.py') : 'setup.py';
     var destSetup = window.FileSystem.path.join(_toolsFolder, 'setup.py');
 
+    if (window.FileSystem && window.FileSystem.getFreeDiskSpaceMB) {
+      var freeMB = window.FileSystem.getFreeDiskSpaceMB(_toolsFolder);
+      var reqMB = isAmd ? 500 : 6000;
+      if (freeMB > 0 && freeMB < reqMB) {
+        var freeGB = (freeMB / 1024).toFixed(1);
+        var reqGB = (reqMB / 1024).toFixed(1);
+        _gpuDownloadState.running = false;
+        _gpuDownloadState.message = 'Low disk space: ' + freeGB + ' GB free, ~' + reqGB + ' GB required on target drive.';
+        _gpuDownloadState.log.push('[ERR] Insufficient disk space on installation drive (' + freeGB + ' GB free, ~' + reqGB + ' GB needed).');
+        renderSetupStep();
+        return;
+      }
+    }
+
     try {
       window.FileSystem.createFolder(_toolsFolder);
       var content = window.FileSystem.fs.readFileSync(sourceSetup, 'utf8');
@@ -372,6 +386,15 @@
       } else {
         rows += renderToolRow({ checking: true }, 'GPU & CUDA', 'Detecting hardware...', 'fa-solid fa-microchip');
       }
+    } else if (_gpuChoice === 'amd') {
+      if (_gpuChecked) {
+        var amdLabel = (_gpuInfo && _gpuInfo.amd_name) ? _gpuInfo.amd_name : 'AMD Radeon';
+        var vulkanOk = _gpuInfo && _gpuInfo.vulkan_available;
+        rows += renderToolRow({ found: vulkanOk, extra: vulkanOk ? 'Vulkan Active' : 'Vulkan Missing' },
+          'GPU & Vulkan', amdLabel + (vulkanOk ? ' - NCNN Vulkan Ready' : ' - Vulkan Runtime Not Found'), 'fa-brands fa-amd');
+      } else {
+        rows += renderToolRow({ checking: true }, 'GPU & Vulkan', 'Detecting AMD Vulkan...', 'fa-brands fa-amd');
+      }
     } else {
       rows += renderToolRow({ found: true, extra: 'cpu' }, 'Mode', 'CPU (no GPU acceleration)', 'fa-solid fa-computer');
     }
@@ -422,7 +445,7 @@
     '</div></div>';
 
     if (!_pythonChecked) { setTimeout(function () { checkPythonAsync(); }, 80); }
-    if (_gpuChoice === 'gpu' && !_gpuChecked && _pythonOk) { setTimeout(function () { checkGpuAsync(); }, 400); }
+    if ((_gpuChoice === 'gpu' || _gpuChoice === 'amd') && !_gpuChecked && _pythonOk) { setTimeout(function () { checkGpuAsync(); }, 400); }
     if (_gpuChoice === 'cpu' && !_gpuChecked) { _gpuChecked = true; _gpuInfo = null; }
     if (!_pytorchChecked && _pythonOk) { setTimeout(function () { checkPytorchAsync(); }, 600); }
     return html;

@@ -83,19 +83,48 @@ def ensure_venv():
         return None
 
 def download_file(url, dest_path, label, attempts=3):
-    """Download a file with progress reporting and bounded retry. Returns True on success."""
     import urllib.request
     import time
 
+    part_path = dest_path + ".part"
+    chunk_size = 65536
+
     for attempt in range(1, attempts + 1):
+        existing_bytes = os.path.getsize(part_path) if os.path.exists(part_path) else 0
         if attempt == 1:
             log("info", f"Downloading {label}...", pct=0)
         else:
-            log("info", f"Retrying download of {label} (attempt {attempt}/{attempts})...", pct=0)
+            log("info", f"Retrying download of {label} (attempt {attempt}/{attempts}, resuming from {existing_bytes // (1024*1024)}MB)...", pct=0)
+
+        headers = {"User-Agent": "AniSmooth/1.0"}
+        if existing_bytes > 0:
+            headers["Range"] = f"bytes={existing_bytes}-"
 
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "AniSmooth/1.0"})
+            req = urllib.request.Request(url, headers=headers)
             resp = urllib.request.urlopen(req, timeout=30)
+        except urllib.error.HTTPError as e:
+            if e.code == 416:
+                existing_bytes = 0
+                try:
+                    os.unlink(part_path)
+                except Exception:
+                    pass
+                req = urllib.request.Request(url, headers={"User-Agent": "AniSmooth/1.0"})
+                try:
+                    resp = urllib.request.urlopen(req, timeout=30)
+                except Exception as e2:
+                    log("warn", f"Could not connect: {e2}")
+                    if attempt < attempts:
+                        time.sleep(2 * attempt)
+                        continue
+                    return False
+            else:
+                log("warn", f"HTTP Error {e.code}: {e}")
+                if attempt < attempts:
+                    time.sleep(2 * attempt)
+                    continue
+                return False
         except Exception as e:
             log("warn", f"Could not connect to download server: {e}")
             if attempt < attempts:
@@ -104,12 +133,21 @@ def download_file(url, dest_path, label, attempts=3):
             log("error", f"Could not connect to download server after {attempts} attempts: {e}")
             return False
 
-        total = int(resp.headers.get("Content-Length", 0))
-        downloaded = 0
-        chunk_size = 65536
+        content_range = resp.headers.get("Content-Range", "")
+        if content_range and "/" in content_range:
+            total = int(content_range.split("/")[-1])
+        else:
+            total = int(resp.headers.get("Content-Length", 0))
+            if existing_bytes > 0 and resp.status == 206:
+                total += existing_bytes
+
+        downloaded = existing_bytes
+        mode = "ab" if (existing_bytes > 0 and resp.status == 206) else "wb"
+        if mode == "wb":
+            downloaded = 0
 
         try:
-            with open(dest_path, "wb") as f:
+            with open(part_path, mode) as f:
                 while True:
                     chunk = resp.read(chunk_size)
                     if not chunk:
@@ -122,14 +160,18 @@ def download_file(url, dest_path, label, attempts=3):
                             log("progress", f"Downloading {label}: {pct}%", pct=pct, done=downloaded, total=total)
         except Exception as e:
             log("warn", f"Download interrupted: {e}")
-            try:
-                os.unlink(dest_path)
-            except Exception:
-                pass
             if attempt < attempts:
                 time.sleep(2 * attempt)
                 continue
             log("error", f"Download failed after {attempts} attempts: {e}")
+            return False
+
+        try:
+            if os.path.exists(dest_path):
+                os.unlink(dest_path)
+            shutil.move(part_path, dest_path)
+        except Exception as e:
+            log("error", f"Could not finalize download: {e}")
             return False
 
         log("progress", f"Downloading {label}: 100%", pct=100, done=downloaded, total=total)
@@ -347,15 +389,21 @@ def _detect_cuda_pytorch_index():
     return None
 
 def _run_pip(venv_python, args):
-    """Run pip inside the venv and stream output. Returns exit code."""
     cmd = [venv_python, "-m", "pip"] + list(args)
-    # For network-bound install operations, make pip resilient to transient
-    # registry/index hiccups.
     if args and args[0] == "install":
         if "--retries" not in cmd:
             cmd += ["--retries", "5"]
         if "--timeout" not in cmd:
             cmd += ["--timeout", "120"]
+        if "--no-warn-script-location" not in cmd:
+            cmd += ["--no-warn-script-location"]
+        cache_dir = os.path.join(SCRIPT_DIR, ".pip_cache")
+        try:
+            os.makedirs(cache_dir, exist_ok=True)
+            if "--cache-dir" not in cmd:
+                cmd += ["--cache-dir", cache_dir]
+        except Exception:
+            pass
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in proc.stdout:
         log("pip", line.strip())
