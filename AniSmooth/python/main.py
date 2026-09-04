@@ -165,12 +165,12 @@ def finalize_output(output_path, input_path, target_size_mb=None, quality=None):
             log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
             reencode_high_quality(output_path, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
 
-def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high"):
+def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high", gpu_id=0):
     q = resolve_quality(preset)
     log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
 
     print_gpu_info()
-    device = get_device()
+    device = get_device(gpu_id)
     log("info", f"Using device: {device}")
 
     use_tensorrt = "tensorrt" in model_name and is_tensorrt_available()
@@ -252,19 +252,14 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                         interp = tensor_to_frame(mid, str(device))
                         video.write_frame(interp)
                 else:
-                    # PyTorch path - channels_last keeps CuDNN on the same
-                    # kernel path as when the model was tuned; without it
-                    # non-deterministic CuDNN kernel selection can shift
-                    # intermediate activations enough to produce wrong flow.
+                    
                     t0 = frame_to_tensor(prev_frame, device).to(memory_format=torch.channels_last)
                     t1 = frame_to_tensor(frame, device).to(memory_format=torch.channels_last)
                     t0_padded, pad_info = pad_to_mod(t0, 32)
                     t1_padded, _ = pad_to_mod(t1, 32)
                     with torch.no_grad(), torch.amp.autocast("cuda", enabled=device.type == "cuda"):
                         model.cachePair(t0_padded, t1_padded)
-                        # Save encoded features: IFNet.forward mutates f0←f1
-                        # after each call, so multi-step (factor≥3) would use
-                        # f1 for both on 2nd+ iterations - wrong flow.
+                        
                         saved_f0 = model.flownet.f0
                         saved_f1 = model.flownet.f1
                         for f in range(1, factor):
@@ -302,12 +297,12 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
     finalize_output(output_path, input_path, target_size_mb, q)
     log("success", "Interpolation process completed successfully.")
 
-def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="high", fit_w=0, fit_h=0):
+def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="high", fit_w=0, fit_h=0, gpu_id=0):
     q = resolve_quality(preset)
     log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
 
     print_gpu_info()
-    device = get_device()
+    device = get_device(gpu_id)
     log("info", f"Using device: {device}")
     cpu_threads = max(2, min(os.cpu_count() or 4, 8))
     cv2.setNumThreads(cpu_threads)
@@ -659,6 +654,8 @@ def main():
                         help="Quality preset key: archival | high | balanced | fast | draft "
                              "(maps to CRF + x264 speed + -tune animation; legacy x264 "
                              "speed names fall back to 'high')")
+    parser.add_argument("--gpu-id", type=int, default=0,
+                        help="GPU device index to execute on (default 0)")
     parser.add_argument("--fit-w", type=int, default=0,
                         help="Target width to fit output within (0 = disabled)")
     parser.add_argument("--fit-h", type=int, default=0,
@@ -708,9 +705,9 @@ def main():
 
     try:
         if args.mode == "interpolate":
-            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset)
+            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.gpu_id)
         elif args.mode == "upscale":
-            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.fit_w, args.fit_h)
+            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.fit_w, args.fit_h, args.gpu_id)
     except Exception as e:
         log("error", f"Processing failed: {e}")
         import traceback
