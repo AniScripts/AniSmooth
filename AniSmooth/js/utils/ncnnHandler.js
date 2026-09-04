@@ -23,6 +23,13 @@
             if (fs.existsSync(guess)) return guess;
             var guessSub = path.join(ncnnDir, name, exeName);
             if (fs.existsSync(guessSub)) return guessSub;
+            if (fs.existsSync(ncnnDir)) {
+              var subs = fs.readdirSync(ncnnDir);
+              for (var s = 0; s < subs.length; s++) {
+                var cand = path.join(ncnnDir, subs[s], exeName);
+                if (fs.existsSync(cand)) return cand;
+              }
+            }
           }
           var appdata = "";
           try { appdata = process.env.APPDATA || ""; } catch (e) {}
@@ -41,6 +48,14 @@
             if (fs.existsSync(guess2Sub)) return guess2Sub;
             var guess3 = path.join(backend, exeName);
             if (fs.existsSync(guess3)) return guess3;
+            var ncnnDir2 = path.join(backend, "ncnn_binaries");
+            if (fs.existsSync(ncnnDir2)) {
+              var subs2 = fs.readdirSync(ncnnDir2);
+              for (var s2 = 0; s2 < subs2.length; s2++) {
+                var cand2 = path.join(ncnnDir2, subs2[s2], exeName);
+                if (fs.existsSync(cand2)) return cand2;
+              }
+            }
           }
         }
       } catch (e) {}

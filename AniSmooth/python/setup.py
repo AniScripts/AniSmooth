@@ -629,7 +629,7 @@ def install_ncnn_binaries():
 
     is_mac = sys.platform == "darwin"
     rife_mac_url = "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-macos.zip"
-    realesrgan_mac_url = "https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan/releases/download/v0.2.0/realesrgan-ncnn-vulkan-20220424-macos.zip"
+    realesrgan_mac_url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-macos.zip"
 
     NCNN_BINARIES = {
         "rife-ncnn-vulkan": {
@@ -724,15 +724,20 @@ def main():
     parser.add_argument("--force-gpu", action="store_true", help="Reinstall PyTorch with CUDA support")
     parser.add_argument("--force-ncnn", action="store_true", help="Download NCNN Vulkan binaries for AMD GPU support")
     args = parser.parse_args()
+    if args.force_ncnn:
+        try:
+            ok = install_ncnn_binaries()
+            sys.exit(0 if ok else 1)
+        except Exception as e:
+            log("fatal", str(e))
+            sys.exit(1)
+        return
 
-    # Fail fast on interpreters too old to have any compatible torch wheel rather
-    # than letting pip emit an opaque 'no matching distribution' later. Runs before
-    # both the force-gpu and normal paths so the wizard GPU path also fails fast.
-    if sys.version_info < (3, 10):
+    min_py = (3, 9) if sys.platform == "darwin" else (3, 10)
+    if sys.version_info < min_py:
         log("error",
-            "Unsupported Python {}.{}. AniSmooth requires Python 3.10 or newer "
-            "(3.10-3.12 recommended; 3.13 supported).".format(
-                sys.version_info[0], sys.version_info[1]))
+            "Unsupported Python {}.{}. AniSmooth requires Python {}.{} or newer.".format(
+                sys.version_info[0], sys.version_info[1], min_py[0], min_py[1]))
         sys.exit(1)
 
     if args.force_gpu:
