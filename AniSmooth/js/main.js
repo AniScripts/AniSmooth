@@ -21,32 +21,20 @@
 
     _presetsDir: (function () {
       if (!window.FileSystem || !window.FileSystem.path) return "";
-      var appdata = "";
-      try { appdata = process.env.APPDATA || ""; } catch (e) {}
-      if (!appdata && window.FileSystem.os) {
-        appdata = window.FileSystem.path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
-      }
+      var appdata = (window.FileSystem.getAppDataDir && window.FileSystem.getAppDataDir()) || "";
       return appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "presets") : "";
     })(),
 
     anismoothToolsFolder: (function () {
-      if (!window.FileSystem || !window.FileSystem.path) return "C:\\AniSmoothTools";
-      var appdata = "";
-      try { appdata = process.env.APPDATA || ""; } catch (e) {}
-      if (!appdata && window.FileSystem.os) {
-        appdata = window.FileSystem.path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
-      }
+      if (!window.FileSystem || !window.FileSystem.path) return "";
+      var appdata = (window.FileSystem.getAppDataDir && window.FileSystem.getAppDataDir()) || "";
       var base = appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth") : "";
-      return base ? window.FileSystem.path.join(base, "backend") : "C:\\AniSmoothTools";
+      return base ? window.FileSystem.path.join(base, "backend") : "";
     })(),
 
     anismoothPythonEnvFolder: (function () {
       if (!window.FileSystem || !window.FileSystem.path) return "";
-      var appdata = "";
-      try { appdata = process.env.APPDATA || ""; } catch (e) {}
-      if (!appdata && window.FileSystem.os) {
-        appdata = window.FileSystem.path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
-      }
+      var appdata = (window.FileSystem.getAppDataDir && window.FileSystem.getAppDataDir()) || "";
       return appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth") : "";
     })(),
 
@@ -113,7 +101,10 @@
     },
 
     _resolvePythonCmd: function () {
-      var venvPython = window.FileSystem.path.join(this.anismoothToolsFolder, ".venv", "Scripts", "python.exe");
+      var isWin = (window.FileSystem && window.FileSystem.os && window.FileSystem.os.platform && window.FileSystem.os.platform() === "win32") || (typeof process !== "undefined" && process.platform === "win32");
+      var venvPython = isWin
+        ? window.FileSystem.path.join(this.anismoothToolsFolder, ".venv", "Scripts", "python.exe")
+        : window.FileSystem.path.join(this.anismoothToolsFolder, ".venv", "bin", "python");
       if (window.FileSystem.fs && window.FileSystem.fs.existsSync(venvPython)) {
         return venvPython;
       }
@@ -1696,14 +1687,18 @@
 
       
       (function () {
-        var ffmpeg = this.anismoothToolsFolder ? window.FileSystem.path.join(this.anismoothToolsFolder, "ffmpeg.exe") : "";
+        var isWin = (window.FileSystem && window.FileSystem.os && window.FileSystem.os.platform && window.FileSystem.os.platform() === "win32") || (typeof process !== "undefined" && process.platform === "win32");
+        var ffmpegName = isWin ? "ffmpeg.exe" : "ffmpeg";
+        var ffmpeg = this.anismoothToolsFolder ? window.FileSystem.path.join(this.anismoothToolsFolder, ffmpegName) : "";
         var found = ffmpeg && window.FileSystem.fs.existsSync(ffmpeg);
         rows.push({ icon: "fa-solid fa-film", label: "FFmpeg", value: found ? ffmpeg : "Not found", ok: found });
       }).call(this);
 
       
       (function () {
-        var ffprobe = this.anismoothToolsFolder ? window.FileSystem.path.join(this.anismoothToolsFolder, "ffprobe.exe") : "";
+        var isWin = (window.FileSystem && window.FileSystem.os && window.FileSystem.os.platform && window.FileSystem.os.platform() === "win32") || (typeof process !== "undefined" && process.platform === "win32");
+        var ffprobeName = isWin ? "ffprobe.exe" : "ffprobe";
+        var ffprobe = this.anismoothToolsFolder ? window.FileSystem.path.join(this.anismoothToolsFolder, ffprobeName) : "";
         var found = ffprobe && window.FileSystem.fs.existsSync(ffprobe);
         rows.push({ icon: "fa-solid fa-magnifying-glass", label: "FFprobe", value: found ? ffprobe : "Not found", ok: found });
       }).call(this);
@@ -2229,18 +2224,22 @@
     _validatePythonPath: function (pPath) {
       if (!pPath) return false;
       if (pPath === "python" || pPath === "python3") return true;
-      if (pPath.indexOf("\\\\") === 0 || pPath.indexOf("//") === 0) return false;
+      if (pPath.indexOf("\\\\") === 0 || (pPath.indexOf("//") === 0 && process.platform === "win32")) return false;
       var lower = pPath.toLowerCase();
       var exeName = lower.split(/[\\\/]/).pop();
-      return exeName === "python.exe" || exeName === "python3.exe";
+      return exeName === "python.exe" || exeName === "python3.exe" || exeName === "python" || exeName === "python3" || /^python3\.\d+$/.test(exeName);
     },
 
     _validateExecutablePath: function (pPath, expectedExe) {
       if (!pPath) return true;
-      if (pPath.indexOf("\\\\") === 0 || pPath.indexOf("//") === 0) return false;
+      if (pPath.indexOf("\\\\") === 0 || (pPath.indexOf("//") === 0 && process.platform === "win32")) return false;
       var lower = pPath.toLowerCase();
       var exeName = lower.split(/[\\\/]/).pop();
-      return expectedExe ? exeName === expectedExe.toLowerCase() : /\.exe$/i.test(exeName);
+      if (expectedExe) {
+        var baseExpected = expectedExe.toLowerCase().replace(/\.exe$/, '');
+        return exeName === expectedExe.toLowerCase() || exeName === baseExpected;
+      }
+      return process.platform === "win32" ? /\.exe$/i.test(exeName) : true;
     },
 
     _filterVersionLabels: function () {

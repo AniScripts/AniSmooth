@@ -17,18 +17,17 @@
   var _totalSteps = 0;
 
   function _resolveDefaultFolder() {
-    var appdata = "";
-    try { appdata = process.env.APPDATA || ""; } catch (e) {}
-    if (!appdata && window.FileSystem && window.FileSystem.os && window.FileSystem.path) {
-      appdata = window.FileSystem.path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
-    }
+    var appdata = (window.FileSystem && window.FileSystem.getAppDataDir && window.FileSystem.getAppDataDir()) || "";
     var base = appdata ? window.FileSystem.path.join(appdata, "com.moongetsu.extensions", "AniSmooth") : "";
-    return base ? window.FileSystem.path.join(base, "backend") : "C:\\AniSmoothTools";
+    return base ? window.FileSystem.path.join(base, "backend") : "";
   }
 
   function _resolvePythonCmd() {
-    var venvPython = window.FileSystem.path.join(_toolsFolder, ".venv", "Scripts", "python.exe");
-    if (window.FileSystem.fs && window.FileSystem.fs.existsSync(venvPython)) {
+    var isWin = (window.FileSystem && window.FileSystem.os && window.FileSystem.os.platform && window.FileSystem.os.platform() === "win32") || (typeof process !== "undefined" && process.platform === "win32");
+    var venvPython = isWin
+      ? window.FileSystem.path.join(_toolsFolder, ".venv", "Scripts", "python.exe")
+      : window.FileSystem.path.join(_toolsFolder, ".venv", "bin", "python");
+    if (window.FileSystem && window.FileSystem.fs && window.FileSystem.fs.existsSync(venvPython)) {
       return venvPython;
     }
     return _pythonCmd || "python";
@@ -368,8 +367,11 @@
   function renderCheckStep() {
     var ffmpegFound = false, ffprobeFound = false;
     if (window.FileSystem && window.FileSystem.fs) {
-      ffmpegFound = window.FileSystem.fs.existsSync(window.FileSystem.path.join(_toolsFolder, "ffmpeg.exe"));
-      ffprobeFound = window.FileSystem.fs.existsSync(window.FileSystem.path.join(_toolsFolder, "ffprobe.exe"));
+      var isWin = (window.FileSystem.os && window.FileSystem.os.platform && window.FileSystem.os.platform() === "win32") || (typeof process !== "undefined" && process.platform === "win32");
+      var ffmpegName = isWin ? "ffmpeg.exe" : "ffmpeg";
+      var ffprobeName = isWin ? "ffprobe.exe" : "ffprobe";
+      ffmpegFound = window.FileSystem.fs.existsSync(window.FileSystem.path.join(_toolsFolder, ffmpegName));
+      ffprobeFound = window.FileSystem.fs.existsSync(window.FileSystem.path.join(_toolsFolder, ffprobeName));
     }
     var rows = '';
     rows += renderToolRow({ found: _pythonOk, checking: !_pythonChecked, extra: _pythonCmd }, 'Python 3', _pythonOk ? _pythonCmd : 'Not found', 'fa-brands fa-python');
@@ -483,6 +485,26 @@
       var fs = window.FileSystem.fs;
       var path = window.FileSystem.path;
       if (fs && path) {
+        if (process.platform === 'darwin' || process.platform === 'linux') {
+          var macPaths = [
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+            "/usr/bin/python3"
+          ];
+          var home = (process.env && process.env.HOME) || "";
+          if (home) {
+            macPaths.push(path.join(home, ".pyenv", "shims", "python3"));
+            macPaths.push(path.join(home, ".pyenv", "shims", "python"));
+            macPaths.push(path.join(home, "miniconda3", "bin", "python3"));
+            macPaths.push(path.join(home, "anaconda3", "bin", "python3"));
+          }
+          for (var pIdx = 0; pIdx < macPaths.length; pIdx++) {
+            if (fs.existsSync(macPaths[pIdx])) commands.push(macPaths[pIdx]);
+          }
+        }
+        var localappdata = (process.env && process.env.LOCALAPPDATA) || "";
+        var userprofile = (process.env && process.env.USERPROFILE) || "";
+        var programfiles = (process.env && process.env.ProgramFiles) || "C:\\Program Files";
         var searchDirs = [];
         if (localappdata) searchDirs.push(path.join(localappdata, "Programs", "Python"));
         if (userprofile) searchDirs.push(path.join(userprofile, "AppData", "Local", "Programs", "Python"));
@@ -623,7 +645,9 @@
 
   function _ffmpegFound() {
     if (!window.FileSystem || !window.FileSystem.fs) return false;
-    return window.FileSystem.fs.existsSync(window.FileSystem.path.join(_toolsFolder, "ffmpeg.exe"));
+    var isWin = (window.FileSystem.os && window.FileSystem.os.platform && window.FileSystem.os.platform() === "win32") || (typeof process !== "undefined" && process.platform === "win32");
+    var ffmpegName = isWin ? "ffmpeg.exe" : "ffmpeg";
+    return window.FileSystem.fs.existsSync(window.FileSystem.path.join(_toolsFolder, ffmpegName));
   }
 
   function addInstallLog(msg) {

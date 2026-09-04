@@ -14,6 +14,18 @@
     os: os,
     childProcess: childProcess,
 
+    getAppDataDir: function () {
+      if (process.platform === "darwin") {
+        return os ? path.join(os.homedir(), "Library", "Application Support") : "";
+      }
+      var appdata = "";
+      try { appdata = process.env.APPDATA || ""; } catch (e) {}
+      if (!appdata && os) {
+        appdata = path.join(os.homedir(), "AppData", "Roaming");
+      }
+      return appdata;
+    },
+
     createFolder: function (folder) {
       if (!fs) return;
       try {

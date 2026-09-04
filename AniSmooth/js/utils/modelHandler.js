@@ -17,14 +17,15 @@
       
       var lowerCmd = command.toLowerCase();
       if (lowerCmd !== "python" && lowerCmd !== "python3") {
-        if (command.indexOf("\\\\") === 0 || command.indexOf("//") === 0) {
+        if (command.indexOf("\\\\") === 0 || (command.indexOf("//") === 0 && process.platform === "win32")) {
           if (callbacks.onError) {
             callbacks.onError("UNC/network path rejected: " + command);
           }
           return;
         }
         var exeName = lowerCmd.split(/[\\\/]/).pop();
-        if (exeName !== "python.exe" && exeName !== "python3.exe") {
+        var isValidExe = (exeName === "python.exe" || exeName === "python3.exe" || exeName === "python" || exeName === "python3" || /^python3\.\d+$/.test(exeName));
+        if (!isValidExe) {
           if (callbacks.onError) {
             callbacks.onError("Untrusted or invalid Python executable path rejected: " + command);
           }

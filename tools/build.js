@@ -197,6 +197,9 @@ async function runBuild() {
         }
 
         console.log(' - Packaging to ZXP...');
+        if (fs.existsSync(zxpOutputPath)) {
+            try { fs.unlinkSync(zxpOutputPath); } catch (e) {}
+        }
         await zxpSignCmd.sign({
             input: DIST_DIR,
             output: zxpOutputPath,
