@@ -225,6 +225,20 @@
         });
       }
 
+      var runDoctorBtn = document.getElementById("runDoctorBtn");
+      if (runDoctorBtn) {
+        runDoctorBtn.addEventListener("click", function () {
+          self.runSystemDoctor();
+        });
+      }
+
+      var selfHealBtn = document.getElementById("selfHealBtn");
+      if (selfHealBtn) {
+        selfHealBtn.addEventListener("click", function () {
+          self.selfHealEnvironment();
+        });
+      }
+
       var refreshGpuBtn = document.getElementById("refreshGpuBtn");
       if (refreshGpuBtn) {
         refreshGpuBtn.addEventListener("click", function () {
@@ -1131,6 +1145,78 @@
       if (ok) {
         var self = this;
         setTimeout(function () { self.refreshGpuInfo(); }, 1500);
+      }
+    },
+
+    runSystemDoctor: function () {
+      var self = this;
+      var btn = document.getElementById("runDoctorBtn");
+      var logEl = document.getElementById("repairLog");
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running diagnostics...'; }
+      if (logEl) {
+        logEl.style.display = "";
+        logEl.innerHTML = '<div class="gpu-install-log" id="repairLogInner" style="max-height:180px;">Starting System Doctor & Benchmark...</div>';
+      }
+
+      var pythonCmd = this._resolvePythonCmd();
+      var extPath = "";
+      try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
+      var scriptPath = (window.FileSystem.path && extPath)
+        ? window.FileSystem.path.join(extPath, "python", "setup.py")
+        : "setup.py";
+
+      try {
+        var proc = window.FileSystem.childProcess.spawn(pythonCmd, [scriptPath, "--doctor"], { cwd: this.anismoothToolsFolder, windowsHide: true });
+        proc.stdout.on("data", function (d) { self._repairLog(d.toString().trim()); });
+        proc.on("close", function (code) {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-stethoscope"></i> Run System Doctor & Benchmark'; }
+          if (code === 0) {
+            window.showToast("System Doctor: All components healthy & verified!", "ok");
+          } else {
+            window.showToast("System Doctor detected issues. Click 'Self-Heal' to repair.", "warn");
+          }
+        });
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-stethoscope"></i> Run System Doctor & Benchmark'; }
+        self._repairLog("[ERR] " + e.message);
+      }
+    },
+
+    selfHealEnvironment: function () {
+      var self = this;
+      var btn = document.getElementById("selfHealBtn");
+      var logEl = document.getElementById("repairLog");
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Self-healing backend...'; }
+      if (logEl) {
+        logEl.style.display = "";
+        logEl.innerHTML = '<div class="gpu-install-log" id="repairLogInner" style="max-height:180px;">Starting 1-Click Self-Healing...</div>';
+      }
+
+      var pythonCmd = this._resolvePythonCmd();
+      var extPath = "";
+      try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
+      var scriptPath = (window.FileSystem.path && extPath)
+        ? window.FileSystem.path.join(extPath, "python", "setup.py")
+        : "setup.py";
+
+      try {
+        var flag = self._gpuVendor === "amd" ? "--force-dml" : (self._gpuVendor === "nvidia" ? "--force-gpu" : "");
+        var args = [scriptPath];
+        if (flag) args.push(flag);
+        var proc = window.FileSystem.childProcess.spawn(pythonCmd, args, { cwd: this.anismoothToolsFolder, windowsHide: true });
+        proc.stdout.on("data", function (d) { self._repairLog(d.toString().trim()); });
+        proc.on("close", function (code) {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 1-Click Self-Heal Environment'; }
+          if (code === 0) {
+            window.showToast("Environment healed & ready!", "ok");
+            self.refreshGpuInfo();
+          } else {
+            window.showToast("Self-heal encountered warnings. Check log.", "error");
+          }
+        });
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 1-Click Self-Heal Environment'; }
+        self._repairLog("[ERR] " + e.message);
       }
     },
 
