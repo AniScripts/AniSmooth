@@ -45,7 +45,7 @@ function copyFolderSync(from, to) {
         fs.mkdirSync(to, { recursive: true });
     }
     fs.readdirSync(from).forEach(element => {
-        if (element === '.venv' || element === '__pycache__' || element === '.git' || element === '.DS_Store') {
+        if (element === '.venv' || element === '__pycache__' || element === '.git' || element === '.DS_Store' || element === 'ncnn_binaries') {
             return;
         }
         const fromPath = path.join(from, element);
