@@ -10,9 +10,11 @@ def log(msg_type, msg, **kw):
     out.update(kw)
     print(json.dumps(out), flush=True)
 
-def get_device():
+def get_device(gpu_id=0):
     if torch.cuda.is_available():
-        return torch.device("cuda")
+        cnt = torch.cuda.device_count()
+        safe_id = max(0, min(int(gpu_id or 0), cnt - 1)) if cnt > 0 else 0
+        return torch.device(f"cuda:{safe_id}")
     return torch.device("cpu")
 
 def get_device_type():
@@ -91,6 +93,34 @@ def _run_nvidia_smi():
     if not smi_path:
         return None
 
+    gpus = []
+    try:
+        result = subprocess.run(
+            [smi_path, "--query-gpu=index,name,memory.total,driver_version",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            for line in result.stdout.strip().splitlines():
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) >= 3:
+                    idx = int(parts[0]) if parts[0].isdigit() else len(gpus)
+                    name = parts[1]
+                    mem_total = int(parts[2]) if parts[2].isdigit() else 0
+                    drv = parts[3] if len(parts) > 3 else "N/A"
+                    gpus.append({
+                        "index": idx,
+                        "name": name,
+                        "memory_total_mb": mem_total,
+                        "driver_version": drv,
+                        "vendor": "nvidia"
+                    })
+    except Exception:
+        pass
+
+    if gpus:
+        return gpus
+
     gpu_name = None
     memory_total_mb = 0
     driver_version = None
@@ -98,48 +128,32 @@ def _run_nvidia_smi():
 
     try:
         result = subprocess.run(
-            [smi_path, "--query-gpu=name,memory.total,driver_version",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=10
+            [smi_path], capture_output=True, text=True, timeout=10
         )
-        if result.returncode == 0 and result.stdout.strip():
-            parts = [p.strip() for p in result.stdout.strip().split(",")]
-            if len(parts) >= 2:
-                gpu_name = parts[0]
-                if parts[1].isdigit():
-                    memory_total_mb = int(parts[1])
-                if len(parts) > 2 and parts[2].lower() != "n/a":
-                    driver_version = parts[2]
+        if result.returncode == 0:
+            for line in result.stdout.split("\n"):
+                if not gpu_name and "NVIDIA" in line.upper() and "GeForce" in line:
+                    gpu_name = line.strip()
+                if "CUDA Version:" in line:
+                    raw = line.strip().split("CUDA Version:")[-1].strip()
+                    cuda_driver_version = raw.split(" ")[0]
+                if "Driver Version:" in line:
+                    raw = line.strip().split("Driver Version:")[-1].strip()
+                    driver_version = raw.split(" ")[0]
     except Exception:
-        log("warn", "nvidia-smi CSV parsing failed", trace=traceback.format_exc())
+        pass
 
-    if not gpu_name or not driver_version:
-        try:
-            result = subprocess.run(
-                [smi_path], capture_output=True, text=True, timeout=10
-            )
-            if result.returncode == 0:
-                for line in result.stdout.split("\n"):
-                    if not gpu_name and "NVIDIA" in line.upper() and "GeForce" in line:
-                        gpu_name = line.strip()
-                    if "CUDA Version:" in line:
-                        raw = line.strip().split("CUDA Version:")[-1].strip()
-                        cuda_driver_version = raw.split(" ")[0]
-                    if "Driver Version:" in line:
-                        raw = line.strip().split("Driver Version:")[-1].strip()
-                        driver_version = raw.split(" ")[0]
-        except Exception:
-            log("warn", "nvidia-smi full output parsing failed", trace=traceback.format_exc())
+    if gpu_name:
+        return [{
+            "index": 0,
+            "name": gpu_name,
+            "memory_total_mb": memory_total_mb,
+            "driver_version": driver_version,
+            "cuda_driver_version": cuda_driver_version,
+            "vendor": "nvidia"
+        }]
 
-    if not gpu_name:
-        return None
-
-    return {
-        "name": gpu_name,
-        "memory_total_mb": memory_total_mb,
-        "driver_version": driver_version,
-        "cuda_driver_version": cuda_driver_version,
-    }
+    return None
 
 def _name_to_vendor(name):
     n = name.lower()
@@ -155,50 +169,69 @@ def _run_amd_gpu_query():
     data = _run_powershell_gpu()
     if not data:
         return None
+    amd_gpus = []
+    idx = 0
     for gpu in data:
         name = str(gpu.get("Name", ""))
         vendor = _name_to_vendor(name)
         if vendor == "amd":
             mem = gpu.get("AdapterRAM", 0)
             mem_mb = int(mem) // (1024 * 1024) if isinstance(mem, (int, float)) and mem > 0 else 0
-            return {
+            amd_gpus.append({
+                "index": idx,
                 "name": name,
                 "memory_total_mb": mem_mb,
                 "driver_version": str(gpu.get("DriverVersion", "")),
-            }
-    return None
+                "vendor": "amd"
+            })
+            idx += 1
+    return amd_gpus if amd_gpus else None
 
 def _pytorch_has_cuda():
     ver = torch.__version__
     return "+cu" in ver or "+cuda" in ver
 
 def get_gpu_info():
-    nvidia = _run_nvidia_smi()
-    amd = _run_amd_gpu_query() if not nvidia else None
+    nvidia_list = _run_nvidia_smi()
+    amd_list = _run_amd_gpu_query()
     torch_cuda = torch.cuda.is_available()
     torch_has_cuda_build = _pytorch_has_cuda()
 
     vendor = get_gpu_vendor()
     dev_type = get_device_type()
 
-    gpu_name = None
-    gpu_mem_total = 0
-    gpu_mem_free = 0
+    gpus = []
+    if torch_cuda and torch.cuda.device_count() > 0:
+        for i in range(torch.cuda.device_count()):
+            prop = torch.cuda.get_device_properties(i)
+            tot_mb = prop.total_memory // (1024 * 1024)
+            free_mb = 0
+            try:
+                fb, _ = torch.cuda.mem_get_info(i)
+                free_mb = fb // (1024 * 1024)
+            except Exception:
+                pass
+            gpus.append({
+                "index": i,
+                "id": str(i),
+                "name": torch.cuda.get_device_name(i),
+                "memory_total_mb": tot_mb,
+                "memory_free_mb": free_mb,
+                "vendor": "nvidia"
+            })
+    elif nvidia_list:
+        for item in nvidia_list:
+            item["id"] = str(item["index"])
+            gpus.append(item)
+    elif amd_list:
+        for item in amd_list:
+            item["id"] = str(item["index"])
+            gpus.append(item)
 
-    if torch_cuda:
-        gpu_name = torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else None
-        gpu_mem_total = torch.cuda.get_device_properties(0).total_memory // (1024 * 1024) if torch.cuda.device_count() > 0 else 0
-        try:
-            free_bytes, total_bytes = torch.cuda.mem_get_info(0)
-            gpu_mem_free = free_bytes // (1024 * 1024)
-        except Exception:
-            pass
-    elif nvidia:
-        gpu_name = nvidia["name"]
-        gpu_mem_total = nvidia["memory_total_mb"]
-    elif amd:
-        gpu_name = amd["name"]
-        gpu_mem_total = amd["memory_total_mb"]
+    primary = gpus[0] if gpus else {}
+    gpu_name = primary.get("name")
+    gpu_mem_total = primary.get("memory_total_mb", 0)
+    gpu_mem_free = primary.get("memory_free_mb", 0)
 
     vulkan_available = False
     if os.name == "nt":
@@ -221,17 +254,18 @@ def get_gpu_info():
         "gpu_memory_total_mb": gpu_mem_total,
         "gpu_memory_free_mb": gpu_mem_free,
         "cuda_version": torch.version.cuda if torch_cuda else None,
-        "gpu_count": torch.cuda.device_count() if torch_cuda else (1 if (nvidia or amd) else 0),
+        "gpu_count": len(gpus) if gpus else (torch.cuda.device_count() if torch_cuda else 0),
+        "gpus": gpus,
         "pytorch_variant": "cuda" if torch_has_cuda_build else "cpu",
         "nvidia_gpu_detected": vendor == "nvidia",
         "amd_gpu_detected": vendor == "amd",
-        "nvidia_name": nvidia["name"] if nvidia else None,
-        "nvidia_driver": nvidia["driver_version"] if nvidia else None,
-        "nvidia_cuda_ver": nvidia["cuda_driver_version"] if nvidia else None,
-        "nvidia_vram_mb": nvidia["memory_total_mb"] if nvidia else 0,
-        "amd_name": amd["name"] if amd else None,
-        "amd_driver": amd["driver_version"] if amd else None,
-        "amd_vram_mb": amd["memory_total_mb"] if amd else 0,
+        "nvidia_name": primary.get("name") if vendor == "nvidia" else None,
+        "nvidia_driver": primary.get("driver_version") if vendor == "nvidia" else None,
+        "nvidia_cuda_ver": primary.get("cuda_driver_version") if vendor == "nvidia" else None,
+        "nvidia_vram_mb": gpu_mem_total if vendor == "nvidia" else 0,
+        "amd_name": primary.get("name") if vendor == "amd" else None,
+        "amd_driver": primary.get("driver_version") if vendor == "amd" else None,
+        "amd_vram_mb": gpu_mem_total if vendor == "amd" else 0,
         "spandrel_available": False,
         "spandrel_version": None,
     }
