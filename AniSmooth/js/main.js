@@ -764,7 +764,8 @@
         details.style.display = "";
       }
 
-      
+      this._buildGpuSelector(info);
+
       this._buildCudaInfo(cuda, nvidiaGpu, cudaVer, torchVer, ptVariant, info.nvidia_cuda_ver, info.nvidia_driver, amdGpu, ncnnAvailable);
 
       this._buildSysInfo(info);
@@ -800,7 +801,52 @@
       }
     },
 
+    _buildGpuSelector: function (info) {
+      var row = document.getElementById("gpuSelectorRow");
+      var sel = document.getElementById("gpuDeviceSelect");
+      if (!row || !sel) return;
+
+      var gpus = info && info.gpus ? info.gpus : [];
+      if (gpus.length <= 1) {
+        row.style.display = "none";
+        return;
+      }
+
+      var savedId = window.StorageManager.getItem("anismooth_gpu_id", "0");
+      sel.innerHTML = "";
+
+      for (var i = 0; i < gpus.length; i++) {
+        var g = gpus[i];
+        var opt = document.createElement("option");
+        opt.value = String(g.index);
+        var label = "[" + g.index + "] " + g.name;
+        if (g.memory_total_mb) {
+          label += " (" + Math.round(g.memory_total_mb / 1024) + " GB)";
+        }
+        opt.textContent = label;
+        if (String(g.index) === String(savedId)) {
+          opt.selected = true;
+        }
+        sel.appendChild(opt);
+      }
+
+      row.style.display = "flex";
+
+      if (!sel._boundChange) {
+        sel._boundChange = true;
+        sel.addEventListener("change", function () {
+          var val = sel.value;
+          window.StorageManager.setItem("anismooth_gpu_id", val);
+          window.StorageManager.setItem("anismooth_ncnn_gpu_id", val);
+          dbg("info", "App", "Active GPU device set to: " + val);
+        });
+      }
+    },
+
     renderGpuError: function (msg) {
+      var row = document.getElementById("gpuSelectorRow");
+      if (row) row.style.display = "none";
+
       var indicator = document.getElementById("gpuIndicator");
       if (indicator) {
         indicator.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';

@@ -276,6 +276,11 @@
         args.push("--preset", options.preset);
       }
 
+      var gpuId = (window.StorageManager && window.StorageManager.getItem("anismooth_gpu_id", "0")) || "0";
+      if (gpuId) {
+        args.push("--gpu-id", String(gpuId));
+      }
+
       this.executeModel(pythonCmd, args, callbacks);
     },
 
@@ -326,6 +331,10 @@
       }
       if (options.fitH && parseInt(options.fitH) > 0) {
         args.push("--fit-h", String(parseInt(options.fitH)));
+      }
+      var gpuId = (window.StorageManager && window.StorageManager.getItem("anismooth_gpu_id", "0")) || "0";
+      if (gpuId) {
+        args.push("--gpu-id", String(gpuId));
       }
 
       this.executeModel(pythonCmd, args, callbacks);
