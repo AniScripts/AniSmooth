@@ -20,6 +20,9 @@ from models.tensorrt_engine import (
     is_tensorrt_available, build_rife_onnx, build_rife_tensorrt_engine,
     load_tensorrt_engine, TensorRTInferenceEngine, get_engine_path, ensure_engines_dir,
 )
+from models.coreml_engine import (
+    is_coreml_available, build_coreml_model, CoreMLInferenceEngine, get_coreml_model_path
+)
 
 def log(msg_type, msg, **kw):
     out = {"type": msg_type, "msg": str(msg)}
@@ -203,6 +206,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
             log("info", f"Padding frames from {w}x{h} to {w + pad_w}x{h + pad_h} (mod-32 alignment)")
 
         trt_engine = None
+        coreml_engine = None
         model = None
 
         if use_tensorrt:
@@ -235,8 +239,24 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                     log("error", "Failed to load TensorRT engine. Falling back to PyTorch.")
                     use_tensorrt = False
 
-        if not use_tensorrt:
-            model = load_interpolation_model(model_name.replace("-tensorrt", ""), device)
+        if not use_tensorrt and is_coreml_available() and "coreml" in model_name:
+            base_key = model_name.replace("-coreml", "")
+            engine_h = h + pad_h
+            engine_w = w + pad_w
+            mlpackage_path = get_coreml_model_path(base_key, (engine_h, engine_w))
+            if not os.path.exists(mlpackage_path):
+                pt_model = load_interpolation_model(base_key, "cpu")
+                mlpackage_path = build_coreml_model(pt_model, base_key, (engine_h, engine_w))
+                del pt_model
+            if mlpackage_path and os.path.exists(mlpackage_path):
+                try:
+                    coreml_engine = CoreMLInferenceEngine(mlpackage_path)
+                    log("info", "Apple Neural Engine / CoreML engine ready for inference")
+                except Exception as e:
+                    log("warn", f"Failed to load CoreML model: {e}")
+
+        if not use_tensorrt and coreml_engine is None:
+            model = load_interpolation_model(model_name.replace("-tensorrt", "").replace("-coreml", ""), device)
 
         log("info", "Starting frame interpolation...")
         frame_idx = 0
@@ -264,6 +284,19 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
                             mid = unpad(result["output"].float(), pad_info)
                         interp = tensor_to_frame(mid, str(device))
                         video.write_frame(interp)
+                elif coreml_engine is not None:
+                    t0 = frame_to_tensor(prev_frame, "cpu")
+                    t1 = frame_to_tensor(frame, "cpu")
+                    t0_padded, pad_info = pad_to_mod(t0, 32)
+                    t1_padded, _ = pad_to_mod(t1, 32)
+                    img0_np = t0_padded.numpy()
+                    img1_np = t1_padded.numpy()
+                    for f in range(1, factor):
+                        alpha = f / factor
+                        mid_np = coreml_engine.infer(img0_np, img1_np, alpha)
+                        mid = unpad(torch.from_numpy(mid_np).float(), pad_info)
+                        interp_frame = tensor_to_frame(mid, "cpu")
+                        video.write_frame(interp_frame)
                 else:
                     
                     t0 = frame_to_tensor(prev_frame, device).to(memory_format=torch.channels_last)

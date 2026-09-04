@@ -94,7 +94,8 @@ Repo root holds build tooling; the CEP extension itself lives in `AniSmooth/`.
     │   ├── rife/              # RIFEModel: CUDA + TensorRT
     │   ├── upscale/           # ShuffleCUGAN (spandrel fallback)
     │   ├── weight_loader.py   # Download/cache/verify model weights
-    │   └── tensorrt_engine.py
+    │   ├── tensorrt_engine.py
+    │   └── coreml_engine.py   # Apple Silicon CoreML / ANE conversion and inference
     ├── duplicate_frame_remover/  # Perceptual hash + pixel diff
     └── utils/
         ├── device.py          # GPU detection, nvidia-smi
