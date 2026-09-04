@@ -351,8 +351,16 @@
         return;
       }
 
-      var ext = window.FileSystem.getExtension(inputPath);
-      if (item.mode === "flowframes") ext = "mp4";
+      var settings = (window.App && window.App.settings) || {};
+      var codec = item.codec || settings.outputCodec || "h264";
+      var ext = "mp4";
+      if (codec.indexOf("prores") !== -1) {
+        ext = "mov";
+      } else if (item.mode !== "flowframes") {
+        var origExt = window.FileSystem.getExtension(inputPath);
+        if (origExt === "mov" || origExt === "mp4") ext = origExt;
+      }
+
       var nameWithoutExt = window.FileSystem.getFileNameWithoutExtension(inputPath);
       var outputName = res.isTemp ? nameWithoutExt.replace(/^AniSmooth_Render_\d+_?/, "") : nameWithoutExt;
       var outDir = (window.App && window.App.settings.outputPath) || window.FileSystem.os.homedir();
@@ -372,7 +380,6 @@
         taskTag = "(Deduped)";
       }
 
-      var settings = (window.App && window.App.settings) || {};
       var prefix = settings.outputPrefix ? settings.outputPrefix + " - " : "";
       var ts = settings.outputTimestamp !== false
         ? " (" + new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19) + ")"
@@ -384,16 +391,14 @@
       (function () {
         try {
           var inputSize = window.FileSystem.fs.statSync(inputPath).size || 0;
-          if (!inputSize) return;
           var mult = item.mode === "upscale" ? (item.scale * item.scale) : (item.mode === "dedupe" ? 0.7 : (item.factor || 2));
-          var estimated = inputSize * mult * 1.6;
+          var estimated = (inputSize || 50 * 1024 * 1024) * mult * 1.6;
           var freeMB = (window.FileSystem && window.FileSystem.getFreeDiskSpaceMB) ? window.FileSystem.getFreeDiskSpaceMB(modeDir) : 0;
           var freeBytes = freeMB * 1024 * 1024;
-          if (freeBytes && freeBytes < estimated) {
-            var freeGB = (freeBytes / (1024 * 1024 * 1024)).toFixed(1);
-            var estGB = (estimated / (1024 * 1024 * 1024)).toFixed(1);
-            dbg("warn", "Queue", "Low disk space: " + freeGB + " GB free, ~" + estGB + " GB estimated");
-            if (window.showToast) window.showToast("Low disk space: " + freeGB + " GB free, ~" + estGB + " GB needed", "error");
+          if (freeMB > 0 && freeMB < 5120) {
+            var freeGB = (freeMB / 1024).toFixed(1);
+            dbg("warn", "Queue", "Low disk space safety alert: Only " + freeGB + " GB remaining on target drive.");
+            if (window.showToast) window.showToast("Disk space warning: Only " + freeGB + " GB free.", "warn");
           }
         } catch (e) {}
       })();
@@ -493,11 +498,11 @@
       };
 
       if (item.mode === "upscale") {
-        window.ModelHandler.upscaleClip(inputPath, outputPath, item.model, { scale: String(item.scale), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high", fitW: item.fitW || 0, fitH: item.fitH || 0 }, callbacks);
+        window.ModelHandler.upscaleClip(inputPath, outputPath, item.model, { scale: String(item.scale), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high", codec: codec, fitW: item.fitW || 0, fitH: item.fitH || 0 }, callbacks);
       } else if (item.mode === "dedupe") {
         window.ModelHandler.dedupeClip(inputPath, outputPath, item.options || {}, callbacks);
       } else if (item.mode === "interpolate") {
-        window.ModelHandler.interpolateClip(inputPath, outputPath, item.model, { fpsFactor: String(item.factor), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high" }, callbacks);
+        window.ModelHandler.interpolateClip(inputPath, outputPath, item.model, { fpsFactor: String(item.factor), targetSizeMb: item.targetSizeMb || 0, preset: item.preset || "high", codec: codec }, callbacks);
       } else if (item.mode === "flowframes") {
         var jobOutDir = window.FileSystem.path.join(modeDir, ".ff_" + item.id);
         window.FileSystem.createFolder(jobOutDir);
