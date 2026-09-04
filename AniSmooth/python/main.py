@@ -47,9 +47,7 @@ def resolve_quality(key):
 def tensor_to_frame(tensor, device="cuda"):
     frame = tensor.squeeze(0).permute(1, 2, 0).detach()
     frame = torch.clamp(frame, 0, 1)
-    frame = (frame * 255).contiguous().to(torch.uint8)
-    if device == "cuda" or str(frame.device).startswith("cuda"):
-        frame = frame.cpu()
+    frame = (frame * 255).contiguous().to(torch.uint8).cpu()
     return cv2.cvtColor(frame.numpy(), cv2.COLOR_RGB2BGR)
 
 def frame_to_tensor(frame, device):

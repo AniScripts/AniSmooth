@@ -28,11 +28,12 @@ def warp(tenInput, tenFlow):
         ).view(1, 2, 1, 1)
 
     g = (tenGrid[k] + tenFlow * tenFlowDiv[k]).permute(0, 2, 3, 1)
+    pad_mode = "zeros" if tenInput.device.type == "mps" else "border"
     return torch.nn.functional.grid_sample(
         input=tenInput,
         grid=g,
         mode="bilinear",
-        padding_mode="border",
+        padding_mode=pad_mode,
         align_corners=True,
     )
 

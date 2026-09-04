@@ -30,9 +30,7 @@ PIP_PACKAGES = [
     "opencv-python>=4.10.0.84",
     "numpy>=1.24.0,<3.0",
     "spandrel==0.3.4",
-    # main.py imports psutil for the system monitor's CPU/RAM metrics. The import
-    # is guarded (degrades gracefully if absent), but it is a real backend
-    # dependency for a shipped feature, so install it for a complete environment.
+    "packaging>=23.0",
     "psutil>=5.9.0"
 ]
 
