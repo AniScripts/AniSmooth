@@ -134,10 +134,15 @@
       var el = document.getElementById('interpModelInfo');
       if (!el) return;
       var m = this.modelSelect ? this.modelSelect.value : 'rife4.25-heavy', info = MODEL_INFO[m] || {}, tags = [];
-      tags.push('<span class="meta-chip">' + (info.params || '5.1M') + '</span>');
+      tags.push('<span class="meta-chip">' + (info.params || '1.3M') + '</span>');
       tags.push('<span class="meta-chip">' + (info.quality || 'High') + '</span>');
-      tags.push('<span class="meta-chip">' + (info.vram || '6GB') + ' VRAM</span>');
-      tags.push('<span class="meta-chip' + (m.indexOf('tensorrt') !== -1 ? ' meta-chip-accent' : '') + '"><i class="fa-solid fa-' + (m.indexOf('tensorrt') !== -1 ? 'bolt' : 'microchip') + '"></i> ' + (m.indexOf('tensorrt') !== -1 ? 'TensorRT' : 'CUDA') + '</span>');
+      tags.push('<span class="meta-chip">' + (info.vram || '2GB') + ' VRAM</span>');
+      var isTrt = m.indexOf('tensorrt') !== -1;
+      var isVulkan = m.indexOf('vulkan') !== -1 || m.indexOf('rife-v') !== -1 || m.indexOf('rife-') === 0;
+      var gpuInfo = (window.App && window.App._gpuInfoCache);
+      var backendLabel = isTrt ? 'TensorRT' : (isVulkan ? 'Vulkan' : ((gpuInfo && gpuInfo.mps_available) ? 'Metal MPS' : ((gpuInfo && gpuInfo.cuda_available) ? 'CUDA' : 'CPU')));
+      var backendIcon = isTrt ? 'bolt' : (isVulkan ? 'fire' : ((gpuInfo && gpuInfo.mps_available) ? 'apple' : ((gpuInfo && gpuInfo.cuda_available) ? 'microchip' : 'computer')));
+      tags.push('<span class="meta-chip' + (isTrt ? ' meta-chip-accent' : '') + '"><i class="fa-solid fa-' + backendIcon + '"></i> ' + backendLabel + '</span>');
       el.innerHTML = '<span class="meta-strip meta-strip-sm">' + tags.join(' \u00b7 ') + '</span>';
     },
 

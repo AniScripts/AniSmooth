@@ -146,7 +146,11 @@
       }
       var m = this.modelSelect ? this.modelSelect.value : 'adore';
       var info = UPSCALE_MODEL_INFO[m] || {};
-      el.innerHTML = '<span class="meta-strip meta-strip-sm"><span class="meta-chip">' + (info.params || '4M') + '</span> \u00b7 <span class="meta-chip">' + (info.quality || 'High') + '</span> \u00b7 <span class="meta-chip">' + (info.vram || '3GB') + ' VRAM</span> \u00b7 <span class="meta-chip"><i class="fa-solid fa-microchip"></i> CUDA</span></span>';
+      var isVulkan = m.indexOf('realesr') === 0 || m.indexOf('vulkan') !== -1;
+      var gpuInfo = (window.App && window.App._gpuInfoCache);
+      var backendLabel = isVulkan ? 'Vulkan' : ((gpuInfo && gpuInfo.mps_available) ? 'Metal MPS' : ((gpuInfo && gpuInfo.cuda_available) ? 'CUDA' : 'CPU'));
+      var backendIcon = isVulkan ? 'fire' : ((gpuInfo && gpuInfo.mps_available) ? 'apple' : ((gpuInfo && gpuInfo.cuda_available) ? 'microchip' : 'computer'));
+      el.innerHTML = '<span class="meta-strip meta-strip-sm"><span class="meta-chip">' + (info.params || '4M') + '</span> \u00b7 <span class="meta-chip">' + (info.quality || 'High') + '</span> \u00b7 <span class="meta-chip">' + (info.vram || '3GB') + ' VRAM</span> \u00b7 <span class="meta-chip"><i class="fa-solid fa-' + backendIcon + '"></i> ' + backendLabel + '</span></span>';
     },
 
     renderScaleInfo: function () {

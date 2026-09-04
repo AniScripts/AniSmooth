@@ -173,6 +173,19 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
     device = get_device(gpu_id)
     log("info", f"Using device: {device}")
 
+    if device.type == "cpu":
+        cpu_count = os.cpu_count() or 4
+        torch.set_num_threads(max(1, cpu_count))
+        try:
+            torch.set_num_interop_threads(max(1, cpu_count // 2))
+        except RuntimeError:
+            pass
+        try:
+            torch.backends.mkldnn.enabled = True
+        except Exception:
+            pass
+        cv2.setNumThreads(max(1, cpu_count))
+
     use_tensorrt = "tensorrt" in model_name and is_tensorrt_available()
     if "tensorrt" in model_name and not is_tensorrt_available():
         log("warn", "TensorRT requested but not available. Falling back to PyTorch CUDA.")
@@ -304,8 +317,22 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
     print_gpu_info()
     device = get_device(gpu_id)
     log("info", f"Using device: {device}")
-    cpu_threads = max(2, min(os.cpu_count() or 4, 8))
-    cv2.setNumThreads(cpu_threads)
+
+    if device.type == "cpu":
+        cpu_count = os.cpu_count() or 4
+        torch.set_num_threads(max(1, cpu_count))
+        try:
+            torch.set_num_interop_threads(max(1, cpu_count // 2))
+        except RuntimeError:
+            pass
+        try:
+            torch.backends.mkldnn.enabled = True
+        except Exception:
+            pass
+        cv2.setNumThreads(max(1, cpu_count))
+    else:
+        cpu_threads = max(2, min(os.cpu_count() or 4, 8))
+        cv2.setNumThreads(cpu_threads)
 
     model = load_upscale_model(model_name, scale, device)
 

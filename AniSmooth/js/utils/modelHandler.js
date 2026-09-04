@@ -269,7 +269,8 @@
     
     interpolateClip: function (inputPath, outputPath, modelKey, options, callbacks) {
       var vendor = (window.App && window.App._gpuVendor) || "unknown";
-      if (vendor === "amd" && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
+      var isNcnnModel = modelKey && (modelKey.indexOf("rife-v") === 0 || modelKey.indexOf("rife-HD") === 0 || modelKey.indexOf("rife-UHD") === 0 || modelKey.indexOf("rife-anime") === 0);
+      if ((vendor === "amd" || isNcnnModel) && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
         outputPath = outputPath.replace(/\.\w+$/, ".mp4");
         var ncnnOpts = {
           model: modelKey || "rife-v4.6",
@@ -279,9 +280,11 @@
         window.NcnnHandler.run(inputPath, outputPath, "rife-ncnn-vulkan", ncnnOpts, callbacks);
         return;
       }
-      if (vendor === "amd") {
-        if (callbacks.onError) callbacks.onError("NCNN Vulkan binaries not found. Install them in Settings → Tools.");
-        return;
+      if (vendor === "amd" || isNcnnModel) {
+        if (isNcnnModel && (!window.NcnnHandler || !window.NcnnHandler.isAvailable())) {
+          if (callbacks.onError) callbacks.onError("NCNN Vulkan binaries not found. Install them in Settings → Tools.");
+          return;
+        }
       }
 
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
@@ -320,7 +323,8 @@
     
     upscaleClip: function (inputPath, outputPath, modelKey, options, callbacks) {
       var vendor = (window.App && window.App._gpuVendor) || "unknown";
-      if (vendor === "amd" && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
+      var isNcnnModel = modelKey && (modelKey.indexOf("realesr") === 0);
+      if ((vendor === "amd" || isNcnnModel) && window.NcnnHandler && window.NcnnHandler.isAvailable()) {
         outputPath = outputPath.replace(/\.\w+$/, ".mp4");
         var ncnnOpts = {
           model: modelKey || "realesr-animevideov3",
@@ -330,9 +334,11 @@
         window.NcnnHandler.run(inputPath, outputPath, "realesrgan-ncnn-vulkan", ncnnOpts, callbacks);
         return;
       }
-      if (vendor === "amd") {
-        if (callbacks.onError) callbacks.onError("NCNN Vulkan binaries not found. Install them in Settings → Tools.");
-        return;
+      if (vendor === "amd" || isNcnnModel) {
+        if (isNcnnModel && (!window.NcnnHandler || !window.NcnnHandler.isAvailable())) {
+          if (callbacks.onError) callbacks.onError("NCNN Vulkan binaries not found. Install them in Settings → Tools.");
+          return;
+        }
       }
 
       var pythonCmd = window.App && window.App.settings.pythonPath ? window.App.settings.pythonPath : 'python';
