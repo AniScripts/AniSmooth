@@ -628,17 +628,14 @@ def install_ncnn_binaries():
     BIN_URL = "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/"
 
     is_mac = sys.platform == "darwin"
-    rife_mac_url = "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-macos.zip"
-    realesrgan_mac_url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-macos.zip"
-
     NCNN_BINARIES = {
         "rife-ncnn-vulkan": {
-            "url": rife_mac_url if is_mac else (BIN_URL + "rife.zip"),
+            "url": BIN_URL + ("rife-macos.zip" if is_mac else "rife.zip"),
             "version": "20221029-full",
             "is_zip": True,
         },
         "realesrgan-ncnn-vulkan": {
-            "url": realesrgan_mac_url if is_mac else (BIN_URL + "realesrgan.zip"),
+            "url": BIN_URL + ("realesrgan-macos.zip" if is_mac else "realesrgan.zip"),
             "version": "20220424-full",
             "is_zip": True,
         },
