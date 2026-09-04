@@ -149,39 +149,59 @@
 
     findLocalPython: function() {
       try {
+        var fs = window.FileSystem.fs;
+        var path = window.FileSystem.path;
+        if (!fs || !path) return null;
+
+        if (process.platform === 'darwin' || process.platform === 'linux') {
+          var macPaths = [
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+            "/usr/bin/python3"
+          ];
+          var home = (process.env && process.env.HOME) || "";
+          if (home) {
+            macPaths.push(path.join(home, ".pyenv", "shims", "python3"));
+            macPaths.push(path.join(home, ".pyenv", "shims", "python"));
+            macPaths.push(path.join(home, "miniconda3", "bin", "python3"));
+            macPaths.push(path.join(home, "anaconda3", "bin", "python3"));
+          }
+          for (var m = 0; m < macPaths.length; m++) {
+            if (fs.existsSync(macPaths[m])) {
+              return macPaths[m];
+            }
+          }
+        }
+
         var localappdata = (process.env && process.env.LOCALAPPDATA) || "";
         var userprofile = (process.env && process.env.USERPROFILE) || "";
         var programfiles = (process.env && process.env.ProgramFiles) || "C:\\Program Files";
-        var fs = window.FileSystem.fs;
-        var path = window.FileSystem.path;
         
-        if (fs && path) {
-          var searchDirs = [];
-          if (localappdata) searchDirs.push(path.join(localappdata, "Programs", "Python"));
-          if (userprofile) searchDirs.push(path.join(userprofile, "AppData", "Local", "Programs", "Python"));
-          if (programfiles) searchDirs.push(path.join(programfiles, "Python"));
-          
-          for (var i = 0; i < searchDirs.length; i++) {
-            var dir = searchDirs[i];
-            if (fs.existsSync(dir)) {
-              var subdirs = fs.readdirSync(dir);
-              for (var j = 0; j < subdirs.length; j++) {
-                var sub = subdirs[j];
-                if (sub.toLowerCase().indexOf("python3") === 0 || sub.toLowerCase().indexOf("python") === 0) {
-                  var fullPath = path.join(dir, sub, "python.exe");
-                  if (fs.existsSync(fullPath)) {
-                    return fullPath;
-                  }
+        var searchDirs = [];
+        if (localappdata) searchDirs.push(path.join(localappdata, "Programs", "Python"));
+        if (userprofile) searchDirs.push(path.join(userprofile, "AppData", "Local", "Programs", "Python"));
+        if (programfiles) searchDirs.push(path.join(programfiles, "Python"));
+        
+        for (var i = 0; i < searchDirs.length; i++) {
+          var dir = searchDirs[i];
+          if (fs.existsSync(dir)) {
+            var subdirs = fs.readdirSync(dir);
+            for (var j = 0; j < subdirs.length; j++) {
+              var sub = subdirs[j];
+              if (sub.toLowerCase().indexOf("python3") === 0 || sub.toLowerCase().indexOf("python") === 0) {
+                var fullPath = path.join(dir, sub, "python.exe");
+                if (fs.existsSync(fullPath)) {
+                  return fullPath;
                 }
               }
             }
           }
-          
-          if (localappdata) {
-            var storePath = path.join(localappdata, "Microsoft", "WindowsApps", "python.exe");
-            if (fs.existsSync(storePath)) {
-              return storePath;
-            }
+        }
+        
+        if (localappdata) {
+          var storePath = path.join(localappdata, "Microsoft", "WindowsApps", "python.exe");
+          if (fs.existsSync(storePath)) {
+            return storePath;
           }
         }
       } catch (e) {}
@@ -222,8 +242,19 @@
           window.FileSystem.childProcess.exec('taskkill /F /T /PID ' + proc.pid, function () {
             self._cancelling = false;
           });
+        } else if (proc.pid) {
+          var self2 = this;
+          try {
+            window.FileSystem.childProcess.exec('pkill -P ' + proc.pid, function () {
+              try { proc.kill('SIGKILL'); } catch (e3) {}
+              self2._cancelling = false;
+            });
+          } catch (ep) {
+            proc.kill('SIGKILL');
+            this._cancelling = false;
+          }
         } else {
-          proc.kill('SIGTERM');
+          proc.kill('SIGKILL');
           this._cancelling = false;
         }
       } catch (e) {

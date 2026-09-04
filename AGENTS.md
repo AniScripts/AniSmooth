@@ -1,6 +1,6 @@
 # AGENTS.md - AniSmooth
 
-Free local After Effects extension for AI frame interpolation and video upscaling. Windows-only. NVIDIA GPU (CUDA) or AMD GPU (Vulkan/NCNN) required for acceleration.
+Free local After Effects extension for AI frame interpolation and video upscaling. Windows & macOS support. NVIDIA GPU (CUDA), Apple Silicon GPU (Metal MPS), or AMD GPU (Vulkan/NCNN) for acceleration.
 
 ## AI Agent Instructions
 
@@ -176,5 +176,5 @@ The Flowframes tab runs through the **shared queue** (`mode: "flowframes"`), but
 
 - Must have `PlayerDebugMode = 1` in registry for unsigned extensions
 - Three AE targets need different manifest version ranges, patched at build
-- CSP restricts to `'self'` except Font Awesome CDN
-- No macOS support, Windows-only (PowerShell, taskkill, Inno Setup)
+- CEP extensions installed in `~/Library/Application Support/Adobe/CEP/extensions/` on macOS and `%APPDATA%/Adobe/CEP/extensions/` on Windows
+- Cross-platform support for Windows (PowerShell, taskkill, Inno Setup) and macOS (AppleScript, POSIX signals, unzip)

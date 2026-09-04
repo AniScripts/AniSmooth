@@ -2,6 +2,7 @@ import json
 import subprocess
 import shutil
 import os
+import sys
 import traceback
 import torch
 
@@ -10,19 +11,79 @@ def log(msg_type, msg, **kw):
     out.update(kw)
     print(json.dumps(out), flush=True)
 
+def is_mps_available():
+    return hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+
 def get_device(gpu_id=0):
     if torch.cuda.is_available():
         cnt = torch.cuda.device_count()
         safe_id = max(0, min(int(gpu_id or 0), cnt - 1)) if cnt > 0 else 0
         return torch.device(f"cuda:{safe_id}")
+    if is_mps_available():
+        return torch.device("mps")
     return torch.device("cpu")
 
 def get_device_type():
     if torch.cuda.is_available():
         return "cuda"
+    if is_mps_available():
+        return "mps"
     return "cpu"
 
+def _run_macos_display_query():
+    if sys.platform != "darwin":
+        return None
+    try:
+        res = subprocess.run(
+            ["system_profiler", "SPDisplaysDataType", "-json"],
+            capture_output=True, text=True, timeout=10
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            data = json.loads(res.stdout.strip())
+            items = data.get("SPDisplaysDataType", [])
+            gpus = []
+            idx = 0
+            for item in items:
+                name = item.get("sppci_model") or item.get("_name", "Apple GPU")
+                vendor_raw = str(item.get("spdisplays_vendor", "")).lower()
+                vendor = "apple" if "apple" in vendor_raw or "apple" in name.lower() else _name_to_vendor(name)
+                metal = item.get("spdisplays_mtlgpufamilysupport", "")
+                cores = item.get("sppci_cores", "")
+                vram_raw = item.get("spdisplays_vram", "")
+                mem_mb = 0
+                if vram_raw and "MB" in vram_raw:
+                    try:
+                        mem_mb = int(vram_raw.replace("MB", "").strip())
+                    except Exception:
+                        pass
+                elif vram_raw and "GB" in vram_raw:
+                    try:
+                        mem_mb = int(float(vram_raw.replace("GB", "").strip()) * 1024)
+                    except Exception:
+                        pass
+
+                gpus.append({
+                    "index": idx,
+                    "id": str(idx),
+                    "name": name,
+                    "memory_total_mb": mem_mb,
+                    "metal_support": metal,
+                    "cores": cores,
+                    "vendor": vendor
+                })
+                idx += 1
+            return gpus if gpus else None
+    except Exception:
+        pass
+    return None
+
 def get_gpu_vendor():
+    if sys.platform == "darwin":
+        mac_gpus = _run_macos_display_query()
+        if mac_gpus and len(mac_gpus) > 0:
+            return mac_gpus[0].get("vendor", "apple")
+        if is_mps_available():
+            return "apple"
     if _find_nvidia_smi() is not None:
         return "nvidia"
     if _run_amd_gpu_query() is not None:
@@ -35,6 +96,8 @@ def get_gpu_vendor():
     return "unknown"
 
 def _run_powershell_gpu():
+    if sys.platform != "win32":
+        return None
     try:
         cmd = 'powershell -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion | ConvertTo-Json -Compress"'
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=15, shell=True)
@@ -48,6 +111,8 @@ def _run_powershell_gpu():
     return None
 
 def _detect_gpu_vendor_wmi():
+    if sys.platform != "win32":
+        return "unknown"
     data = _run_powershell_gpu()
     if not data:
         try:
@@ -157,6 +222,8 @@ def _run_nvidia_smi():
 
 def _name_to_vendor(name):
     n = name.lower()
+    if "apple" in n or "m1" in n or "m2" in n or "m3" in n or "m4" in n:
+        return "apple"
     if "nvidia" in n or "geforce" in n or "rtx" in n or "gtx" in n or "quadro" in n:
         return "nvidia"
     if "amd" in n or "radeon" in n or "rx" in n:
@@ -194,7 +261,9 @@ def _pytorch_has_cuda():
 def get_gpu_info():
     nvidia_list = _run_nvidia_smi()
     amd_list = _run_amd_gpu_query()
+    mac_list = _run_macos_display_query()
     torch_cuda = torch.cuda.is_available()
+    torch_mps = is_mps_available()
     torch_has_cuda_build = _pytorch_has_cuda()
 
     vendor = get_gpu_vendor()
@@ -227,6 +296,9 @@ def get_gpu_info():
         for item in amd_list:
             item["id"] = str(item["index"])
             gpus.append(item)
+    elif mac_list:
+        for item in mac_list:
+            gpus.append(item)
 
     primary = gpus[0] if gpus else {}
     gpu_name = primary.get("name")
@@ -243,10 +315,13 @@ def get_gpu_info():
     else:
         vulkan_available = shutil.which("vulkaninfo") is not None
 
+    pt_variant = "cuda" if torch_has_cuda_build else ("mps" if torch_mps else "cpu")
+
     info = {
         "gpu_vendor": vendor,
         "device_type": dev_type,
         "cuda_available": torch_cuda,
+        "mps_available": torch_mps,
         "vulkan_available": vulkan_available,
         "dml_available": False,
         "device": dev_type,
@@ -254,11 +329,12 @@ def get_gpu_info():
         "gpu_memory_total_mb": gpu_mem_total,
         "gpu_memory_free_mb": gpu_mem_free,
         "cuda_version": torch.version.cuda if torch_cuda else None,
-        "gpu_count": len(gpus) if gpus else (torch.cuda.device_count() if torch_cuda else 0),
+        "gpu_count": len(gpus) if gpus else (torch.cuda.device_count() if torch_cuda else (1 if torch_mps else 0)),
         "gpus": gpus,
-        "pytorch_variant": "cuda" if torch_has_cuda_build else "cpu",
+        "pytorch_variant": pt_variant,
         "nvidia_gpu_detected": vendor == "nvidia",
         "amd_gpu_detected": vendor == "amd",
+        "apple_gpu_detected": vendor == "apple" or torch_mps,
         "nvidia_name": primary.get("name") if vendor == "nvidia" else None,
         "nvidia_driver": primary.get("driver_version") if vendor == "nvidia" else None,
         "nvidia_cuda_ver": primary.get("cuda_driver_version") if vendor == "nvidia" else None,
@@ -266,6 +342,7 @@ def get_gpu_info():
         "amd_name": primary.get("name") if vendor == "amd" else None,
         "amd_driver": primary.get("driver_version") if vendor == "amd" else None,
         "amd_vram_mb": gpu_mem_total if vendor == "amd" else 0,
+        "apple_name": primary.get("name") if vendor == "apple" or torch_mps else None,
         "spandrel_available": False,
         "spandrel_version": None,
     }
@@ -293,12 +370,16 @@ def print_gpu_info():
     log("info", "Device type: " + str(info["device_type"]))
     log("info", "PyTorch variant: " + info["pytorch_variant"])
     log("info", "CUDA available to PyTorch: " + str(info["cuda_available"]))
+    log("info", "Apple Metal (MPS) available: " + str(info.get("mps_available", False)))
 
     if info["cuda_available"]:
         log("info", "NVIDIA GPU: " + str(info["gpu_name"]))
         log("info", "CUDA version: " + str(info["cuda_version"]))
         log("info", "VRAM: " + str(info["gpu_memory_free_mb"]) + "/" + str(info["gpu_memory_total_mb"]) + " MB")
         log("info", "TensorRT: " + str(check_tensorrt()))
+    elif info["apple_gpu_detected"]:
+        log("info", "Apple GPU: " + str(info["gpu_name"]))
+        log("info", "Acceleration: Metal Performance Shaders (MPS)")
     elif info["amd_gpu_detected"]:
         log("info", "AMD GPU: " + str(info["gpu_name"]))
         log("info", "VRAM: " + str(info["amd_vram_mb"]) + " MB")

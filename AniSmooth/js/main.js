@@ -631,13 +631,15 @@
       if (!info) return;
       this._gpuInfoCache = info;
 
-      var vendor = info.gpu_vendor || (info.nvidia_gpu_detected ? "nvidia" : (info.amd_gpu_detected ? "amd" : "unknown"));
+      var vendor = info.gpu_vendor || (info.nvidia_gpu_detected ? "nvidia" : (info.amd_gpu_detected ? "amd" : (info.apple_gpu_detected ? "apple" : "unknown")));
       var cuda = info.cuda_available;
+      var mps = info.mps_available || (vendor === "apple" && info.pytorch_variant === "mps");
       var nvidiaGpu = info.nvidia_gpu_detected || (vendor === "nvidia");
       var amdGpu = info.amd_gpu_detected || (vendor === "amd");
+      var appleGpu = info.apple_gpu_detected || (vendor === "apple");
       var ncnnAvailable = window.NcnnHandler ? window.NcnnHandler.isAvailable() : false;
-      var gpuCount = info.gpu_count || ((nvidiaGpu || amdGpu) ? 1 : 0);
-      var gpuName = info.gpu_name || info.nvidia_name || info.amd_name || "Unknown";
+      var gpuCount = info.gpu_count || ((nvidiaGpu || amdGpu || appleGpu) ? 1 : 0);
+      var gpuName = info.gpu_name || info.nvidia_name || info.amd_name || info.apple_name || (appleGpu ? "Apple Silicon GPU" : "Unknown");
       var cudaVer = info.cuda_version || "";
       var torchVer = info.torch_version || "";
       var totalMb = info.gpu_memory_total_mb || info.nvidia_vram_mb || info.amd_vram_mb || 0;
@@ -651,19 +653,16 @@
 
       this._gpuVendor = vendor;
       this._gpuCuda = cuda;
+      this._gpuMps = mps;
       this._gpuAmd = amdGpu;
       this._gpuNcnn = ncnnAvailable;
 
-      
       var indicator = document.getElementById("gpuIndicator");
       if (indicator) {
-        if (cuda) {
+        if (cuda || mps || ncnnAvailable) {
           indicator.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
           indicator.className = "gpu-indicator gpu-ok";
-        } else if (ncnnAvailable) {
-          indicator.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-          indicator.className = "gpu-indicator gpu-ok";
-        } else if (nvidiaGpu || amdGpu) {
+        } else if (nvidiaGpu || amdGpu || appleGpu) {
           indicator.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
           indicator.className = "gpu-indicator gpu-warn";
         } else {
@@ -674,9 +673,9 @@
 
       var nameEl = document.getElementById("gpuName");
       if (nameEl) {
-        if (cuda || ncnnAvailable) {
+        if (cuda || mps || ncnnAvailable) {
           nameEl.textContent = gpuName;
-        } else if (nvidiaGpu || amdGpu) {
+        } else if (nvidiaGpu || amdGpu || appleGpu) {
           nameEl.textContent = gpuName + " (not usable)";
         } else {
           nameEl.textContent = "No supported GPU detected";
@@ -688,19 +687,19 @@
         var parts = [];
         if (driverVer) parts.push("Driver " + driverVer);
         if (cudaVer) parts.push("CUDA " + cudaVer);
+        if (mps) parts.push("Metal (MPS)");
         if (torchVer) parts.push("Torch " + torchVer);
         if (ncnnAvailable) parts.push("NCNN Vulkan");
         if (nvidiaGpu && !cuda) {
           parts.push("PyTorch is CPU-only");
         } else if (amdGpu && !ncnnAvailable) {
           parts.push("NCNN binaries not installed");
-        } else if (!cuda && !ncnnAvailable) {
+        } else if (!cuda && !mps && !ncnnAvailable) {
           parts.push("CPU mode only");
         }
         metaEl.textContent = parts.join("  |  ");
       }
 
-      
       var fill = document.getElementById("gpuVramFill");
       var text = document.getElementById("gpuVramText");
       if (fill && text && totalMb > 0) {
@@ -708,20 +707,30 @@
           var pct = Math.round((usedMb / totalMb) * 100);
           fill.style.width = pct + "%";
           text.textContent = formatMb(usedMb) + " / " + formatMb(totalMb);
-        } else if (nvidiaGpu || amdGpu) {
+        } else if (nvidiaGpu || amdGpu || appleGpu) {
           fill.style.width = "0%";
-          text.textContent = formatMb(totalMb) + " (unavailable)";
+          text.textContent = formatMb(totalMb) + (appleGpu ? " (Unified)" : " (unavailable)");
         }
       } else if (text) {
         fill.style.width = "0%";
-        text.textContent = (cuda || ncnnAvailable) ? "VRAM: N/A" : ((nvidiaGpu || amdGpu) ? "VRAM: N/A" : "N/A");
+        text.textContent = appleGpu ? "Unified Memory" : ((cuda || ncnnAvailable) ? "VRAM: N/A" : "N/A");
       }
 
       var badgesEl = document.getElementById("gpuBadges");
       if (badgesEl) {
         badgesEl.innerHTML = "";
 
-        if (vendor === "nvidia") {
+        if (vendor === "apple" || appleGpu) {
+          var appleBadge = document.createElement("span");
+          appleBadge.className = "gpu-badge badge-ok";
+          appleBadge.innerHTML = '<i class="fa-brands fa-apple"></i> Apple';
+          badgesEl.appendChild(appleBadge);
+
+          var mpsBadge = document.createElement("span");
+          mpsBadge.className = "gpu-badge " + (mps ? "badge-ok" : "badge-warn");
+          mpsBadge.innerHTML = '<i class="fa-solid fa-' + (mps ? 'check' : 'triangle-exclamation') + '"></i> Metal MPS';
+          badgesEl.appendChild(mpsBadge);
+        } else if (vendor === "nvidia") {
           var nvBadge = document.createElement("span");
           nvBadge.className = "gpu-badge " + (cuda ? "badge-ok" : "badge-warn");
           nvBadge.innerHTML = '<i class="fa-brands fa-nvidia"></i> NVIDIA';
@@ -749,8 +758,8 @@
         }
 
         var ptBadge = document.createElement("span");
-        ptBadge.className = "gpu-badge " + (ptVariant === "cuda" || ncnnAvailable ? "badge-ok" : "badge-warn");
-        ptBadge.innerHTML = '<i class="fa-solid fa-' + (ptVariant === "cuda" || ncnnAvailable ? 'check' : 'exclamation') + '"></i> PyTorch ' + ptVariant.toUpperCase();
+        ptBadge.className = "gpu-badge " + (ptVariant === "cuda" || ptVariant === "mps" || ncnnAvailable ? "badge-ok" : "badge-warn");
+        ptBadge.innerHTML = '<i class="fa-solid fa-' + (ptVariant === "cuda" || ptVariant === "mps" || ncnnAvailable ? 'check' : 'exclamation') + '"></i> PyTorch ' + ptVariant.toUpperCase();
         badgesEl.appendChild(ptBadge);
 
         var srBadge = document.createElement("span");

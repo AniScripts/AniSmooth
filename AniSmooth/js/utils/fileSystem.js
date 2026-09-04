@@ -1,20 +1,20 @@
 (function () {
-  const nodeRequire = (typeof window !== 'undefined' && window.cep && window.cep.node && window.cep.node.require)
+  var nodeRequire = (typeof window !== 'undefined' && window.cep && window.cep.node && window.cep.node.require)
       ? window.cep.node.require
       : (typeof require !== 'undefined' ? require : null);
 
-  const fs = nodeRequire ? nodeRequire('fs') : null;
-  const path = nodeRequire ? nodeRequire('path') : null;
-  const os = nodeRequire ? nodeRequire('os') : null;
-  const childProcess = nodeRequire ? nodeRequire('child_process') : null;
+  var fs = nodeRequire ? nodeRequire('fs') : null;
+  var path = nodeRequire ? nodeRequire('path') : null;
+  var os = nodeRequire ? nodeRequire('os') : null;
+  var childProcess = nodeRequire ? nodeRequire('child_process') : null;
 
-  const FileSystem = {
-    fs,
-    path,
-    os,
-    childProcess,
+  var FileSystem = {
+    fs: fs,
+    path: path,
+    os: os,
+    childProcess: childProcess,
 
-    createFolder(folder) {
+    createFolder: function (folder) {
       if (!fs) return;
       try {
         if (!fs.existsSync(folder)) {
@@ -25,14 +25,15 @@
       }
     },
 
-    deleteFolderRecursive(folderPath) {
+    deleteFolderRecursive: function (folderPath) {
       if (!fs) return;
       try {
         if (fs.existsSync(folderPath)) {
-          fs.readdirSync(folderPath).forEach((file) => {
-            const curPath = path.join(folderPath, file);
+          var self = this;
+          fs.readdirSync(folderPath).forEach(function (file) {
+            var curPath = path.join(folderPath, file);
             if (fs.lstatSync(curPath).isDirectory()) {
-              this.deleteFolderRecursive(curPath);
+              self.deleteFolderRecursive(curPath);
             } else {
               fs.unlinkSync(curPath);
             }
@@ -44,31 +45,32 @@
       }
     },
 
-    copyFolderRecursive(sourceFolder, targetFolder) {
+    copyFolderRecursive: function (sourceFolder, targetFolder) {
       if (!fs) return;
       this.createFolder(targetFolder);
-      fs.readdirSync(sourceFolder).forEach((name) => {
-        const sourcePath = path.join(sourceFolder, name);
-        const targetPath = path.join(targetFolder, name);
-        const stat = fs.statSync(sourcePath);
+      var self = this;
+      fs.readdirSync(sourceFolder).forEach(function (name) {
+        var sourcePath = path.join(sourceFolder, name);
+        var targetPath = path.join(targetFolder, name);
+        var stat = fs.statSync(sourcePath);
         if (stat.isDirectory()) {
-          this.copyFolderRecursive(sourcePath, targetPath);
+          self.copyFolderRecursive(sourcePath, targetPath);
         } else {
           fs.copyFileSync(sourcePath, targetPath);
         }
       });
     },
 
-    calculateFolderSizeMB(folderPath) {
+    calculateFolderSizeMB: function (folderPath) {
       if (!fs) return 0;
-      let totalBytes = 0;
+      var totalBytes = 0;
       try {
         if (!fs.existsSync(folderPath)) return 0;
-        const files = fs.readdirSync(folderPath);
-        files.forEach((file) => {
+        var files = fs.readdirSync(folderPath);
+        files.forEach(function (file) {
           try {
-            const p = path.join(folderPath, file);
-            const stat = fs.statSync(p);
+            var p = path.join(folderPath, file);
+            var stat = fs.statSync(p);
             if (stat.isFile()) {
               totalBytes += stat.size;
             }
@@ -78,49 +80,65 @@
       return totalBytes / (1024 * 1024);
     },
 
-    getFreeDiskSpaceMB(dirPath) {
-      if (!childProcess || process.platform !== "win32") return 0;
-      try {
-        var driveLetter = (dirPath && dirPath[0]) ? dirPath[0] : "C";
-        var ps = childProcess.execFileSync("powershell.exe", [
-          "-NoProfile", "-Command",
-          "(Get-PSDrive -Name '" + driveLetter + "').Free"
-        ], { encoding: "utf8", windowsHide: true });
-        var freeBytes = parseInt(ps, 10) || 0;
-        return Math.floor(freeBytes / (1024 * 1024));
-      } catch (e) {
+    getFreeDiskSpaceMB: function (dirPath) {
+      if (!childProcess) return 0;
+      if (process.platform === "win32") {
+        try {
+          var driveLetter = (dirPath && dirPath[0]) ? dirPath[0] : "C";
+          var ps = childProcess.execFileSync("powershell.exe", [
+            "-NoProfile", "-Command",
+            "(Get-PSDrive -Name '" + driveLetter + "').Free"
+          ], { encoding: "utf8", windowsHide: true });
+          var freeBytes = parseInt(ps, 10) || 0;
+          return Math.floor(freeBytes / (1024 * 1024));
+        } catch (e) {
+          return 0;
+        }
+      } else {
+        try {
+          var checkDir = dirPath || (os ? os.homedir() : "/");
+          var res = childProcess.execFileSync("df", ["-k", checkDir], { encoding: "utf8" });
+          var lines = res.trim().split("\n");
+          if (lines.length > 1) {
+            var tokens = lines[1].trim().split(/\s+/);
+            if (tokens.length >= 4) {
+              var availKb = parseInt(tokens[3], 10) || 0;
+              return Math.floor(availKb / 1024);
+            }
+          }
+        } catch (e2) {}
         return 0;
       }
     },
 
-    pathToFileUrl(filePath) {
+    pathToFileUrl: function (filePath) {
       if (!filePath) return "";
-      let pathName = path ? path.resolve(filePath).replace(/\\/g, "/") : filePath.replace(/\\/g, "/");
+      var pathName = path ? path.resolve(filePath).replace(/\\/g, "/") : filePath.replace(/\\/g, "/");
       if (!pathName.startsWith("/")) {
         pathName = "/" + pathName;
       }
       return encodeURI("file://" + pathName);
     },
 
-    getExtension(filePath) {
+    getExtension: function (filePath) {
       if (!filePath) return "";
-      const dot = filePath.lastIndexOf(".");
+      var dot = filePath.lastIndexOf(".");
       return dot >= 0 ? filePath.substring(dot + 1) : "";
     },
 
-    getFileNameWithoutExtension(filePath) {
+    getFileNameWithoutExtension: function (filePath) {
       if (!filePath) return "";
-      const base = path ? path.basename(filePath) : filePath;
-      const dot = base.lastIndexOf(".");
+      var base = path ? path.basename(filePath) : filePath;
+      var dot = base.lastIndexOf(".");
       return dot >= 0 ? base.substring(0, dot) : base;
     },
 
-    runPowerShellDialog(command) {
+    runPowerShellDialog: function (command) {
       if (!childProcess || process.platform !== "win32") {
         return "";
       }
       try {
-        const result = childProcess.execFileSync(
+        var result = childProcess.execFileSync(
           "powershell.exe",
           ["-NoProfile", "-ExecutionPolicy", "Bypass", "-STA", "-Command", command],
           { encoding: "utf8", windowsHide: true }
@@ -132,38 +150,68 @@
       }
     },
 
-    extractZipPowerShell(zipPath, destFolder) {
-      if (!childProcess || process.platform !== "win32") {
-        return false;
+    runAppleScript: function (script) {
+      if (!childProcess || process.platform !== "darwin") {
+        return "";
       }
       try {
-        
-        
-        
-        
-        const env = Object.assign({}, process.env, {
-          ANISMOOTH_ZIP: String(zipPath || ""),
-          ANISMOOTH_DEST: String(destFolder || "")
-        });
-        childProcess.execFileSync(
-          "powershell.exe",
-          ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
-           "Expand-Archive -LiteralPath $env:ANISMOOTH_ZIP -DestinationPath $env:ANISMOOTH_DEST -Force"],
-          { encoding: "utf8", windowsHide: true, env: env }
+        var result = childProcess.execFileSync(
+          "osascript",
+          ["-e", script],
+          { encoding: "utf8" }
         );
-        return true;
+        return String(result || "").replace(/\r/g, "").replace(/\n/g, "").trim();
       } catch (e) {
-        console.error("Zip extraction failed:", e.message);
-        return false;
+        return "";
       }
     },
 
-    chooseFileWithSystemExplorer(title, startFolder, filter) {
-      const safeTitle = String(title || "Choose file").replace(/'/g, "''");
-      const safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");
-      const safeFilter = String(filter || "All files (*.*)|*.*").replace(/'/g, "''");
+    extractZipArchive: function (zipPath, destFolder) {
+      if (!childProcess) return false;
+      if (process.platform === "win32") {
+        try {
+          var env = Object.assign({}, process.env, {
+            ANISMOOTH_ZIP: String(zipPath || ""),
+            ANISMOOTH_DEST: String(destFolder || "")
+          });
+          childProcess.execFileSync(
+            "powershell.exe",
+            ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+             "Expand-Archive -LiteralPath $env:ANISMOOTH_ZIP -DestinationPath $env:ANISMOOTH_DEST -Force"],
+            { encoding: "utf8", windowsHide: true, env: env }
+          );
+          return true;
+        } catch (e) {
+          console.error("Zip extraction failed:", e.message);
+          return false;
+        }
+      } else {
+        try {
+          childProcess.execFileSync("unzip", ["-q", "-o", zipPath, "-d", destFolder], { encoding: "utf8" });
+          return true;
+        } catch (e2) {
+          console.error("Zip extraction failed:", e2.message);
+          return false;
+        }
+      }
+    },
 
-      const command =
+    extractZipPowerShell: function (zipPath, destFolder) {
+      return this.extractZipArchive(zipPath, destFolder);
+    },
+
+    chooseFileWithSystemExplorer: function (title, startFolder, filter) {
+      if (process.platform === "darwin") {
+        var prompt = String(title || "Choose file").replace(/"/g, '\\"');
+        var script = 'POSIX path of (choose file with prompt "' + prompt + '")';
+        return this.runAppleScript(script);
+      }
+
+      var safeTitle = String(title || "Choose file").replace(/'/g, "''");
+      var safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");
+      var safeFilter = String(filter || "All files (*.*)|*.*").replace(/'/g, "''");
+
+      var command =
         "Add-Type -AssemblyName System.Windows.Forms; " +
         "$dialog = New-Object System.Windows.Forms.OpenFileDialog; " +
         "$dialog.Title = '" + safeTitle + "'; " +
@@ -177,11 +225,17 @@
       return this.runPowerShellDialog(command);
     },
 
-    chooseFolderWithSystemExplorer(title, startFolder) {
-      const safeTitle = String(title || "Choose folder").replace(/'/g, "''");
-      const safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");
+    chooseFolderWithSystemExplorer: function (title, startFolder) {
+      if (process.platform === "darwin") {
+        var prompt = String(title || "Choose folder").replace(/"/g, '\\"');
+        var script = 'POSIX path of (choose folder with prompt "' + prompt + '")';
+        return this.runAppleScript(script);
+      }
 
-      const command =
+      var safeTitle = String(title || "Choose folder").replace(/'/g, "''");
+      var safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");
+
+      var command =
         "Add-Type -AssemblyName System.Windows.Forms; " +
         "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog; " +
         "$dialog.Description = '" + safeTitle + "'; " +
@@ -194,12 +248,19 @@
       return this.runPowerShellDialog(command);
     },
 
-    chooseSaveFileWithSystemExplorer(title, startFolder, defaultName) {
-      const safeTitle = String(title || "Save file").replace(/'/g, "''");
-      const safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");
-      const safeName = String(defaultName || "log.txt").replace(/'/g, "''");
+    chooseSaveFileWithSystemExplorer: function (title, startFolder, defaultName) {
+      if (process.platform === "darwin") {
+        var prompt = String(title || "Save file").replace(/"/g, '\\"');
+        var name = String(defaultName || "output.txt").replace(/"/g, '\\"');
+        var script = 'POSIX path of (choose file name with prompt "' + prompt + '" default name "' + name + '")';
+        return this.runAppleScript(script);
+      }
 
-      const command =
+      var safeTitle = String(title || "Save file").replace(/'/g, "''");
+      var safeFolder = String(startFolder || (os ? os.homedir() : "")).replace(/'/g, "''");
+      var safeName = String(defaultName || "log.txt").replace(/'/g, "''");
+
+      var command =
         "Add-Type -AssemblyName System.Windows.Forms; " +
         "$dialog = New-Object System.Windows.Forms.SaveFileDialog; " +
         "$dialog.Title = '" + safeTitle + "'; " +
@@ -214,13 +275,17 @@
       return this.runPowerShellDialog(command);
     },
 
-    revealFileInExplorer(filePath) {
+    revealFileInExplorer: function (filePath) {
       if (!filePath || !childProcess) return;
       try {
-        var normPath = String(filePath).replace(/\//g, "\\");
-        childProcess.spawn("explorer.exe", ["/select,", normPath], { detached: true, stdio: "ignore" }).unref();
+        if (process.platform === "darwin") {
+          childProcess.spawn("open", ["-R", filePath], { detached: true, stdio: "ignore" }).unref();
+        } else {
+          var normPath = String(filePath).replace(/\//g, "\\");
+          childProcess.spawn("explorer.exe", ["/select,", normPath], { detached: true, stdio: "ignore" }).unref();
+        }
       } catch (e) {
-        console.error("Failed to reveal file in explorer:", e.message);
+        console.error("Failed to reveal file:", e.message);
       }
     }
   };

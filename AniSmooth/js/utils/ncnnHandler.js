@@ -315,8 +315,16 @@
       try {
         if (process.platform === "win32" && proc.pid) {
           window.FileSystem.childProcess.exec("taskkill /F /T /PID " + proc.pid, function () {});
+        } else if (proc.pid) {
+          try {
+            window.FileSystem.childProcess.exec("pkill -P " + proc.pid, function () {
+              try { proc.kill("SIGKILL"); } catch (e3) {}
+            });
+          } catch (ep) {
+            proc.kill("SIGKILL");
+          }
         } else {
-          proc.kill("SIGTERM");
+          proc.kill("SIGKILL");
         }
       } catch (e) {
         try { proc.kill("SIGKILL"); } catch (e2) {}
