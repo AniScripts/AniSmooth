@@ -2001,7 +2001,9 @@
           prefix: this.settings.outputPrefix,
           timestamp: this.settings.outputTimestamp,
           autoImport: this.settings.outputAutoImport,
-          keepPrerender: this.settings.outputKeepPrerender
+          keepPrerender: this.settings.outputKeepPrerender,
+          audioBitrate: this.settings.audioBitrate || "192k",
+          ffmpegPath: this.settings.ffmpegPath || ""
         },
         python: { path: this.settings.pythonPath }
       };
@@ -2089,6 +2091,18 @@
         this.settings.outputTimestamp = state.output.timestamp !== false;
         this.settings.outputAutoImport = state.output.autoImport !== false;
         this.settings.outputKeepPrerender = state.output.keepPrerender !== false;
+        if (state.output.audioBitrate) {
+          this.settings.audioBitrate = state.output.audioBitrate;
+          window.StorageManager.setItem("anismooth_audio_bitrate", this.settings.audioBitrate);
+          var ab = document.getElementById("audioBitrateSelect");
+          if (ab) ab.value = this.settings.audioBitrate;
+        }
+        if (state.output.ffmpegPath !== undefined) {
+          this.settings.ffmpegPath = state.output.ffmpegPath;
+          window.StorageManager.setItem("anismooth_ffmpeg_path", this.settings.ffmpegPath);
+          var fp = document.getElementById("ffmpegPathInput");
+          if (fp) fp.value = this.settings.ffmpegPath;
+        }
         window.StorageManager.setItem("anismooth_output_prefix", this.settings.outputPrefix);
         window.StorageManager.setItem("anismooth_output_timestamp", this.settings.outputTimestamp ? "1" : "0");
         window.StorageManager.setItem("anismooth_output_autoimport", this.settings.outputAutoImport ? "1" : "0");
