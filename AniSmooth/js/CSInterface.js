@@ -463,3 +463,45 @@ CSInterface.prototype.setWindowTitle = function (title) {
 CSInterface.prototype.getWindowTitle = function () {
     return window.__adobe_cep__.invokeSync("getWindowTitle", "");
 };
+
+if (typeof window !== "undefined" && !window.__adobe_cep__) {
+    window.__adobe_cep__ = {
+        evalScript: function (script, callback) {
+            var mockLayer = {
+                ok: true,
+                layerName: "Sample_Anime_Cut.mp4",
+                duration: 2.5,
+                width: 1920,
+                height: 1080,
+                frameRate: 23.976,
+                totalFrames: 60,
+                outputPath: "/mock/path/Sample_Anime_Cut.avi",
+                message: "Dev Mock Active"
+            };
+            if (callback) {
+                setTimeout(function () {
+                    callback(JSON.stringify(mockLayer));
+                }, 100);
+            }
+        },
+        openURLInDefaultBrowser: function (url) {
+            window.open(url, "_blank");
+        },
+        getSystemPath: function (pathType) {
+            return window.location.pathname ? window.location.pathname.replace(/\/[^\/]*$/, "") : "";
+        },
+        getHostEnvironment: function () {
+            return JSON.stringify({
+                appName: "AEFT",
+                appVersion: "24.0.0",
+                appLocale: "en_US",
+                appUILocale: "en_US",
+                appId: "AEFT",
+                isAppOnline: true
+            });
+        },
+        invokeSync: function () { return ""; },
+        invokeAsync: function () {}
+    };
+}
+
