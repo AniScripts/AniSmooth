@@ -309,6 +309,7 @@
       this._buildEnvInfo();
       this._buildFolderActions();
       this._buildModelManager();
+      this._buildModelsCatalog();
       this._initPresets();
       this._buildGpuModeSelector();
 
@@ -536,8 +537,11 @@
               }
               tab.className += " active";
 
-              var ids = { system: "settingsCatSystem", output: "settingsCatOutput", python: "settingsCatPython", tools: "settingsCatTools", interface: "settingsCatInterface", presets: "settingsCatPresets" };
+              var ids = { system: "settingsCatSystem", models: "settingsCatModels", output: "settingsCatOutput", python: "settingsCatPython", tools: "settingsCatTools", interface: "settingsCatInterface", presets: "settingsCatPresets" };
               dbg('info', 'Settings', 'Switching settings category to: ' + cat);
+              if (cat === "models" && self._buildModelsCatalog) {
+                self._buildModelsCatalog();
+              }
               for (var k in ids) {
                 if (!ids.hasOwnProperty(k)) continue;
                 var catEl = document.getElementById(ids[k]);
@@ -1985,16 +1989,163 @@
         }
       }
 
-      scan();
-
-      function escM(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+      scan();      function escM(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
       function escMA(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-      function fmtSz(bytes) {
-        if (bytes < 1024) return bytes + " B";
-        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-        return (bytes / 1048576).toFixed(1) + " MB";
+      function fmtSz(b) {
+        if (!b) return "0 B";
+        if (b < 1024) return b + " B";
+        if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+        if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + " MB";
+        return (b / (1024 * 1024 * 1024)).toFixed(2) + " GB";
       }
     },
+
+    _buildModelsCatalog: function () {
+      var el = document.getElementById("modelsCatalogList");
+      var sizeText = document.getElementById("totalWeightsSizeText");
+      if (!el) return;
+      var self = this;
+
+      var CATALOG = [
+        { id: "rife4.25", name: "RIFE 4.25", type: "Interpolation", size: "175 MB", desc: "1.3M params · Lightweight fast interpolation", url: "https://github.com/AniScripts/AniSmooth-Models/releases/download/interpolation/rife425.pth", relPath: "weights/rife4.25/rife425.pth" },
+        { id: "rife4.25-heavy", name: "RIFE 4.25 Heavy", type: "Interpolation", size: "675 MB", desc: "5.1M params · High quality motion smoothing", url: "https://github.com/AniScripts/AniSmooth-Models/releases/download/interpolation/rife425_heavy.pth", relPath: "weights/rife4.25-heavy/rife425_heavy.pth" },
+        { id: "adore", name: "Adore (ShuffleCUGAN)", type: "Upscaling", size: "16 MB", desc: "4M params · Anime detail & line preservation (2x/4x)", url: "https://github.com/AniScripts/AniSmooth-Models/releases/download/upscale/adore.pth", relPath: "weights/adore/adore.pth" },
+        { id: "fallin_soft", name: "Fallin Soft", type: "Upscaling", size: "15 MB", desc: "3.9M params · Clean anime colors and textures (2x/4x)", url: "https://github.com/AniScripts/AniSmooth-Models/releases/download/upscale/Fallin_soft.pth", relPath: "weights/fallin_soft/Fallin_soft.pth" },
+        { id: "rife-ncnn", name: "RIFE NCNN Vulkan Pack", type: "Vulkan Binaries", size: "65 MB", desc: "Vulkan executable package for AMD / Intel / Apple", url: (process.platform === "darwin" ? "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/rife-macos.zip" : "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/rife-ncnn-vulkan-20221029-windows.zip"), relPath: "ncnn_binaries/rife-ncnn-vulkan" + (process.platform === "win32" ? ".exe" : "") },
+        { id: "realesrgan-ncnn", name: "Real-ESRGAN Vulkan Pack", type: "Vulkan Binaries", size: "55 MB", desc: "Real-ESRGAN Vulkan upscaling binary and anime models", url: (process.platform === "darwin" ? "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/realesrgan-macos.zip" : "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/realesrgan-ncnn-vulkan-20220424-windows.zip"), relPath: "ncnn_binaries/realesrgan-ncnn-vulkan" + (process.platform === "win32" ? ".exe" : "") }
+      ];
+
+      function refresh() {
+        var totalBytes = 0;
+        var html = "";
+        var fs = window.FileSystem.fs;
+        var path = window.FileSystem.path;
+
+        for (var i = 0; i < CATALOG.length; i++) {
+          var item = CATALOG[i];
+          var fullPath = path.join(self.anismoothToolsFolder, item.relPath);
+          var exists = fs && fs.existsSync(fullPath);
+          var fileSize = 0;
+          if (exists) {
+            try { fileSize = fs.statSync(fullPath).size; totalBytes += fileSize; } catch (e) {}
+          }
+          var statusBadge = exists ? '<span class="gpu-badge badge-ok"><i class="fa-solid fa-check"></i> Installed</span>' : '<span class="gpu-badge badge-warn"><i class="fa-solid fa-cloud-arrow-down"></i> Not Downloaded</span>';
+
+          html +=
+            '<div class="model-row" style="padding:8px 6px;margin-bottom:6px;background:var(--card-bg);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:space-between;">' +
+              '<div style="flex:1;min-width:0;padding-right:8px;">' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                  '<b style="font-size:10px;color:var(--text-strong);">' + escM(item.name) + '</b>' +
+                  statusBadge +
+                '</div>' +
+                '<div style="font-size:8px;color:var(--text-3);margin-top:2px;">' + escM(item.desc) + ' · <span style="color:var(--text-dim);">' + item.size + '</span></div>' +
+              '</div>' +
+              '<div style="display:flex;gap:4px;align-items:center;">';
+
+          if (exists) {
+            html += '<button class="btn-sm cat-delete" data-id="' + escMA(item.id) + '" data-path="' + escMA(fullPath) + '" title="Delete" style="padding:3px 7px;"><i class="fa-solid fa-trash"></i></button>';
+          } else {
+            html += '<button class="btn-sm btn-primary cat-download" data-id="' + escMA(item.id) + '" data-url="' + escMA(item.url) + '" data-rel="' + escMA(item.relPath) + '" title="Download" style="padding:3px 7px;"><i class="fa-solid fa-download"></i> Download</button>';
+          }
+          html += '</div></div>';
+        }
+
+        if (sizeText) sizeText.textContent = fmtSz(totalBytes);
+        el.innerHTML = html;
+
+        var dls = el.querySelectorAll(".cat-download");
+        for (var d = 0; d < dls.length; d++) {
+          dls[d].addEventListener("click", function () {
+            var url = this.getAttribute("data-url");
+            var rel = this.getAttribute("data-rel");
+            var btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Downloading...';
+            self._downloadModelFile(url, rel, function (ok, err) {
+              if (ok) {
+                if (window.showToast) window.showToast("Model downloaded successfully!", "success");
+              } else {
+                if (window.showToast) window.showToast("Download failed: " + err, "error");
+              }
+              refresh();
+            });
+          });
+        }
+
+        var dels = el.querySelectorAll(".cat-delete");
+        for (var k = 0; k < dels.length; k++) {
+          dels[k].addEventListener("click", function () {
+            var p = this.getAttribute("data-path");
+            if (p && fs && fs.existsSync(p)) {
+              window.showConfirm("Delete this model file?", function () {
+                try {
+                  fs.unlinkSync(p);
+                  if (window.showToast) window.showToast("Model file deleted", "info");
+                } catch (e) {}
+                refresh();
+              });
+            }
+          });
+        }
+      }
+
+      refresh();
+
+      var refreshBtn = document.getElementById("refreshModelsCatalogBtn");
+      if (refreshBtn) {
+        refreshBtn.onclick = function () { refresh(); };
+      }
+    },
+
+    _downloadModelFile: function (url, relPath, cb) {
+      try {
+        var fs = window.FileSystem.fs;
+        var path = window.FileSystem.path;
+        var dest = path.join(this.anismoothToolsFolder, relPath);
+        var dir = path.dirname(dest);
+        window.FileSystem.createFolder(dir);
+
+        var isZip = url.endsWith(".zip");
+        var tempFile = isZip ? path.join(this.anismoothToolsFolder, "pkg_temp.zip") : dest + ".part";
+
+        var https = require("https");
+        var file = fs.createWriteStream(tempFile);
+
+        function doReq(targetUrl) {
+          https.get(targetUrl, function (res) {
+            if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+              return doReq(res.headers.location);
+            }
+            if (res.statusCode !== 200) {
+              return cb(false, "HTTP " + res.statusCode);
+            }
+            res.pipe(file);
+            file.on("finish", function () {
+              file.close(function () {
+                if (isZip) {
+                  var destExt = path.join(window.App.anismoothToolsFolder, "ncnn_binaries");
+                  window.FileSystem.extractZipArchive(tempFile, destExt);
+                  try { fs.unlinkSync(tempFile); } catch (e) {}
+                  cb(true);
+                } else {
+                  try {
+                    if (fs.existsSync(dest)) fs.unlinkSync(dest);
+                    fs.renameSync(tempFile, dest);
+                  } catch (e2) {}
+                  cb(true);
+                }
+              });
+            });
+          }).on("error", function (e) {
+            try { fs.unlinkSync(tempFile); } catch (e3) {}
+            cb(false, e.message);
+          });
+        }
+
+        doReq(url);
+      } catch (err) {
+        cb(false, err.message);
+      }  },
 
     _initPresets: function () {
       var self = this;

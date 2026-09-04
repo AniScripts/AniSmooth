@@ -19,6 +19,9 @@
           <button class="sub-tab" data-cat="tools" title="Tools">
             <i class="fa-solid fa-toolbox"></i>
           </button>
+          <button class="sub-tab" data-cat="models" title="Model Downloader">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+          </button>
           <button class="sub-tab" data-cat="interface" title="Interface">
             <i class="fa-solid fa-sliders"></i>
           </button>
@@ -539,5 +542,24 @@
           </button>
           <div id="repairLog" style="display:none;margin-top:6px;"></div>
         </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatModels">
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-cloud-arrow-down panel-head-icon"></i>
+              <span class="panel-title">Model Downloader &amp; Manager</span>
+            </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Inspect, download, verify SHA-256 hashes, and manage local AI models.</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:6px;background:var(--inset);border:1px solid var(--border);border-radius:3px;">
+              <div style="font-size:9px;color:var(--text);">
+                <span>Total Weights Size: </span><b id="totalWeightsSizeText">0 MB</b>
+              </div>
+              <button id="refreshModelsCatalogBtn" class="btn-sm" style="font-size:8px;padding:2px 6px;"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+            </div>
+            <div id="modelsCatalogList" class="model-list">
+              <div class="model-empty"><i class="fa-solid fa-spinner fa-spin"></i> Scanning models...</div>
+            </div>
+          </div>
         </div>
       </div>
