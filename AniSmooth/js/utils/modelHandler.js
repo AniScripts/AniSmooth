@@ -311,6 +311,9 @@
       if (options.preset) {
         args.push("--preset", options.preset);
       }
+      if (options.codec) {
+        args.push("--codec", options.codec);
+      }
 
       var gpuId = (window.StorageManager && window.StorageManager.getItem("anismooth_gpu_id", "0")) || "0";
       if (gpuId) {
@@ -364,6 +367,9 @@
       }
       if (options.preset) {
         args.push("--preset", options.preset);
+      }
+      if (options.codec) {
+        args.push("--codec", options.codec);
       }
       if (options.fitW && parseInt(options.fitW) > 0) {
         args.push("--fit-w", String(parseInt(options.fitW)));

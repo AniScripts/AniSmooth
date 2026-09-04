@@ -168,9 +168,9 @@ def finalize_output(output_path, input_path, target_size_mb=None, quality=None):
             log("warn", "Two-pass encoding failed, falling back to high-quality re-encode")
             reencode_high_quality(output_path, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
 
-def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high", gpu_id=0):
+def run_interpolation(input_path, output_path, model_name, factor, target_size_mb=None, preset="high", gpu_id=0, codec="h264"):
     q = resolve_quality(preset)
-    log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x")
+    log("info", f"Starting RIFE Interpolation. Model: {model_name}, Factor: {factor}x, Codec: {codec}")
 
     print_gpu_info()
     device = get_device(gpu_id)
@@ -196,7 +196,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
 
     with VideoProcessor(input_path, output_path) as video:
         w, h, fps, total_frames = video.get_info()
-        video.setup_writer(fps * factor, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"])
+        video.setup_writer(fps * factor, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"], codec=codec)
         log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
         
@@ -343,7 +343,7 @@ def run_interpolation(input_path, output_path, model_name, factor, target_size_m
     finalize_output(output_path, input_path, target_size_mb, q)
     log("success", "Interpolation process completed successfully.")
 
-def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="high", fit_w=0, fit_h=0, gpu_id=0):
+def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=None, preset="high", fit_w=0, fit_h=0, gpu_id=0, codec="h264"):
     q = resolve_quality(preset)
     log("info", f"Starting Video Upscaling. Model: {model_name}, Multiplier: {scale}x")
 
@@ -371,7 +371,7 @@ def run_upscaling(input_path, output_path, model_name, scale, target_size_mb=Non
 
     with VideoProcessor(input_path, output_path) as video:
         w, h, fps, total_frames = video.get_info()
-        video.setup_writer(fps, scale=scale, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"], max_w=fit_w, max_h=fit_h)
+        video.setup_writer(fps, scale=scale, x264_preset=q["x264"], crf=q["crf"], tune=q["tune"], max_w=fit_w, max_h=fit_h, codec=codec)
         log("info", f"Input: {w}x{h}, {fps:.2f} FPS, ~{total_frames} frames")
 
         log("info", "Starting frame upscaling...")
@@ -726,6 +726,8 @@ def main():
                         help="Quality preset key: archival | high | balanced | fast | draft "
                              "(maps to CRF + x264 speed + -tune animation; legacy x264 "
                              "speed names fall back to 'high')")
+    parser.add_argument("--codec", type=str, default="h264",
+                        help="Export video codec: h264 | hevc | prores | prores_4444")
     parser.add_argument("--gpu-id", type=int, default=0,
                         help="GPU device index to execute on (default 0)")
     parser.add_argument("--fit-w", type=int, default=0,
@@ -777,9 +779,9 @@ def main():
 
     try:
         if args.mode == "interpolate":
-            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.gpu_id)
+            run_interpolation(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.gpu_id, args.codec)
         elif args.mode == "upscale":
-            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.fit_w, args.fit_h, args.gpu_id)
+            run_upscaling(args.input, args.output, args.model, args.factor, args.target_size_mb, args.preset, args.fit_w, args.fit_h, args.gpu_id, args.codec)
     except Exception as e:
         log("error", f"Processing failed: {e}")
         import traceback

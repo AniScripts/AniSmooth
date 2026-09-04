@@ -356,7 +356,7 @@ class VideoProcessor:
     def get_info(self):
         return self.width, self.height, self.fps, self.total_frames
 
-    def setup_writer(self, output_fps, scale=1, x264_preset="slow", crf=17, tune="animation", max_w=0, max_h=0):
+    def setup_writer(self, output_fps, scale=1, x264_preset="slow", crf=17, tune="animation", max_w=0, max_h=0, codec="h264"):
         out_w = self.width * scale
         out_h = self.height * scale
 
@@ -367,22 +367,46 @@ class VideoProcessor:
                 "-f", "rawvideo", "-vcodec", "rawvideo",
                 "-s", f"{out_w}x{out_h}", "-pix_fmt", "bgr24",
                 "-r", str(output_fps), "-i", "-",
-                "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
-                "-profile:v", "high", "-level:v", "5.1",
             ]
-            if tune:
-                cmd += ["-tune", tune]
             if max_w > 0 and max_h > 0 and (out_w > max_w or out_h > max_h):
                 cmd += ["-vf", f"scale={max_w}:{max_h}:force_original_aspect_ratio=decrease:flags=lanczos"]
+
             cpu_cores = os.cpu_count() or 4
             enc_threads = max(2, min(cpu_cores, 4 if out_w * out_h >= 3840 * 2160 else 8))
-            cmd += [
-                "-pix_fmt", "yuv420p",
-                "-x264-params", f"threads={enc_threads}:lookahead-threads=1:rc-lookahead=20",
-                "-threads", str(enc_threads),
-                "-movflags", "+faststart",
-                str(self.output_path)
-            ]
+
+            codec_norm = str(codec or "h264").lower()
+            if codec_norm in ("hevc", "h265"):
+                cmd += [
+                    "-c:v", "libx265", "-crf", str(crf), "-preset", x264_preset,
+                    "-pix_fmt", "yuv420p", "-threads", str(enc_threads),
+                    "-movflags", "+faststart", str(self.output_path)
+                ]
+            elif codec_norm in ("prores", "prores_hq", "prores422"):
+                cmd += [
+                    "-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0",
+                    "-pix_fmt", "yuv422p10le", "-threads", str(enc_threads),
+                    str(self.output_path)
+                ]
+            elif codec_norm in ("prores_4444", "prores4444"):
+                cmd += [
+                    "-c:v", "prores_ks", "-profile:v", "4", "-vendor", "apl0",
+                    "-pix_fmt", "yuva444p10le", "-threads", str(enc_threads),
+                    str(self.output_path)
+                ]
+            else:
+                cmd += [
+                    "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
+                    "-profile:v", "high", "-level:v", "5.1",
+                ]
+                if tune:
+                    cmd += ["-tune", tune]
+                cmd += [
+                    "-pix_fmt", "yuv420p",
+                    "-x264-params", f"threads={enc_threads}:lookahead-threads=1:rc-lookahead=20",
+                    "-threads", str(enc_threads),
+                    "-movflags", "+faststart",
+                    str(self.output_path)
+                ]
             self._ffmpeg_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             def _read_stderr():
                 try:

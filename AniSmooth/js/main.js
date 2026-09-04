@@ -64,6 +64,7 @@
       this.settings.outputHideOriginal = window.StorageManager.getItem("anismooth_output_hideoriginal", "0") === "1";
       this.settings.outputKeepPrerender = window.StorageManager.getItem("anismooth_output_keepprerender", "1") === "1";
       this.settings.outputCleanupFailed = window.StorageManager.getItem("anismooth_output_cleanupfailed", "1") === "1";
+      this.settings.outputCodec = window.StorageManager.getItem("anismooth_output_codec", "h264");
       this.settings.audioBitrate = window.StorageManager.getItem("anismooth_audio_bitrate", "192k");
       this.settings.ffmpegPath = window.StorageManager.getItem("anismooth_ffmpeg_path", "");
 
@@ -150,6 +151,7 @@
             self.settings.outputPath = selected;
             window.StorageManager.setItem("anismooth_output_path", selected);
             document.getElementById("outputFolderText").textContent = selected;
+            self._updateDiskSpaceBadge();
             dbg('info', 'Settings', 'Output path updated: ' + selected);
           }
         });
@@ -454,6 +456,17 @@
           self._autoSavePreset();
         });
       }
+
+      var codecSelect = document.getElementById("outputVideoCodec");
+      if (codecSelect) {
+        codecSelect.value = this.settings.outputCodec || "h264";
+        codecSelect.addEventListener("change", function () {
+          self.settings.outputCodec = codecSelect.value;
+          window.StorageManager.setItem("anismooth_output_codec", codecSelect.value);
+        });
+      }
+
+      this._updateDiskSpaceBadge();
 
       var audioSelect = document.getElementById("audioBitrateSelect");
       if (audioSelect) {
@@ -1997,6 +2010,25 @@
         if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
         if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + " MB";
         return (b / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+      }
+    },
+
+    _updateDiskSpaceBadge: function () {
+      var badge = document.getElementById("diskSpaceBadge");
+      if (!badge) return;
+      var outPath = (this.settings && this.settings.outputPath) || "";
+      if (!outPath && window.FileSystem && window.FileSystem.os) {
+        outPath = window.FileSystem.os.homedir();
+      }
+      var freeMB = (window.FileSystem && window.FileSystem.getFreeDiskSpaceMB) ? window.FileSystem.getFreeDiskSpaceMB(outPath) : 0;
+      if (freeMB > 0) {
+        var gb = (freeMB / 1024).toFixed(1);
+        var isLow = freeMB < 5120;
+        badge.innerHTML = '<i class="fa-solid fa-hard-drive"></i> ' + gb + ' GB free';
+        badge.style.color = isLow ? 'var(--danger, #ff4d4d)' : 'var(--text-3)';
+        badge.style.borderColor = isLow ? 'var(--danger, #ff4d4d)' : 'var(--border)';
+      } else {
+        badge.innerHTML = '<i class="fa-solid fa-hard-drive"></i> Ready';
       }
     },
 

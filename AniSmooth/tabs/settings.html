@@ -260,7 +260,10 @@
           </div>
           <span class="form-hint" style="margin-bottom:8px;display:block;">Where processed files and pre-renders are saved.</span>
           <div class="form-group">
-            <label>Save Location</label>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <label style="margin:0;">Save Location</label>
+              <span id="diskSpaceBadge" style="font-size:8px;padding:1px 5px;border-radius:3px;background:var(--bg-card);color:var(--text-3);border:1px solid var(--border);"><i class="fa-solid fa-hard-drive"></i> Checking space...</span>
+            </div>
             <div class="folder-row">
               <div id="outputFolderText" class="folder-text">Select output...</div>
               <button id="chooseOutputFolderBtn" class="btn-sm"><i class="fa-solid fa-folder"></i></button>
@@ -373,6 +376,16 @@
               <option value="fast">Fast (CRF 22)</option>
               <option value="draft">Draft / Preview (CRF 26)</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="outputVideoCodec">Export Video Codec / Format</label>
+            <select id="outputVideoCodec" style="width:100%;background:var(--inset);border:1px solid var(--border);border-radius:3px;color:var(--text-strong);padding:4px 6px;font-family:inherit;font-size:9px;">
+              <option value="h264" selected>MP4 (H.264 / AVC - Universal Standard)</option>
+              <option value="hevc">MP4 (H.265 / HEVC - High Efficiency)</option>
+              <option value="prores">QuickTime MOV (Apple ProRes 422 HQ)</option>
+              <option value="prores_4444">QuickTime MOV (Apple ProRes 4444 with Alpha)</option>
+            </select>
+            <span class="form-hint" style="margin-top:4px;">ProRes outputs directly to .mov for editing timelines.</span>
           </div>
           <div style="border-top:1px solid var(--border);margin:8px 0;"></div>
           <div class="form-group">
