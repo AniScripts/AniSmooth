@@ -76,6 +76,8 @@
       this.settings.outputHideOriginal = window.StorageManager.getItem("anismooth_output_hideoriginal", "0") === "1";
       this.settings.outputKeepPrerender = window.StorageManager.getItem("anismooth_output_keepprerender", "1") === "1";
       this.settings.outputCleanupFailed = window.StorageManager.getItem("anismooth_output_cleanupfailed", "1") === "1";
+      this.settings.audioBitrate = window.StorageManager.getItem("anismooth_audio_bitrate", "192k");
+      this.settings.ffmpegPath = window.StorageManager.getItem("anismooth_ffmpeg_path", "");
 
       if (path && window.FileSystem.fs) {
         window.FileSystem.createFolder(this.settings.outputPath);
@@ -458,6 +460,74 @@
           self.settings.outputCleanupFailed = cfCheck.checked;
           window.StorageManager.setItem("anismooth_output_cleanupfailed", cfCheck.checked ? "1" : "0");
           self._autoSavePreset();
+        });
+      }
+
+      var audioSelect = document.getElementById("audioBitrateSelect");
+      if (audioSelect) {
+        audioSelect.value = this.settings.audioBitrate || "192k";
+        audioSelect.addEventListener("change", function () {
+          self.settings.audioBitrate = audioSelect.value;
+          window.StorageManager.setItem("anismooth_audio_bitrate", audioSelect.value);
+        });
+      }
+
+      var ffmpegPathInput = document.getElementById("ffmpegPathInput");
+      if (ffmpegPathInput) {
+        ffmpegPathInput.value = this.settings.ffmpegPath || "";
+        ffmpegPathInput.addEventListener("change", function () {
+          self.settings.ffmpegPath = ffmpegPathInput.value.trim();
+          window.StorageManager.setItem("anismooth_ffmpeg_path", self.settings.ffmpegPath);
+        });
+      }
+
+      var chooseFfmpegBtn = document.getElementById("chooseFfmpegBtn");
+      if (chooseFfmpegBtn) {
+        chooseFfmpegBtn.addEventListener("click", function () {
+          var picked = window.FileSystem.chooseFileWithSystemExplorer
+            ? window.FileSystem.chooseFileWithSystemExplorer("Select FFmpeg.exe", "", "Executable (*.exe)|*.exe")
+            : null;
+          if (picked) {
+            self.settings.ffmpegPath = picked;
+            window.StorageManager.setItem("anismooth_ffmpeg_path", picked);
+            if (ffmpegPathInput) ffmpegPathInput.value = picked;
+            dbg("info", "Settings", "FFmpeg path updated: " + picked);
+          }
+        });
+      }
+
+      var installNcnnQuickBtn = document.getElementById("installNcnnQuickBtn");
+      if (installNcnnQuickBtn) {
+        installNcnnQuickBtn.addEventListener("click", function () {
+          self.installNcnnBinaries();
+        });
+      }
+
+      var installNcnnMaintBtn = document.getElementById("installNcnnMaintenanceBtn");
+      if (installNcnnMaintBtn) {
+        installNcnnMaintBtn.addEventListener("click", function () {
+          self.installNcnnBinaries();
+        });
+      }
+
+      var scanTempBtn = document.getElementById("scanTempCacheBtn");
+      if (scanTempBtn) {
+        scanTempBtn.addEventListener("click", function () {
+          self._scanTempCache();
+        });
+      }
+
+      var cleanTempBtn = document.getElementById("cleanTempCacheBtn");
+      if (cleanTempBtn) {
+        cleanTempBtn.addEventListener("click", function () {
+          self._cleanTempCache();
+        });
+      }
+
+      var settingsSearch = document.getElementById("settingsSearchInput");
+      if (settingsSearch) {
+        settingsSearch.addEventListener("input", function () {
+          self._filterSettingsSearch(settingsSearch.value.trim().toLowerCase());
         });
       }
 
@@ -1163,6 +1233,147 @@
           statusEl.innerHTML = '<span class="form-hint">No mode selected. Run setup wizard to configure.</span>';
         }
       }
+
+      var ncnnStatusText = document.getElementById("settingsNcnnStatusText");
+      if (ncnnStatusText) {
+        var isNcnnOk = window.NcnnHandler ? window.NcnnHandler.isAvailable() : false;
+        ncnnStatusText.innerHTML = isNcnnOk ? '<span style="color:var(--ok-text);">Installed</span>' : '<span style="color:var(--warn-text);">Not Installed</span>';
+      }
+    },
+
+    _filterSettingsSearch: function (query) {
+      var categories = document.querySelectorAll(".settings-cat");
+      if (!query) {
+        var activeSub = document.querySelector("#settingsSubNav .sub-tab.active");
+        var activeCat = activeSub ? activeSub.getAttribute("data-cat") : "system";
+        var ids = { system: "settingsCatSystem", output: "settingsCatOutput", python: "settingsCatPython", tools: "settingsCatTools", interface: "settingsCatInterface", presets: "settingsCatPresets" };
+        for (var k in ids) {
+          var el = document.getElementById(ids[k]);
+          if (el) {
+            if (k === activeCat) el.classList.remove("hidden");
+            else el.classList.add("hidden");
+            var panels = el.querySelectorAll(".panel");
+            for (var p = 0; p < panels.length; p++) panels[p].style.display = "";
+          }
+        }
+        return;
+      }
+
+      for (var i = 0; i < categories.length; i++) {
+        var cat = categories[i];
+        var panels = cat.querySelectorAll(".panel");
+        var hasMatchInCat = false;
+        for (var j = 0; j < panels.length; j++) {
+          var panel = panels[j];
+          var text = panel.textContent.toLowerCase();
+          var matches = text.indexOf(query) !== -1;
+          panel.style.display = matches ? "" : "none";
+          if (matches) hasMatchInCat = true;
+        }
+        if (hasMatchInCat) {
+          cat.classList.remove("hidden");
+        } else {
+          cat.classList.add("hidden");
+        }
+      }
+    },
+
+    _scanTempCache: function () {
+      var textEl = document.getElementById("tempCacheSizeText");
+      var logEl = document.getElementById("cleanTempCacheLog");
+      if (!textEl) return;
+      textEl.textContent = "Scanning...";
+      if (logEl) logEl.style.display = "none";
+
+      var fs = window.FileSystem.fs;
+      var path = window.FileSystem.path;
+      var totalBytes = 0;
+
+      try {
+        var outDir = this.settings.outputPath;
+        if (outDir && fs.existsSync(outDir)) {
+          var entries = fs.readdirSync(outDir);
+          for (var i = 0; i < entries.length; i++) {
+            var ent = entries[i];
+            if (/_ncnn_frames$|_ncnn_input$/i.test(ent) || /temp_.*\.avi$/i.test(ent)) {
+              var full = path.join(outDir, ent);
+              try {
+                var st = fs.statSync(full);
+                if (st.isDirectory()) {
+                  var subF = fs.readdirSync(full);
+                  for (var si = 0; si < subF.length; si++) {
+                    totalBytes += fs.statSync(path.join(full, subF[si])).size;
+                  }
+                } else {
+                  totalBytes += st.size;
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        if (this.anismoothToolsFolder && fs.existsSync(this.anismoothToolsFolder)) {
+          var tempDir = path.join(this.anismoothToolsFolder, "temp");
+          if (fs.existsSync(tempDir)) {
+            var tf = fs.readdirSync(tempDir);
+            for (var ti = 0; ti < tf.length; ti++) {
+              try { totalBytes += fs.statSync(path.join(tempDir, tf[ti])).size; } catch (e) {}
+            }
+          }
+        }
+      } catch (err) {}
+
+      var mb = (totalBytes / (1024 * 1024)).toFixed(1);
+      textEl.textContent = mb + " MB";
+      dbg("info", "Settings", "Temp cache scan: " + mb + " MB");
+    },
+
+    _cleanTempCache: function () {
+      var self = this;
+      var fs = window.FileSystem.fs;
+      var path = window.FileSystem.path;
+      var logEl = document.getElementById("cleanTempCacheLog");
+      var textEl = document.getElementById("tempCacheSizeText");
+
+      window.showConfirm("Purge all temporary video frames and scratch files?", function () {
+        var deleted = 0;
+        try {
+          var outDir = self.settings.outputPath;
+          if (outDir && fs.existsSync(outDir)) {
+            var entries = fs.readdirSync(outDir);
+            for (var i = 0; i < entries.length; i++) {
+              var ent = entries[i];
+              if (/_ncnn_frames$|_ncnn_input$/i.test(ent)) {
+                var dirP = path.join(outDir, ent);
+                try {
+                  window.FileSystem.deleteFolderRecursive(dirP);
+                  deleted++;
+                } catch (e) {}
+              } else if (/temp_.*\.avi$/i.test(ent)) {
+                try {
+                  fs.unlinkSync(path.join(outDir, ent));
+                  deleted++;
+                } catch (e) {}
+              }
+            }
+          }
+          if (self.anismoothToolsFolder && fs.existsSync(self.anismoothToolsFolder)) {
+            var tempDir = path.join(self.anismoothToolsFolder, "temp");
+            if (fs.existsSync(tempDir)) {
+              var tf = fs.readdirSync(tempDir);
+              for (var ti = 0; ti < tf.length; ti++) {
+                try { fs.unlinkSync(path.join(tempDir, tf[ti])); deleted++; } catch (e) {}
+              }
+            }
+          }
+        } catch (err) {}
+
+        if (textEl) textEl.textContent = "0.0 MB";
+        if (logEl) {
+          logEl.style.display = "block";
+          logEl.textContent = "Purged " + deleted + " temporary item(s).";
+        }
+        window.showToast("Temporary cache cleaned!", "ok");
+      });
     },
 
     _buildModelToggles: function () {

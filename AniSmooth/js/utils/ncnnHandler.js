@@ -84,10 +84,11 @@
         appdata = p.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
       }
       var backendDir = appdata ? p.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend") : "";
-      var ffmpegPath = backendDir ? p.join(backendDir, "ffmpeg.exe") : "";
+      var customFfmpeg = (window.App && window.App.settings && window.App.settings.ffmpegPath) || window.StorageManager.getItem("anismooth_ffmpeg_path", "");
+      var ffmpegPath = (customFfmpeg && fs.existsSync(customFfmpeg)) ? customFfmpeg : (backendDir ? p.join(backendDir, "ffmpeg.exe") : "");
       var ffmpegDir = "";
       if (ffmpegPath && fs.existsSync(ffmpegPath)) {
-        ffmpegDir = backendDir;
+        ffmpegDir = p.dirname(ffmpegPath);
       } else {
         ffmpegPath = null;
         try {
@@ -188,14 +189,15 @@
                 var fpsEstimate = factor * 24;
                 dbg("info", "NCNN-DEBUG", "Encoding " + frames.length + " frames -> MP4 at " + fpsEstimate + "fps");
                 try {
+                  var audioQuality = (window.App && window.App.settings && window.App.settings.audioBitrate) || window.StorageManager.getItem("anismooth_audio_bitrate", "192k");
+                  var audioArgs = audioQuality === "copy" ? ["-map", "1:a:0?", "-c:a", "copy"] : ["-map", "1:a:0?", "-c:a", "aac", "-b:a", audioQuality];
                   var ffmpegArgs = [
                     "-y", "-f", "concat", "-safe", "0", "-r", String(fpsEstimate), "-i", concatPath,
                     "-i", inputPath,
                     "-c:v", "libx264", "-preset", "medium", "-crf", "18",
                     "-pix_fmt", "yuv420p",
-                    "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "aac", "-b:a", "192k",
-                    finalOutputPath
-                  ];
+                    "-map", "0:v:0"
+                  ].concat(audioArgs).concat([finalOutputPath]);
                   var encResult = cp.spawnSync(ffmpegPath, ffmpegArgs, { cwd: passOutput, windowsHide: true, timeout: 300000 });
                   dbg("info", "NCNN-DEBUG", "FFmpeg encode exit: " + encResult.status);
                   if (encResult.status === 0 && fs.existsSync(finalOutputPath)) {
