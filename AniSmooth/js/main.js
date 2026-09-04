@@ -2369,32 +2369,28 @@
     _importPreset: function () {
       var self = this;
       try {
-        var extPath = "";
-        try { var csi = new CSInterface(); extPath = csi.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
-        var psCmd = 'Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*"; $f.Title = "Import AniSmooth Preset"; if ($f.ShowDialog() -eq "OK") { $f.FileName }';
-        var proc = window.FileSystem.childProcess.exec('powershell -Command "' + psCmd + '"', function (err, stdout) {
-          if (err) { dbg("error", "Presets", "Import dialog error: " + (err.message || err)); return; }
-          var filePath = (stdout || "").trim();
-          if (!filePath || !window.FileSystem.fs.existsSync(filePath)) return;
-          try {
-            var raw = window.FileSystem.fs.readFileSync(filePath, "utf8");
-            var preset = JSON.parse(raw);
-            if (!self._validatePreset(preset)) {
-              dbg("error", "Presets", "Rejected invalid/unsafe preset file during import");
-              window.showToast("Import failed: Preset contains invalid or unsafe values.", "error");
-              return;
-            }
-            var defName = filePath.split("\\").pop().replace(/\.(preset\.)?json$/i, "").replace(/^AniSmooth_/, "");
-            window.showPrompt("Import Preset", "Preset name...", "", function (name) {
-              if (!name) return;
-              self._savePresetFile(name, preset);
-              self._renderPresetList();
-              dbg("info", "Presets", "Imported: " + name);
-            }, defName);
-          } catch (e) {
-            dbg("error", "Presets", "Import failed: " + (e.message || e));
+        var filePath = window.FileSystem.chooseFileWithSystemExplorer
+          ? window.FileSystem.chooseFileWithSystemExplorer("Import AniSmooth Preset", "", "JSON Files (*.json)|*.json|All Files (*.*)|*.*")
+          : "";
+        if (!filePath || !window.FileSystem.fs.existsSync(filePath)) return;
+        try {
+          var raw = window.FileSystem.fs.readFileSync(filePath, "utf8");
+          var preset = JSON.parse(raw);
+          if (!self._validatePreset(preset)) {
+            dbg("error", "Presets", "Rejected invalid/unsafe preset file during import");
+            window.showToast("Import failed: Preset contains invalid or unsafe values.", "error");
+            return;
           }
-        });
+          var defName = filePath.split(/[\\\/]/).pop().replace(/\.(preset\.)?json$/i, "").replace(/^AniSmooth_/, "");
+          window.showPrompt("Import Preset", "Preset name...", "", function (name) {
+            if (!name) return;
+            self._savePresetFile(name, preset);
+            self._renderPresetList();
+            dbg("info", "Presets", "Imported: " + name);
+          }, defName);
+        } catch (e) {
+          dbg("error", "Presets", "Import failed: " + (e.message || e));
+        }
       } catch (e) {
         dbg("error", "Presets", "Import failed: " + (e.message || e));
       }
