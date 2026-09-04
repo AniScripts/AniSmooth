@@ -550,6 +550,21 @@
         });
       }
 
+      var aboutLinks = document.querySelectorAll(".about-link-card");
+      for (var al = 0; al < aboutLinks.length; al++) {
+        (function (link) {
+          link.addEventListener("click", function (e) {
+            e.preventDefault();
+            var url = link.getAttribute("data-url");
+            if (url && window.FileSystem && window.FileSystem.openURL) {
+              window.FileSystem.openURL(url);
+            } else if (url && window.__adobe_cep__ && window.__adobe_cep__.openURLInDefaultBrowser) {
+              window.__adobe_cep__.openURLInDefaultBrowser(url);
+            }
+          });
+        })(aboutLinks[al]);
+      }
+
       var subNav = document.getElementById("settingsSubNav");
       if (subNav) {
         var subTabs = subNav.querySelectorAll(".sub-tab");
@@ -564,10 +579,13 @@
               }
               tab.className += " active";
 
-              var ids = { system: "settingsCatSystem", models: "settingsCatModels", output: "settingsCatOutput", python: "settingsCatPython", tools: "settingsCatTools", interface: "settingsCatInterface", presets: "settingsCatPresets" };
+              var ids = { system: "settingsCatSystem", models: "settingsCatModels", output: "settingsCatOutput", python: "settingsCatPython", tools: "settingsCatTools", interface: "settingsCatInterface", presets: "settingsCatPresets", about: "settingsCatAbout" };
               dbg('info', 'Settings', 'Switching settings category to: ' + cat);
               if (cat === "models" && self._buildModelsCatalog) {
                 self._buildModelsCatalog();
+              }
+              if (cat === "about" && self._updateAboutSpecs) {
+                self._updateAboutSpecs();
               }
               for (var k in ids) {
                 if (!ids.hasOwnProperty(k)) continue;
@@ -735,8 +753,11 @@
         }
       } else if (text) {
         fill.style.width = "0%";
-        text.textContent = appleGpu ? "Unified Memory" : ((cuda || ncnnAvailable) ? "VRAM: N/A" : "N/A");
+        text.textContent = "--";
       }
+
+      self._lastGpuData = info;
+      self._updateAboutSpecs();
 
       var badgesEl = document.getElementById("gpuBadges");
       if (badgesEl) {
@@ -803,10 +824,6 @@
 
       this._applyBackendFilter();
       this._applyModelVisibility();
-      if (window.FlowframesPanel && window.FlowframesPanel.applyVendorFilter) {
-        window.FlowframesPanel.applyVendorFilter();
-      }
-
       var actionsEl = document.getElementById("gpuActions");
       if (actionsEl) {
         if (nvidiaGpu && !cuda) {
@@ -829,6 +846,46 @@
         } else {
           actionsEl.style.display = "none";
         }
+      }
+    },
+
+    _updateAboutSpecs: function () {
+      var backendEl = document.getElementById("aboutActiveBackend");
+      var gpuNameEl = document.getElementById("aboutGpuName");
+      var vramEl = document.getElementById("aboutVramText");
+      var pyEl = document.getElementById("aboutPythonStatus");
+      if (!backendEl) return;
+
+      var currentMode = window.StorageManager.getItem("anismooth_gpu_choice", "gpu");
+      if (backendEl) {
+        if (currentMode === "gpu") {
+          backendEl.innerHTML = '<span style="color:var(--ok-text);"><i class="fa-solid fa-microchip"></i> PyTorch CUDA</span>';
+        } else if (currentMode === "amd") {
+          backendEl.innerHTML = '<span style="color:var(--ok-text);"><i class="fa-solid fa-fire"></i> AMD Vulkan (NCNN)</span>';
+        } else if (currentMode === "cpu") {
+          backendEl.innerHTML = '<span style="color:var(--warn-text);"><i class="fa-solid fa-computer"></i> CPU Mode</span>';
+        } else {
+          backendEl.textContent = "Auto / Standby";
+        }
+      }
+
+      var info = this._lastGpuData;
+      if (info && gpuNameEl) {
+        gpuNameEl.textContent = info.gpu_name || "Detected GPU";
+      }
+      if (info && vramEl) {
+        var totalMb = info.gpu_total_mb || 0;
+        if (totalMb > 0) {
+          var usedMb = info.gpu_used_mb || 0;
+          vramEl.textContent = (usedMb > 0 ? (usedMb > 1024 ? (usedMb / 1024).toFixed(1) + " GB / " : usedMb + " MB / ") : "") +
+            (totalMb > 1024 ? (totalMb / 1024).toFixed(1) + " GB" : totalMb + " MB");
+        } else {
+          vramEl.textContent = "Unified / System RAM";
+        }
+      }
+      if (pyEl) {
+        var pythonCmd = this._resolvePythonCmd();
+        pyEl.textContent = (pythonCmd && pythonCmd.indexOf(".venv") !== -1) ? "Isolated .venv (Ready)" : "System Python";
       }
     },
 
@@ -1395,7 +1452,7 @@
       if (!query) {
         var activeSub = document.querySelector("#settingsSubNav .sub-tab.active");
         var activeCat = activeSub ? activeSub.getAttribute("data-cat") : "system";
-        var ids = { system: "settingsCatSystem", output: "settingsCatOutput", python: "settingsCatPython", tools: "settingsCatTools", interface: "settingsCatInterface", presets: "settingsCatPresets" };
+        var ids = { system: "settingsCatSystem", output: "settingsCatOutput", python: "settingsCatPython", tools: "settingsCatTools", interface: "settingsCatInterface", presets: "settingsCatPresets", models: "settingsCatModels", about: "settingsCatAbout" };
         for (var k in ids) {
           var el = document.getElementById(ids[k]);
           if (el) {

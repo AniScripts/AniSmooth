@@ -28,6 +28,9 @@
           <button class="sub-tab" data-cat="presets" title="Presets">
             <i class="fa-solid fa-bookmark"></i>
           </button>
+          <button class="sub-tab" data-cat="about" title="About &amp; Credits">
+            <i class="fa-solid fa-circle-info"></i>
+          </button>
         </nav>
 
         <div class="settings-cat" id="settingsCatSystem">
@@ -609,6 +612,133 @@
             </div>
             <div id="modelsCatalogList" class="model-list">
               <div class="model-empty"><i class="fa-solid fa-spinner fa-spin"></i> Scanning models...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-cat hidden" id="settingsCatAbout">
+          <div class="panel about-hero-panel">
+            <div class="about-hero-header">
+              <img src="./images/AniSmooth-Logo-Only.png" alt="AniSmooth" class="about-hero-logo">
+              <div class="about-hero-meta">
+                <div class="about-hero-title-row">
+                  <span class="about-hero-title">AniSmooth</span>
+                  <span class="about-badge">v1.0.0</span>
+                  <span class="about-badge badge-free">100% Free</span>
+                </div>
+                <div class="about-hero-tagline">AI Frame Interpolation &amp; Video Upscaling for After Effects</div>
+              </div>
+            </div>
+            <div class="about-vision-box">
+              <i class="fa-solid fa-sparkles vision-icon"></i>
+              <span>Built for anime editors and creators. Compact, stable, modular tabs, zero paywalls, zero telemetry, full local GPU acceleration.</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-compass panel-head-icon"></i>
+              <span class="panel-title">Community &amp; Resources</span>
+            </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Open official project pages, documentation, and support.</span>
+            <div class="about-links-grid">
+              <a href="#" class="about-link-card" id="aboutLinkGithub" data-url="https://github.com/AniScripts/AniSmooth">
+                <div class="about-link-icon"><i class="fa-brands fa-github"></i></div>
+                <div class="about-link-info">
+                  <div class="about-link-title">GitHub Repository</div>
+                  <div class="about-link-desc">AniScripts/AniSmooth source &amp; releases</div>
+                </div>
+                <i class="fa-solid fa-arrow-up-right-from-square about-link-arrow"></i>
+              </a>
+
+              <a href="#" class="about-link-card" id="aboutLinkIssues" data-url="https://github.com/AniScripts/AniSmooth/issues">
+                <div class="about-link-icon"><i class="fa-solid fa-bug"></i></div>
+                <div class="about-link-info">
+                  <div class="about-link-title">Issues &amp; Feedback</div>
+                  <div class="about-link-desc">Report bugs or request new features</div>
+                </div>
+                <i class="fa-solid fa-arrow-up-right-from-square about-link-arrow"></i>
+              </a>
+
+              <a href="#" class="about-link-card" id="aboutLinkSupport" data-url="https://buymeacoffee.com/tsukyio">
+                <div class="about-link-icon" style="color:#f59e0b;"><i class="fa-solid fa-mug-hot"></i></div>
+                <div class="about-link-info">
+                  <div class="about-link-title">Support Project</div>
+                  <div class="about-link-desc">Buy Me a Coffee (tsukyio)</div>
+                </div>
+                <i class="fa-solid fa-arrow-up-right-from-square about-link-arrow"></i>
+              </a>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-microchip panel-head-icon"></i>
+              <span class="panel-title">Engine &amp; Acceleration Overview</span>
+            </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Current hardware profile and runtime status.</span>
+            <div class="about-spec-grid">
+              <div class="about-spec-item">
+                <span class="about-spec-label"><i class="fa-solid fa-bolt"></i> Active Backend</span>
+                <span class="about-spec-value" id="aboutActiveBackend">Detecting...</span>
+              </div>
+              <div class="about-spec-item">
+                <span class="about-spec-label"><i class="fa-solid fa-microchip"></i> Detected GPU</span>
+                <span class="about-spec-value" id="aboutGpuName">Detecting...</span>
+              </div>
+              <div class="about-spec-item">
+                <span class="about-spec-label"><i class="fa-solid fa-memory"></i> Video Memory</span>
+                <span class="about-spec-value" id="aboutVramText">--</span>
+              </div>
+              <div class="about-spec-item">
+                <span class="about-spec-label"><i class="fa-brands fa-python"></i> Python Backend</span>
+                <span class="about-spec-value" id="aboutPythonStatus">Embedded venv</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <i class="fa-solid fa-award panel-head-icon"></i>
+              <span class="panel-title">Open-Source AI Credits</span>
+            </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">AniSmooth is powered by these state-of-the-art open-source projects.</span>
+            <div class="about-credits-list">
+              <div class="about-credit-item">
+                <div class="about-credit-top">
+                  <b>RIFE (Practical-RIFE)</b>
+                  <span class="about-credit-tag">Frame Interpolation</span>
+                </div>
+                <span class="about-credit-desc">Real-Time Intermediate Flow Estimation for video frame synthesis.</span>
+              </div>
+              <div class="about-credit-item">
+                <div class="about-credit-top">
+                  <b>Real-ESRGAN / ShuffleCUGAN</b>
+                  <span class="about-credit-tag">Anime Upscaling</span>
+                </div>
+                <span class="about-credit-desc">Super-resolution neural networks trained for anime line preservation and color fidelity.</span>
+              </div>
+              <div class="about-credit-item">
+                <div class="about-credit-top">
+                  <b>NCNN Vulkan</b>
+                  <span class="about-credit-tag">Cross-GPU Engine</span>
+                </div>
+                <span class="about-credit-desc">High-performance neural network inference framework optimized for mobile and AMD Vulkan GPUs.</span>
+              </div>
+              <div class="about-credit-item">
+                <div class="about-credit-top">
+                  <b>Flowframes &amp; Spandrel</b>
+                  <span class="about-credit-tag">Pipeline &amp; Architecture</span>
+                </div>
+                <span class="about-credit-desc">Spandrel PyTorch model loader and Flowframes standalone GUI integration.</span>
+              </div>
+              <div class="about-credit-item">
+                <div class="about-credit-top">
+                  <b>FFmpeg &amp; OpenCV</b>
+                  <span class="about-credit-tag">Media Encoding</span>
+                </div>
+                <span class="about-credit-desc">High-speed frame extraction, optical flow detection, audio muxing, and lossless pipelines.</span>
+              </div>
             </div>
           </div>
         </div>
