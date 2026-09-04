@@ -618,6 +618,28 @@ def force_gpu_pytorch():
         log("error", "GPU environment install failed.")
     return ok
 
+def force_dml_pytorch():
+    log("section", "DirectML PyTorch Installer (AMD / Intel)", step=1, total=1)
+    if sys.platform != "win32":
+        log("error", "DirectML PyTorch is only supported on Windows.")
+        return False
+
+    venv_python = ensure_venv()
+    if not venv_python:
+        log("error", "Failed to set up virtual environment.")
+        return False
+
+    log("info", "Installing torch-directml in virtual environment...")
+    rc = _run_pip(venv_python, ["install", "--force-reinstall", "torch-directml", "torchvision", "opencv-python", "numpy", "spandrel==0.3.4", "psutil"])
+    ok = rc == 0
+    if ok:
+        log("info", "Installing FFmpeg...")
+        install_ffmpeg()
+        log("success", "DirectML PyTorch installed successfully.")
+    else:
+        log("error", "DirectML PyTorch installation failed.")
+    return ok
+
 def install_ncnn_binaries():
     log("section", "NCNN Vulkan Binary Installer", step=1, total=1)
 
@@ -719,8 +741,17 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="AniSmooth Setup")
     parser.add_argument("--force-gpu", action="store_true", help="Reinstall PyTorch with CUDA support")
+    parser.add_argument("--force-dml", action="store_true", help="Install PyTorch DirectML for AMD/Intel GPU support on Windows")
     parser.add_argument("--force-ncnn", action="store_true", help="Download NCNN Vulkan binaries for AMD GPU support")
     args = parser.parse_args()
+    if args.force_dml:
+        try:
+            ok = force_dml_pytorch()
+            sys.exit(0 if ok else 1)
+        except Exception as e:
+            log("fatal", str(e))
+            sys.exit(1)
+        return
     if args.force_ncnn:
         try:
             ok = install_ncnn_binaries()

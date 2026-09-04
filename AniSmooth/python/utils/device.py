@@ -14,6 +14,15 @@ def log(msg_type, msg, **kw):
 def is_mps_available():
     return hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
 
+def is_dml_available():
+    if sys.platform != "win32":
+        return False
+    try:
+        import torch_directml
+        return torch_directml.is_available()
+    except Exception:
+        return False
+
 def get_device(gpu_id=0):
     if torch.cuda.is_available():
         cnt = torch.cuda.device_count()
@@ -21,6 +30,14 @@ def get_device(gpu_id=0):
         return torch.device(f"cuda:{safe_id}")
     if is_mps_available():
         return torch.device("mps")
+    if is_dml_available():
+        try:
+            import torch_directml
+            cnt = torch_directml.device_count()
+            safe_id = max(0, min(int(gpu_id or 0), cnt - 1)) if cnt > 0 else 0
+            return torch_directml.device(safe_id)
+        except Exception:
+            pass
     return torch.device("cpu")
 
 def get_device_type():
@@ -28,6 +45,8 @@ def get_device_type():
         return "cuda"
     if is_mps_available():
         return "mps"
+    if is_dml_available():
+        return "dml"
     return "cpu"
 
 def _run_macos_display_query():
@@ -315,7 +334,8 @@ def get_gpu_info():
     else:
         vulkan_available = shutil.which("vulkaninfo") is not None
 
-    pt_variant = "cuda" if torch_has_cuda_build else ("mps" if torch_mps else "cpu")
+    torch_dml = is_dml_available()
+    pt_variant = "cuda" if torch_has_cuda_build else ("mps" if torch_mps else ("dml" if torch_dml else "cpu"))
 
     info = {
         "gpu_vendor": vendor,
@@ -323,7 +343,7 @@ def get_gpu_info():
         "cuda_available": torch_cuda,
         "mps_available": torch_mps,
         "vulkan_available": vulkan_available,
-        "dml_available": False,
+        "dml_available": torch_dml,
         "device": dev_type,
         "gpu_name": gpu_name,
         "gpu_memory_total_mb": gpu_mem_total,
