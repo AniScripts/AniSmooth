@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 import urllib.request
@@ -10,6 +11,8 @@ def _get_appdata_dir():
     if appdata:
         return os.path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend")
     home = os.path.expanduser("~")
+    if sys.platform == "darwin":
+        return os.path.join(home, "Library", "Application Support", "com.moongetsu.extensions", "AniSmooth", "backend")
     return os.path.join(home, "AppData", "Roaming", "com.moongetsu.extensions", "AniSmooth", "backend")
 
 WEIGHTS_DIR = os.path.join(_get_appdata_dir(), "weights")
