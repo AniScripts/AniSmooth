@@ -16,5 +16,17 @@ tools/cert.p12
 
 # Inno Setup output
 *.exe
-/AniSmooth/python/models/__pycache__
+# Python environment and caches
+.venv/
+*/.venv/
+__pycache__/
+*/__pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Local binaries and downloads
+ncnn_binaries/
+*/ncnn_binaries/
+.DS_Store
+*/.DS_Store
