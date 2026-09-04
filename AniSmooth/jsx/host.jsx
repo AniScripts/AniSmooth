@@ -18,7 +18,7 @@ function toAbsRenderTime(displayTime, comp) {
   return abs;
 }
 
-function importFileToAE(filePath) {
+function importFileToAE(filePath, hideOriginal) {
   app.beginUndoGroup("Import AniSmooth Output");
   try {
     if (!app.project) {
@@ -36,9 +36,6 @@ function importFileToAE(filePath) {
     
     var comp = app.project.activeItem;
     if (comp && comp instanceof CompItem) {
-      // Capture selection BEFORE add() - adding a layer makes the new layer the
-      // only selected one, so reading selectedLayers afterwards returns itself
-      // and moveAfter() throws "Can not move a layer before or after itself".
       var selectedLayer = null;
       if (comp.selectedLayers && comp.selectedLayers.length > 0) {
         selectedLayer = comp.selectedLayers[0];
@@ -49,6 +46,9 @@ function importFileToAE(filePath) {
       if (selectedLayer && selectedLayer !== layer) {
         layer.startTime = selectedLayer.inPoint;
         layer.moveAfter(selectedLayer);
+        if (hideOriginal === true || hideOriginal === "true" || hideOriginal === 1) {
+          selectedLayer.enabled = false;
+        }
       } else {
         layer.startTime = comp.time;
       }

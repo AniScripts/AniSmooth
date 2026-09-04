@@ -11,6 +11,7 @@
       outputPrefix: "AniSmooth",
       outputTimestamp: true,
       outputAutoImport: true,
+      outputHideOriginal: false,
       outputKeepPrerender: true,
       outputCleanupFailed: true
     },
@@ -72,6 +73,7 @@
       this.settings.outputPrefix = window.StorageManager.getItem("anismooth_output_prefix") || "AniSmooth";
       this.settings.outputTimestamp = window.StorageManager.getItem("anismooth_output_timestamp", "1") === "1";
       this.settings.outputAutoImport = window.StorageManager.getItem("anismooth_output_autoimport", "1") === "1";
+      this.settings.outputHideOriginal = window.StorageManager.getItem("anismooth_output_hideoriginal", "0") === "1";
       this.settings.outputKeepPrerender = window.StorageManager.getItem("anismooth_output_keepprerender", "1") === "1";
       this.settings.outputCleanupFailed = window.StorageManager.getItem("anismooth_output_cleanupfailed", "1") === "1";
 
@@ -425,6 +427,16 @@
         aiCheck.addEventListener("change", function () {
           self.settings.outputAutoImport = aiCheck.checked;
           window.StorageManager.setItem("anismooth_output_autoimport", aiCheck.checked ? "1" : "0");
+          self._autoSavePreset();
+        });
+      }
+
+      var hoCheck = document.getElementById("outputHideOriginal");
+      if (hoCheck) {
+        hoCheck.checked = this.settings.outputHideOriginal;
+        hoCheck.addEventListener("change", function () {
+          self.settings.outputHideOriginal = hoCheck.checked;
+          window.StorageManager.setItem("anismooth_output_hideoriginal", hoCheck.checked ? "1" : "0");
           self._autoSavePreset();
         });
       }
@@ -995,7 +1007,8 @@
         return;
       }
       var escapedPath = String(filePath || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      window.__adobe_cep__.evalScript('importFileToAE("' + escapedPath + '")', function (result) {
+      var hideOrig = this.settings && this.settings.outputHideOriginal === true;
+      window.__adobe_cep__.evalScript('importFileToAE("' + escapedPath + '", ' + hideOrig + ')', function (result) {
         try {
           var res = JSON.parse(result || "{}");
           if (res.ok) {
