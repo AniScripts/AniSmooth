@@ -3,9 +3,26 @@
       ? window.cep.node.require
       : (typeof require !== 'undefined' ? require : null);
 
-  var fs = nodeRequire ? nodeRequire('fs') : null;
-  var path = nodeRequire ? nodeRequire('path') : null;
-  var os = nodeRequire ? nodeRequire('os') : null;
+  var path = nodeRequire ? nodeRequire('path') : {
+    join: function () {
+      var parts = [];
+      for (var i = 0; i < arguments.length; i++) {
+        var arg = String(arguments[i] || "");
+        if (arg) parts.push(arg.replace(/^\/+|\/+$/g, ""));
+      }
+      return parts.join("/");
+    },
+    basename: function (p) {
+      return String(p || "").split(/[\\\/]/).pop();
+    },
+    resolve: function (p) { return String(p || ""); }
+  };
+
+  var os = nodeRequire ? nodeRequire('os') : {
+    homedir: function () { return "/Users/mockuser"; },
+    platform: function () { return typeof process !== "undefined" ? process.platform : "darwin"; }
+  };
+
   var childProcess = nodeRequire ? nodeRequire('child_process') : null;
 
   var FileSystem = {
