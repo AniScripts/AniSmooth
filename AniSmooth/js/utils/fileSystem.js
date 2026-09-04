@@ -3,6 +3,14 @@
       ? window.cep.node.require
       : (typeof require !== 'undefined' ? require : null);
 
+  var fs = nodeRequire ? nodeRequire('fs') : {
+    existsSync: function () { return false; },
+    statSync: function () { return { size: 0, isDirectory: function () { return false; }, isFile: function () { return false; } }; },
+    readdirSync: function () { return []; },
+    readFileSync: function () { return ""; },
+    writeFileSync: function () {}
+  };
+
   var path = nodeRequire ? nodeRequire('path') : {
     join: function () {
       var parts = [];
