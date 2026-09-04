@@ -84,15 +84,19 @@
         smallMovements: smallMovements
       };
 
-      window.QueueManager.add({
-        mode: "dedupe",
-        task: "Dedupe",
-        name: s.layerName || s.name || "Footage",
-        layerIndex: s.layerIndex || 0,
-        options: options,
-        width: s.width || 0,
-        height: s.height || 0
-      });
+      var targets = (s.layers && s.layers.length > 0) ? s.layers : [s];
+      for (var i = 0; i < targets.length; i++) {
+        var t = targets[i];
+        window.QueueManager.add({
+          mode: "dedupe",
+          task: "Dedupe",
+          name: t.layerName || t.name || "Footage",
+          layerIndex: t.layerIndex || 0,
+          options: options,
+          width: t.width || s.width || 0,
+          height: t.height || s.height || 0
+        });
+      }
       this.app.switchTab("queue");
     }
   };

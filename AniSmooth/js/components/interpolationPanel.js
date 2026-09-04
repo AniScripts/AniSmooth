@@ -118,6 +118,11 @@
         el.innerHTML = '<span class="meta-strip meta-strip-dim"><i class="fa-solid fa-layer-group"></i> Select a footage layer</span>';
         return;
       }
+      var count = (s.layers && s.layers.length > 1) ? s.layers.length : (s.selectedCount || 1);
+      if (count > 1) {
+        el.innerHTML = '<span class="meta-strip"><i class="fa-solid fa-layer-group"></i> <b>' + count + ' layers selected</b> · Ready to batch interpolate</span>';
+        return;
+      }
       var w = s.width || 0, h = s.height || 0, fps = s.frameRate || s.compFrameRate || 0, dur = s.layerDuration || s.compDuration || s.duration || 0, frames = Math.round((dur || 0) * fps), parts = [];
       if (w > 0 && h > 0) parts.push('<span>' + w + '<b>\u00d7</b>' + h + '</span>');
       if (fps > 0) parts.push('<span>' + fps.toFixed(2) + ' fps</span>');
@@ -202,19 +207,26 @@
       var targetSize = (enableTargetSize && enableTargetSize.checked) ? (parseFloat(document.getElementById('interpTargetSize').value) || 0) : 0;
       var presetEl = document.getElementById('interpPreset');
       var preset = presetEl ? presetEl.value : 'high';
-      window.QueueManager.add({
-        mode: 'interpolate',
-        task: 'Interpolation',
-        name: s.layerName || s.name || 'Footage',
-        layerIndex: s.layerIndex || 0,
-        model: this.modelSelect ? this.modelSelect.value : 'rife4.25-heavy',
-        factor: this.getFactor(),
-        width: s.width || 0,
-        height: s.height || 0,
-        fps: s.frameRate || s.compFrameRate || 0,
-        targetSizeMb: targetSize,
-        preset: preset
-      });
+      var model = this.modelSelect ? this.modelSelect.value : 'rife4.25-heavy';
+      var factor = this.getFactor();
+
+      var targets = (s.layers && s.layers.length > 0) ? s.layers : [s];
+      for (var i = 0; i < targets.length; i++) {
+        var t = targets[i];
+        window.QueueManager.add({
+          mode: 'interpolate',
+          task: 'Interpolation',
+          name: t.layerName || t.name || 'Footage',
+          layerIndex: t.layerIndex || 0,
+          model: model,
+          factor: factor,
+          width: t.width || s.width || 0,
+          height: t.height || s.height || 0,
+          fps: t.frameRate || s.frameRate || s.compFrameRate || 0,
+          targetSizeMb: targetSize,
+          preset: preset
+        });
+      }
       this.app.switchTab('queue');
     },
 

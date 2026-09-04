@@ -275,6 +275,11 @@
         el.innerHTML = '<span class="meta-strip meta-strip-dim"><i class="fa-solid fa-layer-group"></i> Select a footage layer</span>';
         return;
       }
+      var count = (s.layers && s.layers.length > 1) ? s.layers.length : (s.selectedCount || 1);
+      if (count > 1) {
+        el.innerHTML = '<span class="meta-strip"><i class="fa-solid fa-layer-group"></i> <b>' + count + ' layers selected</b> · Ready to batch interpolate</span>';
+        return;
+      }
       var w = s.width || 0, h = s.height || 0, fps = s.frameRate || s.compFrameRate || 0, dur = s.layerDuration || s.compDuration || s.duration || 0, frames = Math.round((dur || 0) * fps), parts = [];
       if (w > 0 && h > 0) parts.push('<span>' + w + '<b>×</b>' + h + '</span>');
       if (fps > 0) parts.push('<span>' + fps.toFixed(2) + ' fps</span>');
@@ -292,21 +297,32 @@
         window.showToast('Flowframes.exe not found. Set its path in Settings.', 'error');
         return;
       }
-      window.QueueManager.add({
-        mode: 'flowframes',
-        task: 'Flowframes',
-        name: s.layerName || s.name || 'Footage',
-        layerIndex: s.layerIndex || 0,
-        ai: this.aiSelect ? this.aiSelect.value : 'RifeNcnn',
-        model: this.modelSelect ? this.modelSelect.value : 'RIFE 4.26',
-        format: this.formatSelect ? this.formatSelect.value : 'Mp4',
-        encoder: this.encoderSelect ? this.encoderSelect.value : 'X264',
-        pixFmt: this.pixFmtSelect ? this.pixFmtSelect.value : 'Yuv420P',
-        factor: this.getFactor(),
-        width: s.width || 0,
-        height: s.height || 0,
-        fps: s.frameRate || s.compFrameRate || 0
-      });
+      var ai = this.aiSelect ? this.aiSelect.value : 'RifeNcnn';
+      var model = this.modelSelect ? this.modelSelect.value : 'RIFE 4.26';
+      var format = this.formatSelect ? this.formatSelect.value : 'Mp4';
+      var encoder = this.encoderSelect ? this.encoderSelect.value : 'X264';
+      var pixFmt = this.pixFmtSelect ? this.pixFmtSelect.value : 'Yuv420P';
+      var factor = this.getFactor();
+
+      var targets = (s.layers && s.layers.length > 0) ? s.layers : [s];
+      for (var i = 0; i < targets.length; i++) {
+        var t = targets[i];
+        window.QueueManager.add({
+          mode: 'flowframes',
+          task: 'Flowframes',
+          name: t.layerName || t.name || 'Footage',
+          layerIndex: t.layerIndex || 0,
+          ai: ai,
+          model: model,
+          format: format,
+          encoder: encoder,
+          pixFmt: pixFmt,
+          factor: factor,
+          width: t.width || s.width || 0,
+          height: t.height || s.height || 0,
+          fps: t.frameRate || s.frameRate || s.compFrameRate || 0
+        });
+      }
       this.app.switchTab('queue');
     }
   };

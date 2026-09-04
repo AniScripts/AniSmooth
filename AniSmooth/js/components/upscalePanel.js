@@ -125,6 +125,11 @@
         el.innerHTML = '<span class="meta-strip meta-strip-dim"><i class="fa-solid fa-layer-group"></i> Select a footage layer</span>';
         return;
       }
+      var count = (s.layers && s.layers.length > 1) ? s.layers.length : (s.selectedCount || 1);
+      if (count > 1) {
+        el.innerHTML = '<span class="meta-strip"><i class="fa-solid fa-layer-group"></i> <b>' + count + ' layers selected</b> · Ready to batch upscale</span>';
+        return;
+      }
       var w = s.width || 0;
       var h = s.height || 0;
       var sc = parseInt(this.scaleSelect ? this.scaleSelect.value : '2', 10);
@@ -288,20 +293,27 @@
         fitW = parseInt(document.getElementById('upscaleFitW').value, 10) || 0;
         fitH = parseInt(document.getElementById('upscaleFitH').value, 10) || 0;
       }
-      window.QueueManager.add({
-        mode: 'upscale',
-        task: 'Upscale',
-        name: s.layerName || s.name || 'Footage',
-        layerIndex: s.layerIndex || 0,
-        model: this.modelSelect ? this.modelSelect.value : 'adore',
-        scale: parseInt(this.scaleSelect ? this.scaleSelect.value : '2', 10),
-        width: s.width || 0,
-        height: s.height || 0,
-        targetSizeMb: targetSize,
-        preset: preset,
-        fitW: fitW,
-        fitH: fitH
-      });
+      var model = this.modelSelect ? this.modelSelect.value : 'adore';
+      var scale = parseInt(this.scaleSelect ? this.scaleSelect.value : '2', 10);
+
+      var targets = (s.layers && s.layers.length > 0) ? s.layers : [s];
+      for (var i = 0; i < targets.length; i++) {
+        var t = targets[i];
+        window.QueueManager.add({
+          mode: 'upscale',
+          task: 'Upscale',
+          name: t.layerName || t.name || 'Footage',
+          layerIndex: t.layerIndex || 0,
+          model: model,
+          scale: scale,
+          width: t.width || s.width || 0,
+          height: t.height || s.height || 0,
+          targetSizeMb: targetSize,
+          preset: preset,
+          fitW: fitW,
+          fitH: fitH
+        });
+      }
       this.app.switchTab('queue');
     }
   };

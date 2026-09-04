@@ -116,8 +116,8 @@ function getSelectedLayerInfo() {
     var comp = app.project.activeItem;
     var layer = null;
     var footage = null;
+    var validLayers = [];
 
-    
     if (comp && comp instanceof CompItem) {
       var sel = comp.selectedLayers;
       if (sel && sel.length > 0) {
@@ -125,22 +125,34 @@ function getSelectedLayerInfo() {
           var lyr = sel[i];
           if (!lyr) continue;
           var src = lyr.source;
+          var validSrc = null;
           if (src && src instanceof FootageItem) {
-            layer = lyr;
-            footage = src;
-            break;
+            validSrc = src;
+          } else if (src && src.width > 0 && src.height > 0) {
+            validSrc = src;
           }
-          
-          if (src && src.width > 0 && src.height > 0) {
-            layer = lyr;
-            footage = src;
-            break;
+          if (validSrc) {
+            if (!layer) {
+              layer = lyr;
+              footage = validSrc;
+            }
+            var lyrIn = parseFloat(lyr.inPoint) || 0;
+            var lyrOut = parseFloat(lyr.outPoint) || 0;
+            validLayers.push({
+              name: String(lyr.name || validSrc.name || "Footage"),
+              layerName: String(lyr.name || ""),
+              layerIndex: lyr.index,
+              width: parseInt(validSrc.width) || 0,
+              height: parseInt(validSrc.height) || 0,
+              frameRate: parseFloat(validSrc.frameRate || comp.frameRate || 0),
+              duration: parseFloat(validSrc.duration || 0),
+              layerDuration: (lyrOut - lyrIn)
+            });
           }
         }
       }
     }
 
-    
     if (!footage && app.project.selection && app.project.selection.length > 0) {
       for (var j = 0; j < app.project.selection.length; j++) {
         var itm = app.project.selection[j];
@@ -151,7 +163,6 @@ function getSelectedLayerInfo() {
       }
     }
 
-    
     if (!footage && comp instanceof FootageItem) {
       footage = comp;
     }
@@ -185,6 +196,19 @@ function getSelectedLayerInfo() {
         json += ",\"layerDuration\":" + (layerOut - layerIn).toFixed(2);
       }
     }
+
+    json += ",\"selectedCount\":" + (validLayers.length > 0 ? validLayers.length : 1);
+    json += ",\"layers\":[";
+    if (validLayers.length > 0) {
+      for (var k = 0; k < validLayers.length; k++) {
+        var vl = validLayers[k];
+        if (k > 0) json += ",";
+        json += "{\"name\":\"" + jsonEscape(vl.name) + "\",\"layerName\":\"" + jsonEscape(vl.layerName) + "\",\"layerIndex\":" + vl.layerIndex + ",\"width\":" + vl.width + ",\"height\":" + vl.height + ",\"frameRate\":" + vl.frameRate.toFixed(3) + ",\"duration\":" + vl.duration.toFixed(2) + ",\"layerDuration\":" + vl.layerDuration.toFixed(2) + "}";
+      }
+    } else {
+      json += "{\"name\":\"" + jsonEscape(String(name)) + "\",\"layerName\":\"" + jsonEscape(layer ? String(layer.name) : "") + "\",\"layerIndex\":" + (layer ? layer.index : 0) + ",\"width\":" + w + ",\"height\":" + h + ",\"frameRate\":" + fps.toFixed(3) + ",\"duration\":" + dur.toFixed(2) + ",\"layerDuration\":" + dur.toFixed(2) + "}";
+    }
+    json += "]";
 
     json += "}";
     return json;
