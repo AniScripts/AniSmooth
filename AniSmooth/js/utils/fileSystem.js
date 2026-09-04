@@ -5,6 +5,7 @@
 
   var fs = nodeRequire ? nodeRequire('fs') : {
     existsSync: function () { return false; },
+    mkdirSync: function () {},
     statSync: function () { return { size: 0, isDirectory: function () { return false; }, isFile: function () { return false; } }; },
     readdirSync: function () { return []; },
     readFileSync: function () { return ""; },
@@ -22,6 +23,11 @@
     },
     basename: function (p) {
       return String(p || "").split(/[\\\/]/).pop();
+    },
+    dirname: function (p) {
+      var parts = String(p || "").split(/[\\\/]/);
+      parts.pop();
+      return parts.join("/") || "/";
     },
     resolve: function (p) { return String(p || ""); }
   };

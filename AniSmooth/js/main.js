@@ -2196,6 +2196,9 @@
       if (!el) return;
       var self = this;
 
+      function escM(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+      function escMA(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
       var CATALOG = [
         { id: "rife4.25", name: "RIFE 4.25", type: "Interpolation", size: "175 MB", desc: "1.3M params · Lightweight fast interpolation", url: "https://github.com/AniScripts/AniSmooth-Models/releases/download/interpolation/rife425.pth", relPath: "weights/rife4.25/rife425.pth" },
         { id: "rife4.25-heavy", name: "RIFE 4.25 Heavy", type: "Interpolation", size: "675 MB", desc: "5.1M params · High quality motion smoothing", url: "https://github.com/AniScripts/AniSmooth-Models/releases/download/interpolation/rife425_heavy.pth", relPath: "weights/rife4.25-heavy/rife425_heavy.pth" },
