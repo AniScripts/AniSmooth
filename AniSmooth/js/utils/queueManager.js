@@ -129,6 +129,38 @@
       return false;
     },
 
+    moveUp: function (id) {
+      for (var i = 0; i < this._queue.length; i++) {
+        if (this._queue[i].id === id && (this._queue[i].status === "queued" || this._queue[i].status === "rendering")) {
+          if (i > 0 && (this._queue[i - 1].status === "queued" || this._queue[i - 1].status === "rendering")) {
+            var temp = this._queue[i - 1];
+            this._queue[i - 1] = this._queue[i];
+            this._queue[i] = temp;
+            this._notify();
+            return true;
+          }
+          break;
+        }
+      }
+      return false;
+    },
+
+    moveDown: function (id) {
+      for (var i = 0; i < this._queue.length; i++) {
+        if (this._queue[i].id === id && (this._queue[i].status === "queued" || this._queue[i].status === "rendering")) {
+          if (i < this._queue.length - 1 && (this._queue[i + 1].status === "queued" || this._queue[i + 1].status === "rendering")) {
+            var temp = this._queue[i + 1];
+            this._queue[i + 1] = this._queue[i];
+            this._queue[i] = temp;
+            this._notify();
+            return true;
+          }
+          break;
+        }
+      }
+      return false;
+    },
+
     cancelItem: function () {
       var item = this.getProcessing();
       if (!item) return false;

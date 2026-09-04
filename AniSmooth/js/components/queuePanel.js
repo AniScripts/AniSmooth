@@ -121,6 +121,19 @@
           progressHtml = '<div class="q-took">Took ' + formatDur(item.elapsed) + '</div>';
         }
 
+        var actionsHtml = '';
+        if (item.status === "queued" || item.status === "rendering") {
+          actionsHtml += '<div class="q-actions">';
+          actionsHtml += '<button class="q-btn-action q-move-up" data-id="' + item.id + '" title="Move Up"><i class="fa-solid fa-chevron-up"></i></button>';
+          actionsHtml += '<button class="q-btn-action q-move-down" data-id="' + item.id + '" title="Move Down"><i class="fa-solid fa-chevron-down"></i></button>';
+          actionsHtml += '<button class="q-remove" data-id="' + item.id + '" title="Remove"><i class="fa-solid fa-xmark"></i></button>';
+          actionsHtml += '</div>';
+        } else if (item.status === "processing") {
+          actionsHtml += '<div class="q-actions"><button class="q-cancel" title="Cancel"><i class="fa-solid fa-stop"></i></button></div>';
+        } else if (item.status === "done" && item.outputPath) {
+          actionsHtml += '<div class="q-actions"><button class="q-btn-action q-reveal" data-path="' + escapeHtml(item.outputPath) + '" title="Show in Explorer"><i class="fa-solid fa-folder-open"></i></button></div>';
+        }
+
         html +=
           '<div class="q-row ' + rowCls + '">' +
             '<i class="fa-solid ' + icon + ' q-status"></i>' +
@@ -133,11 +146,7 @@
               (item.status === "error" ? '<div class="q-err">' + escapeHtml(item.error || "Unknown error") + '</div>' : '') +
               progressHtml +
             '</div>' +
-            ((item.status === "queued" || item.status === "rendering")
-              ? '<button class="q-remove" data-id="' + item.id + '"><i class="fa-solid fa-xmark"></i></button>'
-              : (item.status === "processing"
-                ? '<button class="q-cancel"><i class="fa-solid fa-stop"></i></button>'
-                : '')) +
+            actionsHtml +
           '</div>';
       }
       container.innerHTML = html;
@@ -149,6 +158,32 @@
           e.stopPropagation();
           var id = this.getAttribute("data-id");
           if (id) window.QueueManager.remove(id);
+        });
+      }
+      var moveUps = container.querySelectorAll(".q-move-up");
+      for (var u = 0; u < moveUps.length; u++) {
+        moveUps[u].addEventListener("click", function (e) {
+          e.stopPropagation();
+          var id = this.getAttribute("data-id");
+          if (id) window.QueueManager.moveUp(id);
+        });
+      }
+      var moveDowns = container.querySelectorAll(".q-move-down");
+      for (var d = 0; d < moveDowns.length; d++) {
+        moveDowns[d].addEventListener("click", function (e) {
+          e.stopPropagation();
+          var id = this.getAttribute("data-id");
+          if (id) window.QueueManager.moveDown(id);
+        });
+      }
+      var reveals = container.querySelectorAll(".q-reveal");
+      for (var rv = 0; rv < reveals.length; rv++) {
+        reveals[rv].addEventListener("click", function (e) {
+          e.stopPropagation();
+          var p = this.getAttribute("data-path");
+          if (p && window.FileSystem && window.FileSystem.revealFileInExplorer) {
+            window.FileSystem.revealFileInExplorer(p);
+          }
         });
       }
       var cancels = container.querySelectorAll(".q-cancel");

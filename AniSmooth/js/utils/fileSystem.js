@@ -197,6 +197,16 @@
         "}";
 
       return this.runPowerShellDialog(command);
+    },
+
+    revealFileInExplorer(filePath) {
+      if (!filePath || !childProcess) return;
+      try {
+        var normPath = String(filePath).replace(/\//g, "\\");
+        childProcess.spawn("explorer.exe", ["/select,", normPath], { detached: true, stdio: "ignore" }).unref();
+      } catch (e) {
+        console.error("Failed to reveal file in explorer:", e.message);
+      }
     }
   };
 
