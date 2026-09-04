@@ -45,6 +45,17 @@
       </nav>
     </header>
 
+    <div id="updateNotificationBanner" class="update-banner" style="display:none;">
+      <div class="update-banner-info">
+        <i class="fa-solid fa-sparkles update-banner-icon"></i>
+        <span class="update-banner-text"><b>Update Available:</b> A new version of AniSmooth is ready!</span>
+      </div>
+      <div class="update-banner-actions">
+        <button class="update-banner-btn" onclick="window.App && window.App.switchSettingsCategory ? window.App.switchSettingsCategory('about') : (window.App && window.App.switchTab('settings'))">View</button>
+        <button class="update-banner-close" onclick="window.AutoUpdater && window.AutoUpdater.dismissBanner()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+
     <main class="content">
       <div data-tab="deadframes"></div>
       <div data-tab="interpolation"></div>
@@ -117,6 +128,7 @@
   <script src="./js/utils/flowframesHandler.js"></script>
   <script src="./js/utils/ncnnHandler.js"></script>
   <script src="./js/utils/queueManager.js"></script>
+  <script src="./js/utils/autoUpdater.js"></script>
   <script src="./js/console.js"></script>
   <script src="./js/components/deadframesPanel.js"></script>
   <script src="./js/components/interpolationPanel.js"></script>

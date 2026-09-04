@@ -84,6 +84,7 @@ Repo root holds build tooling; the CEP extension itself lives in `AniSmooth/`.
 │       ├── modelHandler.js    # Singleton: spawns Python for all 3 modes
 │       ├── flowframesHandler.js # Singleton: spawns Flowframes.exe, tails session log
 │       ├── queueManager.js    # Batch queue: pause/cancel/retry/persist
+│       ├── autoUpdater.js     # Singleton: GitHub releases check and 1-click update
 │       ├── customSelect.js
 │       └── tabLoader.js
 ├── jsx/host.jsx               # ExtendScript: AE render, layer info, file import

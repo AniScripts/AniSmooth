@@ -99,6 +99,13 @@
       setTimeout(function () {
         self.refreshGpuInfo();
       }, 800);
+
+      var autoCheck = window.StorageManager.getItem("anismooth_autocheck_updates", "1") === "1";
+      if (autoCheck && window.AutoUpdater && typeof window.AutoUpdater.checkForUpdates === "function") {
+        setTimeout(function () {
+          window.AutoUpdater.checkForUpdates(false);
+        }, 3000);
+      }
     },
 
     _resolvePythonCmd: function () {
@@ -547,6 +554,14 @@
       if (settingsSearch) {
         settingsSearch.addEventListener("input", function () {
           self._filterSettingsSearch(settingsSearch.value.trim().toLowerCase());
+        });
+      }
+
+      var autoCheckToggle = document.getElementById("autocheckUpdatesToggle");
+      if (autoCheckToggle) {
+        autoCheckToggle.checked = window.StorageManager.getItem("anismooth_autocheck_updates", "1") === "1";
+        autoCheckToggle.addEventListener("change", function () {
+          window.StorageManager.setItem("anismooth_autocheck_updates", autoCheckToggle.checked ? "1" : "0");
         });
       }
 

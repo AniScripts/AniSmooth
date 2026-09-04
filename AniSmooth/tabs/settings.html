@@ -637,6 +637,39 @@
 
           <div class="panel">
             <div class="panel-head">
+              <i class="fa-solid fa-cloud-arrow-down panel-head-icon"></i>
+              <span class="panel-title">Updates &amp; Releases</span>
+              <span class="info-chip" data-tip="Checks GitHub for official AniSmooth releases and updates files directly without touching your models or settings.">?</span>
+            </div>
+            <span class="form-hint" style="margin-bottom:8px;display:block;">Check for new features, speed optimizations, and model updates.</span>
+            <div id="updateStatusText" style="margin-bottom:8px;">
+              <span class="form-hint"><i class="fa-solid fa-circle-check" style="color:var(--ok);"></i> Up to date (v1.0.0)</span>
+            </div>
+            <div id="updateActionBtns" style="display:none;margin-bottom:8px;gap:6px;">
+              <button id="installUpdateBtn" class="btn btn-primary" style="flex:1;" onclick="window.AutoUpdater && window.AutoUpdater.downloadAndInstallUpdate()">
+                <i class="fa-solid fa-download"></i> 1-Click Update Now
+              </button>
+            </div>
+            <div id="updateProgressBar" style="display:none;margin-bottom:8px;">
+              <div class="progress-track">
+                <div id="updateProgressFill" class="progress-fill" style="width:0%;"></div>
+              </div>
+              <span id="updateProgressText" class="form-hint" style="margin-top:4px;display:block;">Downloading update...</span>
+            </div>
+            <div class="btn-row" style="margin-bottom:6px;">
+              <button id="checkUpdatesBtn" class="btn" onclick="window.AutoUpdater && window.AutoUpdater.checkForUpdates(true)">
+                <i class="fa-solid fa-arrows-rotate"></i> Check for Updates
+              </button>
+            </div>
+            <label class="toggle-row" style="padding:0;margin-top:4px;">
+              <span class="toggle-label" style="flex:1;">Auto-check on startup</span>
+              <input type="checkbox" class="toggle-input" id="autocheckUpdatesToggle" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
               <i class="fa-solid fa-compass panel-head-icon"></i>
               <span class="panel-title">Community &amp; Resources</span>
             </div>

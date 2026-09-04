@@ -960,6 +960,60 @@ html[data-theme="light"] {
   margin-top: 6px;
 }
 
+/* Update notification banner */
+.update-banner {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.18) 0%, rgba(16, 185, 129, 0.18) 100%);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  animation: slideDown 0.25s ease-out;
+  flex-shrink: 0;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.update-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: var(--text);
+}
+.update-banner-icon {
+  color: var(--ok);
+  font-size: 10px;
+}
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.update-banner-btn {
+  font-size: 8.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  background: var(--accent);
+  color: var(--accent-on);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.update-banner-close {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-size: 9px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.update-banner-close:hover {
+  color: var(--text);
+}
+
 /* About tab styling */
 .about-hero-panel {
   background: linear-gradient(135deg, var(--surface) 0%, var(--inset) 100%);
