@@ -532,21 +532,31 @@ def run_sys_metrics():
         log("warn", "GPU metrics polling failed", trace=traceback.format_exc())
 
     if not smi_path:
-        try:
-            ps_cmd = (
-                'powershell -NoProfile -Command "'
-                '$gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1;'
-                'Write-Output ($gpu.Name + ''|'' + $gpu.AdapterRAM)"'
-            )
-            result = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=10, shell=True)
-            if result.returncode == 0 and result.stdout.strip():
-                parts = result.stdout.strip().split("|")
-                if len(parts) >= 1:
-                    metrics["gpu_name"] = parts[0].strip()
-                if len(parts) >= 2 and parts[1].isdigit():
-                    metrics["gpu_mem_total_mb"] = float(parts[1].strip()) / (1024 * 1024)
-        except Exception:
-            pass
+        if sys.platform == "darwin":
+            try:
+                from utils.device import _run_macos_display_query
+                mac_gpus = _run_macos_display_query()
+                if mac_gpus and len(mac_gpus) > 0:
+                    metrics["gpu_name"] = mac_gpus[0].get("name", "Apple Silicon GPU")
+                    metrics["gpu_mem_total_mb"] = mac_gpus[0].get("memory_total_mb", 0)
+            except Exception:
+                pass
+        elif sys.platform == "win32":
+            try:
+                ps_cmd = (
+                    'powershell -NoProfile -Command "'
+                    '$gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1;'
+                    'Write-Output ($gpu.Name + \'|\' + $gpu.AdapterRAM)"'
+                )
+                result = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=10, shell=True)
+                if result.returncode == 0 and result.stdout.strip():
+                    parts = result.stdout.strip().split("|")
+                    if len(parts) >= 1:
+                        metrics["gpu_name"] = parts[0].strip()
+                    if len(parts) >= 2 and parts[1].isdigit():
+                        metrics["gpu_mem_total_mb"] = float(parts[1].strip()) / (1024 * 1024)
+            except Exception:
+                pass
 
     log("sys_metrics", json.dumps(metrics))
 
@@ -574,8 +584,10 @@ def run_dedupe(
     script_dir = Path(__file__).parent
     ffmpeg_exe = None
     ffprobe_exe = None
-    local_ffmpeg = script_dir / "ffmpeg.exe"
-    local_ffprobe = script_dir / "ffprobe.exe"
+    ffmpeg_name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+    ffprobe_name = "ffprobe.exe" if sys.platform == "win32" else "ffprobe"
+    local_ffmpeg = script_dir / ffmpeg_name
+    local_ffprobe = script_dir / ffprobe_name
     if local_ffmpeg.exists():
         ffmpeg_exe = str(local_ffmpeg)
     else:
