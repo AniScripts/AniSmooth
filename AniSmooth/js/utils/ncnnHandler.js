@@ -8,31 +8,40 @@
       try {
         var fs = window.FileSystem.fs;
         var path = window.FileSystem.path;
-        var exeName = name + ".exe";
+        var isWin = process.platform === "win32";
+        var exeNames = isWin ? [name + ".exe"] : [name, name + ".exe"];
         var configured = window.StorageManager.getItem("anismooth_ncnn_path", "");
         if (configured && fs.existsSync(configured)) return configured;
         var extPath = "";
         try { var cs = new CSInterface(); extPath = cs.getSystemPath(SystemPath.EXTENSION); } catch (e) {}
-        if (extPath) {
-          var ncnnDir = path.join(extPath, "python", "ncnn_binaries");
-          var guess = path.join(ncnnDir, exeName);
-          if (fs.existsSync(guess)) return guess;
-          var guessSub = path.join(ncnnDir, name, exeName);
-          if (fs.existsSync(guessSub)) return guessSub;
-        }
-        var appdata = "";
-        try { appdata = process.env.APPDATA || ""; } catch (e) {}
-        if (!appdata && window.FileSystem.os) {
-          appdata = path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
-        }
-        if (appdata) {
-          var backend = path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend");
-          var guess2 = path.join(backend, "ncnn_binaries", exeName);
-          if (fs.existsSync(guess2)) return guess2;
-          var guess2Sub = path.join(backend, "ncnn_binaries", name, exeName);
-          if (fs.existsSync(guess2Sub)) return guess2Sub;
-          var guess3 = path.join(backend, exeName);
-          if (fs.existsSync(guess3)) return guess3;
+        
+        for (var i = 0; i < exeNames.length; i++) {
+          var exeName = exeNames[i];
+          if (extPath) {
+            var ncnnDir = path.join(extPath, "python", "ncnn_binaries");
+            var guess = path.join(ncnnDir, exeName);
+            if (fs.existsSync(guess)) return guess;
+            var guessSub = path.join(ncnnDir, name, exeName);
+            if (fs.existsSync(guessSub)) return guessSub;
+          }
+          var appdata = "";
+          try { appdata = process.env.APPDATA || ""; } catch (e) {}
+          if (!appdata && window.FileSystem.os) {
+            if (isWin) {
+              appdata = path.join(window.FileSystem.os.homedir(), "AppData", "Roaming");
+            } else {
+              appdata = path.join(window.FileSystem.os.homedir(), "Library", "Application Support");
+            }
+          }
+          if (appdata) {
+            var backend = path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend");
+            var guess2 = path.join(backend, "ncnn_binaries", exeName);
+            if (fs.existsSync(guess2)) return guess2;
+            var guess2Sub = path.join(backend, "ncnn_binaries", name, exeName);
+            if (fs.existsSync(guess2Sub)) return guess2Sub;
+            var guess3 = path.join(backend, exeName);
+            if (fs.existsSync(guess3)) return guess3;
+          }
         }
       } catch (e) {}
       return null;
