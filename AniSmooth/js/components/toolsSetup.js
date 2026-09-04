@@ -121,23 +121,35 @@
 
   
   function renderWelcomeStep() {
+    var isMac = process.platform === "darwin";
+    var detectedHW = isMac ? "Apple Silicon (Metal MPS & CoreML)" : "Windows GPU Acceleration (NVIDIA / DirectML / CPU)";
+    var iconHW = isMac ? "fa-brands fa-apple" : "fa-solid fa-microchip";
+
     return '<div class="setup-card">' +
       '<div class="setup-logo" style="text-align: center; margin-bottom: 12px;"><img src="' + ((window.AniSmoothTheme && window.AniSmoothTheme.getLogo("iconOnly")) || "./images/AniSmooth-Logo-Only.png") + '" alt="AniSmooth Logo" style="height: 72px; width: auto; object-fit: contain; display: inline-block;"></div>' +
       '<h1>AniSmooth Setup</h1>' +
-      '<p class="setup-desc">This wizard detects your hardware and installs everything needed to run local AI models for frame interpolation and upscaling.</p>' +
-      '<div class="setup-info-box">' +
-        '<p><strong>What will be checked:</strong></p>' +
-        '<ul>' +
-          '<li><i class="fa-brands fa-python"></i> Python 3 &mdash; runtime engine</li>' +
-          '<li><i class="fa-solid fa-microchip"></i> GPU &amp; CUDA &mdash; hardware acceleration</li>' +
-          '<li><i class="fa-solid fa-film"></i> FFmpeg &mdash; video processing</li>' +
-          '<li><i class="fa-solid fa-cubes"></i> PyTorch &amp; OpenCV &mdash; AI inference</li>' +
-        '</ul>' +
-        '<p style="margin-top:6px;">Everything installs to: <code>' + _toolsFolder + '</code></p>' +
+      '<p class="setup-desc">Welcome to AniSmooth. Automatically configure AI frame interpolation, video upscaling, and GPU acceleration in 1 click.</p>' +
+      '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;background:var(--active-overlay);border:1px solid var(--accent);margin-bottom:10px;">' +
+        '<i class="' + iconHW + '" style="color:var(--accent);font-size:12px;"></i>' +
+        '<span style="font-size:9px;color:var(--text-strong);font-weight:600;">Detected: ' + detectedHW + '</span>' +
       '</div>' +
-      '<div class="setup-nav">' +
-        '<button class="btn btn-ghost" onclick="skipToolsSetup()">Skip</button>' +
-        '<button class="btn btn-primary" onclick="goToSetupStep(\'gpuchoice\')"><i class="fa-solid fa-arrow-right"></i> Next</button>' +
+      '<div class="setup-info-box">' +
+        '<p><strong>1-Click Express Setup will configure:</strong></p>' +
+        '<ul>' +
+          '<li><i class="fa-brands fa-python"></i> Isolated Python Environment</li>' +
+          '<li><i class="fa-solid fa-microchip"></i> Hardware Acceleration (CUDA / MPS / DirectML)</li>' +
+          '<li><i class="fa-solid fa-film"></i> Resilient FFmpeg Media Engine</li>' +
+          '<li><i class="fa-solid fa-cubes"></i> Pre-flight System Doctor &amp; GPU Benchmark</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="setup-nav" style="flex-direction:column;gap:6px;">' +
+        '<button class="btn btn-primary" style="width:100%;padding:8px 12px;font-size:10px;font-weight:700;" onclick="startExpressSetup()">' +
+          '<i class="fa-solid fa-wand-magic-sparkles"></i> Express Setup (Recommended - 1 Click)' +
+        '</button>' +
+        '<div style="display:flex;width:100%;gap:6px;margin-top:4px;">' +
+          '<button class="btn btn-ghost" style="flex:1;" onclick="skipToolsSetup()">Skip</button>' +
+          '<button class="btn btn-secondary" style="flex:1;" onclick="goToSetupStep(\'gpuchoice\')">Custom Setup</button>' +
+        '</div>' +
       '</div>' +
     '</div></div>';
   }
@@ -1039,7 +1051,21 @@
     return false;
   }
 
+  function startExpressSetup() {
+    var isMac = process.platform === "darwin";
+    if (isMac) {
+      _gpuChoice = "gpu";
+    } else if (window.App && window.App._gpuVendor === "amd") {
+      _gpuChoice = "amd";
+    } else {
+      _gpuChoice = "gpu";
+    }
+    _gpuDownloadState = null;
+    goToSetupStep('autoinstall');
+  }
+
   window.ToolsSetup = { showToolsSetup: showToolsSetup, showToolsSetupForGpuInstall: showToolsSetupForGpuInstall, checkAndShowIfNeeded: checkAndShowIfNeeded, renderSetupStep: renderSetupStep };
+  window.startExpressSetup = startExpressSetup;
   window.goToSetupStep = goToSetupStep;
   window.scanToolsAndRefresh = scanToolsAndRefresh;
   window.skipToolsSetup = skipToolsSetup;
