@@ -387,22 +387,13 @@
           if (!inputSize) return;
           var mult = item.mode === "upscale" ? (item.scale * item.scale) : (item.mode === "dedupe" ? 0.7 : (item.factor || 2));
           var estimated = inputSize * mult * 1.6;
-          var driveLetter = outputPath[0] || "C";
-          var freeBytes = 0;
-          if (window.FileSystem && window.FileSystem.childProcess) {
-            try {
-              var ps = window.FileSystem.childProcess.execFileSync("powershell.exe", [
-                "-NoProfile", "-Command",
-                "(Get-PSDrive -Name '" + driveLetter + "').Free"
-              ], { encoding: "utf8", windowsHide: true });
-              freeBytes = parseInt(ps, 10) || 0;
-            } catch (e2) {}
-          }
+          var freeMB = (window.FileSystem && window.FileSystem.getFreeDiskSpaceMB) ? window.FileSystem.getFreeDiskSpaceMB(modeDir) : 0;
+          var freeBytes = freeMB * 1024 * 1024;
           if (freeBytes && freeBytes < estimated) {
             var freeGB = (freeBytes / (1024 * 1024 * 1024)).toFixed(1);
             var estGB = (estimated / (1024 * 1024 * 1024)).toFixed(1);
-            dbg("warn", "Queue", "Low disk space on " + driveLetter + ": " + freeGB + " GB free, ~" + estGB + " GB estimated");
-            if (window.showToast) window.showToast("Low disk space: " + freeGB + " GB free, ~" + estGB + " GB needed on " + driveLetter + ":", "error");
+            dbg("warn", "Queue", "Low disk space: " + freeGB + " GB free, ~" + estGB + " GB estimated");
+            if (window.showToast) window.showToast("Low disk space: " + freeGB + " GB free, ~" + estGB + " GB needed", "error");
           }
         } catch (e) {}
       })();
