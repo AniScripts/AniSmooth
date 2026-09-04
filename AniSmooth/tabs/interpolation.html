@@ -8,7 +8,10 @@
             <div id="interpLayerInfo"></div>
           </div>
           <div class="form-group">
-            <label>Model</label>
+            <div class="label-row">
+              <label>Model</label>
+              <span class="info-chip" data-tip="Heavy = best quality for anime cuts and AMVs. Standard = lighter on VRAM. TensorRT = up to 2x faster on NVIDIA. Vulkan = AMD/Intel.">?</span>
+            </div>
             <div class="custom-select" id="interpolationModel">
               <div class="select-trigger">
                 <span class="select-value"><i class="fa-solid fa-microchip"></i> RIFE 4.25 HEAVY Cuda</span>
@@ -34,7 +37,10 @@
             <div class="info-card" id="interpModelInfo"></div>
           </div>
           <div class="form-group">
-            <label>Factor</label>
+            <div class="label-row">
+              <label>Factor</label>
+              <span class="info-chip" data-tip="2x turns 24fps into 48/60fps (smooth playback). 4x turns it into 120fps (high refresh). 8x or 10x is ideal for slow motion twixtor effects without warp artifacts.">?</span>
+            </div>
             <div class="factor-presets" id="interpolationFactor">
               <button class="factor-btn active" data-value="2">2×</button>
               <button class="factor-btn" data-value="4">4×</button>

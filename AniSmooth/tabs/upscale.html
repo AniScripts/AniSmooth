@@ -8,7 +8,10 @@
             <div id="upscaleLayerInfo"></div>
           </div>
           <div class="form-group">
-            <label>Model</label>
+            <div class="label-row">
+              <label>Model</label>
+              <span class="info-chip" data-tip="Adore = crisp outlines and fine detail (best for most anime). Fallin Soft = painterly smooth gradients and denoised backgrounds. Vulkan = for AMD GPUs.">?</span>
+            </div>
             <div class="custom-select" id="upscaleModel">
               <div class="select-trigger">
                 <span class="select-value"><i class="fa-solid fa-microchip"></i> Adore Cuda</span>
@@ -28,7 +31,10 @@
             <div class="info-card" id="upscaleModelInfo"></div>
           </div>
           <div class="form-group">
-            <label>Multiplier</label>
+            <div class="label-row">
+              <label>Multiplier</label>
+              <span class="info-chip" data-tip="2x is recommended for 1080p to 4K upscaling. 4x is best for low-res 720p/480p anime rips.">?</span>
+            </div>
             <div class="custom-select" id="upscaleScale">
               <div class="select-trigger">
                 <span class="select-value">2x</span>
@@ -42,7 +48,10 @@
             <div class="info-card" id="upscaleScaleInfo"></div>
           </div>
           <div class="form-group">
-            <label>Fit to Resolution</label>
+            <div class="label-row">
+              <label>Fit to Resolution</label>
+              <span class="info-chip" data-tip="AI upscales high-res, then downscales back to your target canvas (e.g. 1920x1080) with high-fidelity Lanczos filtering for extreme sharpness.">?</span>
+            </div>
             <div class="toggle-row" style="padding:0;margin-bottom:4px;">
               <span class="toggle-label" style="flex:1;">Scale down to fit target resolution</span>
               <input type="checkbox" class="toggle-input" id="upscaleEnableFit">

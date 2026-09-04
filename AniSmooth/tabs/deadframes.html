@@ -9,28 +9,40 @@
             <label class="collapse-label" data-df-group="detection"><i class="fa-solid fa-chevron-down collapse-arrow"></i> Detection Settings</label>
             <div class="collapse-body">
               <div class="form-group">
-                <label for="deadframeFlowThreshold">Flow Sensitivity (Lower = Removes More)</label>
+                <div class="label-row">
+                  <label for="deadframeFlowThreshold">Flow Sensitivity</label>
+                  <span class="info-chip" data-tip="Optical movement threshold. Lower values (0.2 - 0.4) aggressively strip static duplicate frames. Higher values (0.8+) keep subtle anime movements.">?</span>
+                </div>
                 <input type="number" id="deadframeFlowThreshold" value="0.5" min="0.05" max="5.0" step="0.05">
                 <span class="form-hint">Optical flow magnitude threshold. 0.05 = keep only large motion, 5.0 = keep everything.</span>
               </div>
               <div class="form-group">
-                <label for="deadframeMotionAreaFraction">Min Motion Area</label>
+                <div class="label-row">
+                  <label for="deadframeMotionAreaFraction">Min Motion Area</label>
+                  <span class="info-chip" data-tip="Minimum percentage of screen that must move. Lower = protects tiny details like eye blinks or single finger twitches.">?</span>
+                </div>
                 <input type="number" id="deadframeMotionAreaFraction" value="0.15" min="0.01" max="0.50" step="0.01">
                 <span class="form-hint">Min fraction of frame area with motion to consider it unique. 0.01 = aggressive, 0.50 = safe.</span>
               </div>
               <div class="form-group">
-                <label for="deadframeCadence">Cadence (Min Consecutive Dead Frames)</label>
+                <div class="label-row">
+                  <label for="deadframeCadence">Cadence (Consecutive Holds)</label>
+                  <span class="info-chip" data-tip="Drop frames only when held for N+ frames. Setting to 2 or 3 protects natural anime hand-drawn cadence (animating on 2s or 3s) while removing true freezes.">?</span>
+                </div>
                 <input type="number" id="deadframeCadence" value="3" min="0" max="10" step="1">
                 <span class="form-hint">Drop only when N+ consecutive frames are dead. Preserves animation holds on 2s/3s.</span>
               </div>
               <div class="form-group">
-                <label for="deadframeDetectScale">Detection Resolution Scale</label>
+                <div class="label-row">
+                  <label for="deadframeDetectScale">Detection Resolution Scale</label>
+                  <span class="info-chip" data-tip="Downscales during motion analysis to speed up detection 3x-4x. 0.5 gives fast results without losing detection accuracy.">?</span>
+                </div>
                 <input type="number" id="deadframeDetectScale" value="1.0" min="0.1" max="1.0" step="0.1">
                 <span class="form-hint">Downscale before detection. 0.5 = half resolution (faster), 1.0 = full resolution.</span>
               </div>
               <div class="form-group" style="margin-bottom:0;">
                 <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-                  <span class="toggle-label" style="flex:1;">Auto-Calibrate Thresholds</span>
+                  <span class="toggle-label" style="flex:1;">Auto-Calibrate Thresholds <span class="info-chip" data-tip="Automatically analyzes clip motion levels to determine optimal thresholds without guessing numbers.">?</span></span>
                   <input type="checkbox" class="toggle-input" id="deadframeAuto">
                   <span class="toggle-switch"></span>
                 </label>
@@ -44,7 +56,7 @@
             <div class="collapse-body">
               <div class="form-group">
                 <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-                  <span class="toggle-label" style="flex:1;">Keep Dialogue / Mouth Motion</span>
+                  <span class="toggle-label" style="flex:1;">Keep Dialogue / Mouth Motion <span class="info-chip" data-tip="Protects subtle mouth flaps and lip-sync movement from being deleted during character dialogue.">?</span></span>
                   <input type="checkbox" class="toggle-input" id="deadframeKeepTalking">
                   <span class="toggle-switch"></span>
                 </label>
@@ -52,7 +64,7 @@
               </div>
               <div class="form-group">
                 <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-                  <span class="toggle-label" style="flex:1;">Keep Camera Movement</span>
+                  <span class="toggle-label" style="flex:1;">Keep Camera Movement <span class="info-chip" data-tip="Prevents deleting frames during slow cinematic camera pans, zooms, and steady tracking shots.">?</span></span>
                   <input type="checkbox" class="toggle-input" id="deadframeKeepCamera">
                   <span class="toggle-switch"></span>
                 </label>
@@ -60,14 +72,17 @@
               </div>
               <div class="form-group" style="margin-bottom: 12px;">
                 <label class="toggle-row" style="padding:0;margin-bottom:4px;">
-                  <span class="toggle-label" style="flex:1;">Parallax Mode</span>
+                  <span class="toggle-label" style="flex:1;">Parallax Mode <span class="info-chip" data-tip="Special detection for anime scenes where foreground characters move at different speeds than background scenery.">?</span></span>
                   <input type="checkbox" class="toggle-input" id="deadframeParallax">
                   <span class="toggle-switch"></span>
                 </label>
                 <span class="form-hint">Invert camera motion rule for parallax shots (foreground moves differently from background).</span>
               </div>
               <div class="form-group" style="margin-bottom:0;">
-                <label for="deadframeSmallMovements">Small Movements Threshold (Optional)</label>
+                <div class="label-row">
+                  <label for="deadframeSmallMovements">Small Movements Override (Optional)</label>
+                  <span class="info-chip" data-tip="Explicit sensitivity override for anime with micro-animations like hair floating in wind or raindrops.">?</span>
+                </div>
                 <input type="number" id="deadframeSmallMovements" value="" min="0" max="5.0" step="0.01" placeholder="Leave empty for auto">
                 <span class="form-hint">Custom flow threshold override. 0 = keep all motion, 0.5 = default. Leave empty for auto-detection.</span>
               </div>
