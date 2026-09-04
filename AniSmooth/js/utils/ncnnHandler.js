@@ -17,6 +17,8 @@
           var ncnnDir = path.join(extPath, "python", "ncnn_binaries");
           var guess = path.join(ncnnDir, exeName);
           if (fs.existsSync(guess)) return guess;
+          var guessSub = path.join(ncnnDir, name, exeName);
+          if (fs.existsSync(guessSub)) return guessSub;
         }
         var appdata = "";
         try { appdata = process.env.APPDATA || ""; } catch (e) {}
@@ -27,6 +29,8 @@
           var backend = path.join(appdata, "com.moongetsu.extensions", "AniSmooth", "backend");
           var guess2 = path.join(backend, "ncnn_binaries", exeName);
           if (fs.existsSync(guess2)) return guess2;
+          var guess2Sub = path.join(backend, "ncnn_binaries", name, exeName);
+          if (fs.existsSync(guess2Sub)) return guess2Sub;
           var guess3 = path.join(backend, exeName);
           if (fs.existsSync(guess3)) return guess3;
         }
@@ -148,7 +152,22 @@
       var currentPass = 0;
       var finished = false;
 
-      var finalize = function (ok, message) {
+        var mappedModel = options.model || (isRealEsrgan ? "realesr-animevideov3" : "rife-v4.6");
+        if (!isRealEsrgan) {
+          if (/4\.26|4\.6/i.test(mappedModel)) mappedModel = "rife-v4.6";
+          else if (/4\.0|v4/i.test(mappedModel)) mappedModel = "rife-v4";
+          else if (/3\.1/i.test(mappedModel)) mappedModel = "rife-v3.1";
+          else if (/anime/i.test(mappedModel)) mappedModel = "rife-anime";
+          else if (/hd/i.test(mappedModel)) mappedModel = "rife-HD";
+          else if (/uhd/i.test(mappedModel)) mappedModel = "rife-UHD";
+          else mappedModel = "rife-v4.6";
+        } else {
+          if (/anime/i.test(mappedModel) || /shufflecugan/i.test(mappedModel)) mappedModel = "realesr-animevideov3";
+          else if (/net/i.test(mappedModel)) mappedModel = "realesrnet-x4plus";
+          else mappedModel = "realesrgan-x4plus";
+        }
+
+        var finalize = function (ok, message) {
           if (finished) return;
           finished = true;
           self.activeProcess = null;
@@ -169,12 +188,15 @@
                 var fpsEstimate = factor * 24;
                 dbg("info", "NCNN-DEBUG", "Encoding " + frames.length + " frames -> MP4 at " + fpsEstimate + "fps");
                 try {
-                  var encResult = cp.spawnSync(ffmpegPath, [
+                  var ffmpegArgs = [
                     "-y", "-f", "concat", "-safe", "0", "-r", String(fpsEstimate), "-i", concatPath,
+                    "-i", inputPath,
                     "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-                    "-pix_fmt", "yuv420p", "-an",
+                    "-pix_fmt", "yuv420p",
+                    "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "aac", "-b:a", "192k",
                     finalOutputPath
-                  ], { cwd: passOutput, windowsHide: true, timeout: 300000 });
+                  ];
+                  var encResult = cp.spawnSync(ffmpegPath, ffmpegArgs, { cwd: passOutput, windowsHide: true, timeout: 300000 });
                   dbg("info", "NCNN-DEBUG", "FFmpeg encode exit: " + encResult.status);
                   if (encResult.status === 0 && fs.existsSync(finalOutputPath)) {
                     dbg("info", "NCNN-DEBUG", "Final MP4: " + finalOutputPath + " (" + fs.statSync(finalOutputPath).size + " bytes)");
@@ -226,13 +248,12 @@
           }
           var inCount = fs.existsSync(passInput) ? fs.readdirSync(passInput).length : 0;
           dbg("info", "NCNN-DEBUG", "Pass " + (currentPass + 1) + "/" + passes + ": " + inCount + " frames, " + passInput + " -> " + passOutput);
-          var isRealEsrgan = /realesrgan/i.test(exeName);
           var passArgs;
           if (isRealEsrgan) {
             var modelsDir = p.join(exeDir, "models");
-            passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", modelsDir, "-n", options.model || "realesrgan-x4plus", "-s", String(options.scale || "2"), "-j", String(options.threadCount || "4:4:4")];
+            passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", modelsDir, "-n", mappedModel, "-s", String(options.scale || "2"), "-j", String(options.threadCount || "4:4:4")];
           } else {
-            passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", options.model || "rife-v4.6", "-j", String(options.threadCount || "4:4:4")];
+            passArgs = ["-i", passInput, "-o", passOutput, "-g", gpuId, "-m", mappedModel, "-j", String(options.threadCount || "4:4:4")];
             if (passes === 1) passArgs.push("-x", String(factor));
           }
           var passProc = cp.spawn(exe, passArgs, { env: envAsync, cwd: exeDir, windowsHide: true });
@@ -249,7 +270,7 @@
             }
             dbg("info", "NCNN-DEBUG", "Pass " + (currentPass + 1) + " done");
             currentPass++;
-            if (callbacks.onProgress) callbacks.onProgress(Math.round((currentPass / passes) * 50));
+            if (callbacks.onProgress) callbacks.onProgress(Math.round((currentPass / passes) * 90));
             if (currentPass >= passes) {
               tempPngDir = passOutput;
               self.activeProcess = null;
@@ -266,9 +287,17 @@
             _cleanupTempDir();
           });
           passProc.stderr.on("data", function (data) {
-            var text = data.toString().trim();
-            if (text) dbg("debug", "NCNN-DEBUG", "Pass " + (currentPass + 1) + " stderr: " + text);
-            if (callbacks.onLog) callbacks.onLog(text);
+            var text = data.toString();
+            var trimmed = text.trim();
+            if (trimmed) dbg("debug", "NCNN-DEBUG", "Pass " + (currentPass + 1) + " stderr: " + trimmed);
+            var pct = _parseProgress(text);
+            if (pct >= 0 && callbacks.onProgress) {
+              var passBase = (currentPass / passes) * 90;
+              var passSlice = (1 / passes) * 90;
+              var overall = Math.round(passBase + (pct / 100) * passSlice);
+              callbacks.onProgress(Math.min(90, Math.max(0, overall)));
+            }
+            if (callbacks.onLog) callbacks.onLog(trimmed);
           });
         }
 
