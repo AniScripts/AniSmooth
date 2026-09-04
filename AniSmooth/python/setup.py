@@ -624,17 +624,21 @@ def install_ncnn_binaries():
     ncnn_dir = os.path.join(SCRIPT_DIR, "ncnn_binaries")
     os.makedirs(ncnn_dir, exist_ok=True)
 
-    NCNN_VERSION = "1.1.0"
+    NCNN_VERSION = "1.2.0"
     BIN_URL = "https://github.com/AniScripts/AniSmooth-Models/releases/download/ncnn/"
+
+    is_mac = sys.platform == "darwin"
+    rife_mac_url = "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-macos.zip"
+    realesrgan_mac_url = "https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan/releases/download/v0.2.0/realesrgan-ncnn-vulkan-20220424-macos.zip"
 
     NCNN_BINARIES = {
         "rife-ncnn-vulkan": {
-            "url": BIN_URL + "rife.zip",
+            "url": rife_mac_url if is_mac else (BIN_URL + "rife.zip"),
             "version": "20221029-full",
             "is_zip": True,
         },
         "realesrgan-ncnn-vulkan": {
-            "url": BIN_URL + "realesrgan.zip",
+            "url": realesrgan_mac_url if is_mac else (BIN_URL + "realesrgan.zip"),
             "version": "20220424-full",
             "is_zip": True,
         },
@@ -651,10 +655,11 @@ def install_ncnn_binaries():
 
     import urllib.request
     import zipfile
+    import stat
 
     ok = True
     for name, meta in NCNN_BINARIES.items():
-        exe_path = os.path.join(ncnn_dir, name + ".exe")
+        exe_path = os.path.join(ncnn_dir, name) if is_mac else os.path.join(ncnn_dir, name + ".exe")
         installed_ver = installed.get(name, {}).get("version", "")
 
         if os.path.exists(exe_path) and installed_ver == meta["version"]:
@@ -670,6 +675,16 @@ def install_ncnn_binaries():
                     zf.extractall(ncnn_dir)
                 installed[name] = {"version": meta["version"]}
                 log("info", "Extracted: " + name + " (with models)")
+                if is_mac:
+                    for root, _, files in os.walk(ncnn_dir):
+                        for f in files:
+                            if not f.endswith(".json") and not f.endswith(".bin") and not f.endswith(".param") and not f.endswith(".png"):
+                                fpath = os.path.join(root, f)
+                                try:
+                                    st = os.stat(fpath)
+                                    os.chmod(fpath, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+                                except Exception:
+                                    pass
             except Exception as e:
                 log("error", "Download/extract failed for " + name + ": " + str(e))
                 ok = False
@@ -682,7 +697,10 @@ def install_ncnn_binaries():
             try:
                 urllib.request.urlretrieve(meta["url"], exe_path)
                 installed[name] = {"version": meta["version"]}
-                log("info", "Downloaded: " + name + ".exe")
+                log("info", "Downloaded: " + name)
+                if is_mac:
+                    st = os.stat(exe_path)
+                    os.chmod(exe_path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
             except Exception as e:
                 log("error", "Download failed for " + name + ": " + str(e))
                 ok = False
