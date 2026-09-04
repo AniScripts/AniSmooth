@@ -16,11 +16,18 @@
     }
   }
   window.__ANISMOOTH_TAB_HTML__ = html;
-  document.addEventListener("DOMContentLoaded", function () {
+
+  function injectTabs() {
     var placeholders = document.querySelectorAll("main.content [data-tab]");
     for (var j = 0; j < placeholders.length; j++) {
       var name = placeholders[j].getAttribute("data-tab");
       placeholders[j].outerHTML = window.__ANISMOOTH_TAB_HTML__[name] || "";
     }
-  }, true);
+  }
+
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    injectTabs();
+  } else {
+    document.addEventListener("DOMContentLoaded", injectTabs, true);
+  }
 })();

@@ -464,6 +464,13 @@ CSInterface.prototype.getWindowTitle = function () {
     return window.__adobe_cep__.invokeSync("getWindowTitle", "");
 };
 
+if (typeof window !== "undefined" && typeof process === "undefined") {
+    window.process = {
+        platform: navigator.platform.indexOf("Mac") !== -1 ? "darwin" : "win32",
+        env: {}
+    };
+}
+
 if (typeof window !== "undefined" && !window.__adobe_cep__) {
     window.__adobe_cep__ = {
         evalScript: function (script, callback) {
