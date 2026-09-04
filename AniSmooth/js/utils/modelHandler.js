@@ -63,6 +63,7 @@
             env[pathKey] = toolsFolder;
           }
         } else {
+          env.PYTORCH_ENABLE_MPS_FALLBACK = "1";
           if (env.PATH) {
             env.PATH = env.PATH + ":" + toolsFolder;
           } else {
