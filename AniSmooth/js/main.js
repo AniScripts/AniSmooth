@@ -1253,7 +1253,16 @@
             if (k === activeCat) el.classList.remove("hidden");
             else el.classList.add("hidden");
             var panels = el.querySelectorAll(".panel");
-            for (var p = 0; p < panels.length; p++) panels[p].style.display = "";
+            for (var p = 0; p < panels.length; p++) {
+              panels[p].style.display = "";
+              var t = panels[p].querySelector(".panel-title");
+              var collapseKey = "anismooth_settings_collapsed_" + (t ? t.textContent : "").replace(/\s+/g, "_");
+              if (window.StorageManager.getItem(collapseKey, "1") === "1") {
+                panels[p].classList.add("collapsed");
+              } else {
+                panels[p].classList.remove("collapsed");
+              }
+            }
           }
         }
         return;
@@ -1268,7 +1277,10 @@
           var text = panel.textContent.toLowerCase();
           var matches = text.indexOf(query) !== -1;
           panel.style.display = matches ? "" : "none";
-          if (matches) hasMatchInCat = true;
+          if (matches) {
+            hasMatchInCat = true;
+            panel.classList.remove("collapsed");
+          }
         }
         if (hasMatchInCat) {
           cat.classList.remove("hidden");
