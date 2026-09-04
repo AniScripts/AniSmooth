@@ -5,15 +5,25 @@
             <input id="consoleSearch" type="text" placeholder="Filter logs...">
           </div>
           <div class="console-bar-right">
+            <button id="consoleScrollLockBtn" class="btn-sm active" title="Toggle Auto-Scroll"><i class="fa-solid fa-arrows-down-to-line"></i> Auto-Scroll</button>
+            <button id="consoleCopyBtn" class="btn-sm" title="Copy logs to clipboard"><i class="fa-solid fa-copy"></i> Copy</button>
             <button id="consoleClearBtn" class="btn-sm"><i class="fa-solid fa-eraser"></i> Clear</button>
             <button id="consoleExportBtn" class="btn-sm"><i class="fa-solid fa-download"></i> Export</button>
           </div>
         </div>
         <div id="consoleCategories" class="console-categories">
           <button class="console-cat active" data-mode="all">All</button>
-          <button class="console-cat" data-mode="upscale">Upscale</button>
           <button class="console-cat" data-mode="interpolate">Interpolate</button>
+          <button class="console-cat" data-mode="upscale">Upscale</button>
+          <button class="console-cat" data-mode="flowframes">Flowframes</button>
           <button class="console-cat" data-mode="dedupe">Dedupe</button>
+        </div>
+        <div id="consoleLevels" class="console-levels">
+          <button class="console-level-btn active" data-level="all">All <span id="countLevelAll" class="console-pill-count">0</span></button>
+          <button class="console-level-btn level-err" data-level="error"><i class="fa-solid fa-circle-xmark"></i> Errors <span id="countLevelError" class="console-pill-count">0</span></button>
+          <button class="console-level-btn level-warn" data-level="warn"><i class="fa-solid fa-triangle-exclamation"></i> Warnings <span id="countLevelWarn" class="console-pill-count">0</span></button>
+          <button class="console-level-btn level-info" data-level="info"><i class="fa-solid fa-circle-info"></i> Info <span id="countLevelInfo" class="console-pill-count">0</span></button>
+          <button class="console-level-btn level-ok" data-level="success"><i class="fa-solid fa-circle-check"></i> Success <span id="countLevelSuccess" class="console-pill-count">0</span></button>
         </div>
         <div id="consoleEntries" class="console-entries"></div>
       </div>

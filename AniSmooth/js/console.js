@@ -2,14 +2,28 @@ window.consoleLog = [];
 window.consoleMaxEntries = 500;
 window.consoleFilter = { level: 'all', source: 'all', search: '', mode: 'all' };
 window.consoleSort = { by: 'time', order: 'asc' };
+window.consoleAutoScroll = true;
+
+var _renderDebounceTimer = null;
+
+function inferLogMode(source) {
+  if (!source) return '';
+  var s = String(source).toLowerCase();
+  if (s.indexOf('interpolate') !== -1 || s.indexOf('rife') !== -1) return 'interpolate';
+  if (s.indexOf('upscale') !== -1 || s.indexOf('realesr') !== -1 || s.indexOf('cugan') !== -1 || s.indexOf('spandrel') !== -1) return 'upscale';
+  if (s.indexOf('dedupe') !== -1 || s.indexOf('deadframe') !== -1) return 'dedupe';
+  if (s.indexOf('flowframe') !== -1) return 'flowframes';
+  return '';
+}
 
 function dbg(level, source, message, mode) {
-  const entry = {
+  var resolvedMode = mode || inferLogMode(source);
+  var entry = {
     time: new Date(),
     level: level,
     source: source,
     message: String(message || ''),
-    mode: mode || ''
+    mode: resolvedMode
   };
 
   window.consoleLog.push(entry);
@@ -25,8 +39,24 @@ function dbg(level, source, message, mode) {
   } catch (e) {}
 
   if (window.ConsolePanel && window.ConsolePanel.isActive && window.ConsolePanel.isActive()) {
-    window.ConsolePanel.renderLogContent();
+    if (!_renderDebounceTimer) {
+      _renderDebounceTimer = setTimeout(function () {
+        _renderDebounceTimer = null;
+        if (window.ConsolePanel && window.ConsolePanel.renderLogContent) {
+          window.ConsolePanel.renderLogContent();
+        }
+      }, 40);
+    }
   }
+}
+
+function getLogCounts() {
+  var counts = { all: window.consoleLog.length, error: 0, warn: 0, info: 0, success: 0, debug: 0 };
+  for (var i = 0; i < window.consoleLog.length; i++) {
+    var lvl = window.consoleLog[i].level;
+    if (counts[lvl] !== undefined) counts[lvl]++;
+  }
+  return counts;
 }
 
 function getFilteredAndSortedLogs() {
@@ -94,6 +124,32 @@ window.clearLog = function() {
   window.consoleLog = [];
   if (window.ConsolePanel && window.ConsolePanel.renderLogContent) window.ConsolePanel.renderLogContent();
   dbg('info', 'Console', 'Log cleared');
+};
+
+window.copyLogsToClipboard = function(cb) {
+  var logs = getFilteredAndSortedLogs();
+  var lines = [];
+  for (var i = 0; i < logs.length; i++) {
+    var entry = logs[i];
+    var time = entry.time.toISOString().replace('T', ' ').substring(0, 19);
+    var modeTag = entry.mode ? ' [' + entry.mode + ']' : '';
+    lines.push('[' + time + '] ' + entry.level.toUpperCase() + ' [' + entry.source + ']' + modeTag + ' ' + entry.message);
+  }
+  var text = lines.join('\n');
+
+  try {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    var success = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (cb) cb(success);
+  } catch (e) {
+    if (cb) cb(false);
+  }
 };
 
 window.exportLog = function() {
@@ -168,3 +224,4 @@ function escapeHtmlLog(text) {
   return div.innerHTML;
 }
 window.escapeHtmlLog = escapeHtmlLog;
+window.getLogCounts = getLogCounts;

@@ -230,16 +230,31 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accen
 .console-bar-left input:focus { border-color: var(--accent); }
 .console-bar-right { display: flex; gap: 3px; flex-shrink: 0; }
 
-.console-categories { display: flex; gap: 3px; margin-bottom: 5px; }
+.console-categories { display: flex; gap: 3px; margin-bottom: 4px; }
 .console-cat {
   background: var(--bg); border: 1px solid var(--border); color: var(--text-3);
-  padding: 3px 10px; border-radius: 10px; font-size: 9px; cursor: pointer; transition: none;
+  padding: 2px 8px; border-radius: 10px; font-size: 9px; cursor: pointer; transition: none;
 }
 .console-cat:hover { border-color: #666666; color: var(--text-2); }
 .console-cat.active { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
 
+.console-levels { display: flex; gap: 3px; margin-bottom: 5px; flex-wrap: wrap; }
+.console-level-btn {
+  background: var(--inset); border: 1px solid var(--border); color: var(--text-3);
+  padding: 2px 7px; border-radius: 3px; font-size: 8.5px; cursor: pointer; display: flex; align-items: center; gap: 4px;
+}
+.console-level-btn:hover { border-color: var(--border-strong); color: var(--text); }
+.console-level-btn.active { background: var(--active-overlay); color: var(--text); border-color: var(--accent); font-weight: 500; }
+.console-level-btn.level-err.active { border-color: var(--error); color: var(--error-text); }
+.console-level-btn.level-warn.active { border-color: var(--warn); color: var(--warn-text); }
+.console-level-btn.level-info.active { border-color: var(--accent); color: var(--accent); }
+.console-level-btn.level-ok.active { border-color: var(--ok); color: var(--ok-text); }
+.console-pill-count {
+  background: var(--surface-2); border-radius: 8px; padding: 0 4px; font-size: 7.5px; font-weight: 600; opacity: 0.8;
+}
+
 .console-entries {
-  height: calc(100vh - 135px); overflow-y: auto;
+  height: calc(100vh - 155px); overflow-y: auto;
   background: var(--inset); border: 1px solid var(--border); border-radius: 4px;
   padding: 6px; font-family: 'Consolas','Courier New',monospace; font-size: 10px; line-height: 1.5;
 }
