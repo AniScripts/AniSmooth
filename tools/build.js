@@ -316,6 +316,50 @@ async function runBuild() {
     ].join('\r\n'), 'utf8');
     console.log(' - Generated batch installer');
 
+    const shPath = path.join(versionDir, 'Install-macOS.sh');
+    console.log('\n📝 Generating macOS shell installer...');
+    fs.writeFileSync(shPath, [
+        `#!/bin/bash`,
+        `set -e`,
+        ``,
+        `SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"`,
+        `SRC_DIR="$SCRIPT_DIR/${EXTENSION_NAME}"`,
+        `DEST_DIR="$HOME/Library/Application Support/Adobe/CEP/extensions/${EXTENSION_NAME}"`,
+        ``,
+        `echo "=========================================================="`,
+        `echo "${EXTENSION_NAME} After Effects Extension - macOS Installer"`,
+        `echo "=========================================================="`,
+        `echo ""`,
+        ``,
+        `if [ ! -d "$SRC_DIR" ]; then`,
+        `    echo "[ERROR] Could not find ${EXTENSION_NAME} directory next to this script."`,
+        `    exit 1`,
+        `fi`,
+        ``,
+        `echo "[1/3] Copying extension files to CEP directory..."`,
+        `mkdir -p "$HOME/Library/Application Support/Adobe/CEP/extensions"`,
+        `rm -rf "$DEST_DIR"`,
+        `cp -R "$SRC_DIR" "$DEST_DIR"`,
+        ``,
+        `echo "[2/3] Enabling CEP PlayerDebugMode for After Effects..."`,
+        `defaults write com.adobe.CSXS.8 PlayerDebugMode 1 2>/dev/null || true`,
+        `defaults write com.adobe.CSXS.9 PlayerDebugMode 1 2>/dev/null || true`,
+        `defaults write com.adobe.CSXS.10 PlayerDebugMode 1 2>/dev/null || true`,
+        `defaults write com.adobe.CSXS.11 PlayerDebugMode 1 2>/dev/null || true`,
+        `defaults write com.adobe.CSXS.12 PlayerDebugMode 1 2>/dev/null || true`,
+        `defaults write com.adobe.CSXS.13 PlayerDebugMode 1 2>/dev/null || true`,
+        `defaults write com.adobe.CSXS.14 PlayerDebugMode 1 2>/dev/null || true`,
+        `defaults write com.adobe.CSXS.15 PlayerDebugMode 1 2>/dev/null || true`,
+        ``,
+        `echo "[3/3] Finalizing installation..."`,
+        `echo ""`,
+        `echo "=========================================================="`,
+        `echo "[SUCCESS] ${EXTENSION_NAME} has been successfully installed!"`,
+        `echo "Please restart After Effects and open it from Window > Extensions."`,
+        `echo "=========================================================="`
+    ].join('\n'), { mode: 0o755, encoding: 'utf8' });
+    console.log(' - Generated macOS shell installer');
+
     console.log(`\n✨ ${EXTENSION_NAME} ${PROFILE.label} build complete!`);
 }
 
