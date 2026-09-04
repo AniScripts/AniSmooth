@@ -74,6 +74,10 @@
     }
     gate.innerHTML = html;
     if (_step === 'gpuchoice') _bindGpuChoiceClicks();
+    var logs = gate.querySelectorAll('.ts-install-log, .ts-gpu-download-log');
+    for (var li = 0; li < logs.length; li++) {
+      logs[li].scrollTop = logs[li].scrollHeight;
+    }
     if (_step === 'autoinstall' && !_installRunning) {
       setTimeout(function () { startAutoInstall(); }, 400);
     }
