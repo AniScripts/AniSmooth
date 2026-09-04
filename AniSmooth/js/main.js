@@ -1442,8 +1442,8 @@
       var interpCudaModels = [
         { value: "rife4.25-heavy", label: "RIFE 4.25 HEAVY", icon: "fa-microchip", backend: "cuda" },
         { value: "rife4.25", label: "RIFE 4.25", icon: "fa-microchip", backend: "cuda" },
-        { value: "rife4.25-heavy-tensorrt", label: "RIFE 4.25 HEAVY TensorRT", icon: "fa-bolt", backend: "cuda" },
-        { value: "rife4.25-tensorrt", label: "RIFE 4.25 TensorRT", icon: "fa-bolt", backend: "cuda" }
+        { value: "rife4.25-heavy-tensorrt", label: "RIFE 4.25 HEAVY TensorRT", icon: "fa-bolt", backend: "tensorrt" },
+        { value: "rife4.25-tensorrt", label: "RIFE 4.25 TensorRT", icon: "fa-bolt", backend: "tensorrt" }
       ];
       var interpVulkanModels = [
         { value: "rife-v4.6", label: "RIFE 4.6 (Vulkan)", icon: "fa-fire", backend: "vulkan" },
@@ -1574,13 +1574,22 @@
 
     _applyBackendFilter: function () {
       var vendor = this._gpuVendor || "unknown";
+      var cuda = !!this._gpuCuda;
+      var mps = !!this._gpuMps;
+      var trt = !!(this._gpuInfoCache && this._gpuInfoCache.tensorrt_available);
       var allToggles = document.querySelectorAll(".toggle-row[data-backend]");
       for (var i = 0; i < allToggles.length; i++) {
         var row = allToggles[i];
         var backend = row.getAttribute("data-backend");
-        if (backend === "cuda" && vendor !== "nvidia") {
-          row.classList.add("toggle-unsupported");
-        } else if (backend === "vulkan" && vendor === "nvidia") {
+        var supported = true;
+        if (backend === "tensorrt") {
+          supported = vendor === "nvidia" && trt;
+        } else if (backend === "cuda") {
+          supported = vendor === "nvidia" || vendor === "apple";
+        } else if (backend === "vulkan") {
+          supported = true;
+        }
+        if (!supported) {
           row.classList.add("toggle-unsupported");
         } else {
           row.classList.remove("toggle-unsupported");
@@ -1598,10 +1607,9 @@
         var backendAttr = m.backend ? ' data-backend="' + escTxt(m.backend) + '"' : '';
         html +=
           '<label class="toggle-row" style="padding:0;margin-bottom:3px;"' + verAttr + backendAttr + '>' +
-            '<i class="fa-solid ' + m.icon + ' toggle-icon"></i>' +
-            '<span class="toggle-label">' + escTxt(m.label) + '</span>' +
-            '<input type="checkbox" class="toggle-input model-vis-toggle" data-value="' + escTxt(m.value) + '" data-prefix="' + escTxt(prefix) + '"' + (visible ? " checked" : "") + '>' +
+            '<input type="checkbox" class="toggle-input model-vis-toggle" data-value="' + escTxt(m.value) + '" data-prefix="' + escTxt(prefix) + '"' + (visible ? ' checked' : '') + '>' +
             '<span class="toggle-switch"></span>' +
+            '<span class="toggle-label"><i class="fa-solid ' + m.icon + '"></i> ' + escTxt(m.label) + '</span>' +
           '</label>';
       }
       return html;
@@ -1634,6 +1642,9 @@
         var firstVisible = null;
         var activeFound = false;
         var vendor = (window.App && window.App._gpuVendor) || "unknown";
+        var cuda = !!(window.App && window.App._gpuCuda);
+        var mps = !!(window.App && window.App._gpuMps);
+        var trt = !!(window.App && window.App._gpuInfoCache && window.App._gpuInfoCache.tensorrt_available);
 
         for (var i = 0; i < children.length; i++) {
           var child = children[i];
@@ -1644,7 +1655,16 @@
           var optBackend = child.getAttribute('data-backend') || '';
           var versionMatch = version === "both" || !optVer || optVer.split(/\s+/).indexOf(version) !== -1;
           var toggled = window.StorageManager.getItem(prefix + val, "1") !== "0";
-          var vendorMatch = !optBackend || (optBackend === "cuda" && vendor === "nvidia") || (optBackend === "vulkan" && vendor === "amd");
+
+          var vendorMatch = true;
+          if (optBackend === "tensorrt") {
+            vendorMatch = (vendor === "nvidia") && trt;
+          } else if (optBackend === "cuda") {
+            vendorMatch = (vendor === "nvidia" && cuda) || (vendor === "apple" && mps);
+          } else if (optBackend === "vulkan") {
+            vendorMatch = true;
+          }
+
           var visible = versionMatch && toggled && vendorMatch;
           child._visible = visible;
           if (visible) {
