@@ -1,3 +1,9 @@
+> [!IMPORTANT]
+> ### 🚨 Repository Moved to GitLab
+> This repository has officially migrated to **GitLab** and is now archived on GitHub for historical reference.
+>
+> 📦 **Active Development & Releases**: [https://gitlab.com/aniscripts/anismooth](https://gitlab.com/aniscripts/anismooth)
+
 <h1 align="center">
   <img src="AniSmooth/AniSmooth-Logo.png" height="48" alt="AniSmooth"/>
   <br />
